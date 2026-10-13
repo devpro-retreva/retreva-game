@@ -1,0 +1,76 @@
+import { useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { runtime } from '../game/core/runtime';
+import { useGame } from '../game/store/gameStore';
+import { saves } from '../game/persistence/instance';
+import { usePack } from './worldContext';
+
+const INTERACT_RANGE = 2.5;
+
+/** Finds the nearest interactable each ~120ms and publishes it only on change. */
+export function InteractionSystem() {
+  const pack = usePack();
+  const acc = useRef(0);
+  useFrame((_, dt) => {
+    acc.current += dt;
+    if (acc.current < 0.12) return;
+    acc.current = 0;
+    const s = useGame.getState();
+    if (s.ui !== 'play') return;
+    const p = runtime.player;
+    let best: { id: string; d: number } | null = null;
+    for (const n of pack.npcs) {
+      const a = runtime.actors.get(n.id);
+      if (!a) continue;
+      const d = Math.hypot(a.x - p.x, a.z - p.z);
+      if (d < INTERACT_RANGE && (!best || d < best.d)) best = { id: n.id, d };
+    }
+    const npc = best && pack.npcs.find((n) => n.id === best!.id);
+    s.setNearby(npc ? { id: npc.id, kind: 'npc', label: npc.name, verb: npc.promptVerb } : null);
+  });
+  return null;
+}
+
+/** Game clock (job timers, play time), periodic autosave and perf sampling. */
+export function GameLoop() {
+  const gl = useThree((s) => s.gl);
+  const acc = useRef({ tick: 0, save: 0, perf: 0, frames: 0, lastX: 0, lastZ: 0 });
+  useFrame((_, dt) => {
+    const a = acc.current;
+    const d = Math.min(dt, 0.1);
+    a.tick += d;
+    a.save += d;
+    a.perf += dt;
+    a.frames++;
+    if (a.tick >= 0.1) {
+      useGame.getState().tick(a.tick * 1000);
+      a.tick = 0;
+    }
+    if (a.save >= 4) {
+      a.save = 0;
+      const p = runtime.player;
+      if (Math.hypot(p.x - a.lastX, p.z - a.lastZ) > 0.5 || useGame.getState().jobs.active) {
+        a.lastX = p.x;
+        a.lastZ = p.z;
+        saves.schedule(0);
+      }
+    }
+    if (a.perf >= 0.5) {
+      runtime.perf.fps = Math.round(a.frames / a.perf);
+      runtime.perf.drawCalls = gl.info.render.calls;
+      runtime.perf.triangles = gl.info.render.triangles;
+      a.perf = 0;
+      a.frames = 0;
+    }
+  });
+  return null;
+}
+
+/** Flips the game to "playing" once the world has actually rendered a few frames. */
+export function ReadySignal() {
+  const frames = useRef(0);
+  useFrame(() => {
+    if (++frames.current === 3 && useGame.getState().phase === 'loading') useGame.getState().setPhase('playing');
+  });
+  return null;
+}

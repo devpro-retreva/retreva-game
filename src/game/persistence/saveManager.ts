@@ -1,0 +1,103 @@
+import { SAVE_SCHEMA_VERSION, type SaveAdapter, type SaveData } from './types';
+
+export const MAIN_SLOT = 'main';
+
+/** Validates and upgrades a loaded document. Returns null if it is unusable. */
+export function migrate(raw: unknown): SaveData | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const d = raw as Partial<SaveData>;
+  if (typeof d.schemaVersion !== 'number' || d.schemaVersion > SAVE_SCHEMA_VERSION) return null;
+  if (!d.profile || !d.wallet || !d.inventory || !d.jobs) return null;
+  if (typeof d.wallet.balance !== 'number' || !Array.isArray(d.wallet.ledger)) return null;
+  // v1 is current; future versions add upgrade steps here.
+  return d as SaveData;
+}
+
+export function getDeviceId(): string {
+  try {
+    const k = 'retriever:device';
+    let id = localStorage.getItem(k);
+    if (!id) {
+      id = `dev-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(k, id);
+    }
+    return id;
+  } catch {
+    return 'dev-unknown';
+  }
+}
+
+/**
+ * Serialises writes so they never race, and keeps a monotonically
+ * increasing revision on every document it writes.
+ */
+export class SaveManager {
+  private chain: Promise<unknown> = Promise.resolve();
+  private revision = 0;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  lastSavedAt = 0;
+  lastError: string | null = null;
+
+  constructor(
+    private adapter: SaveAdapter,
+    private snapshot: () => Omit<SaveData, 'revision' | 'updatedAt' | 'schemaVersion' | 'deviceId'> | null,
+    private deviceId = 'dev-unknown',
+    private slot = MAIN_SLOT,
+  ) {}
+
+  get adapterId() {
+    return this.adapter.id;
+  }
+
+  async load(): Promise<SaveData | null> {
+    try {
+      const data = migrate(await this.adapter.load(this.slot));
+      if (data) this.revision = data.revision;
+      return data;
+    } catch (e) {
+      this.lastError = String(e);
+      return null;
+    }
+  }
+
+  /** Debounced save for frequent, low-stakes changes. */
+  schedule(delayMs = 800) {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.saveNow(), delayMs);
+  }
+
+  /** Immediate save for money, purchases and job outcomes. */
+  saveNow(): Promise<void> {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    const run = this.chain.then(async () => {
+      const snap = this.snapshot();
+      if (!snap) return;
+      const doc: SaveData = {
+        ...snap,
+        schemaVersion: SAVE_SCHEMA_VERSION,
+        revision: this.revision + 1,
+        updatedAt: Date.now(),
+        deviceId: this.deviceId,
+      };
+      try {
+        await this.adapter.save(this.slot, doc);
+        this.revision = doc.revision;
+        this.lastSavedAt = doc.updatedAt;
+        this.lastError = null;
+      } catch (e) {
+        this.lastError = String(e);
+      }
+    });
+    this.chain = run;
+    return run;
+  }
+
+  async wipe(): Promise<void> {
+    await this.chain;
+    await this.adapter.remove(this.slot);
+    this.revision = 0;
+  }
+}
