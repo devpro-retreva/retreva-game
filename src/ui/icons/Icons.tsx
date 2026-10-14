@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react';
 
-/** Retriever icon set: 24px grid, 1.75 stroke, round caps/joins, currentColor. */
+/** Retreva icon set: 24px grid, 1.75 stroke, round caps/joins, currentColor. */
 type P = SVGProps<SVGSVGElement> & { size?: number };
 
 function Base({ size = 22, children, ...rest }: P & { children: React.ReactNode }) {

@@ -19,7 +19,7 @@ function Loading({ done, label }: { done: boolean; label: string }) {
   return (
     <div className={`loading ${done ? 'done' : ''}`} aria-hidden={done} role="status">
       <div className="inner">
-        <div className="eyelabel">Retriever</div>
+        <div className="eyelabel">Retreva</div>
         <h2>{label}</h2>
         <div className="bar">
           <i />
@@ -84,7 +84,7 @@ export default function App() {
 
   // expose a small debug/playtest handle (read-only state + store actions)
   useEffect(() => {
-    window.__retriever = { store: useGame, runtime, saves };
+    window.__retreva = { store: useGame, runtime, saves };
   }, []);
 
   const onContinue = async () => {

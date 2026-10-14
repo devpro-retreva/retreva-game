@@ -1,5 +1,6 @@
 import type { SaveAdapter, SaveData } from './types';
 
+// Storage keys keep the original project id so existing saves still load after the rename to Retreva.
 const DB_NAME = 'retriever';
 const STORE = 'saves';
 

@@ -71,7 +71,7 @@ export function Phone() {
         {showing === 'home' && <div className="wallpaper" />}
         <div className="statusbar" style={{ position: 'relative' }}>
           <span className="num">{time}</span>
-          <span>Retriever · 4G</span>
+          <span>Retreva · 4G</span>
         </div>
         {showing === 'home' ? (
           <Home open={open} now={now} />

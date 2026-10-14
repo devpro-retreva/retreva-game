@@ -85,9 +85,9 @@ export function TitleScreen({ save, onContinue, onNew }: { save: SaveData | null
       <Skyline />
       <div className="title-wrap">
         <h1 className="wordmark">
-          Retri<em>e</em>ver
+          Retr<em>e</em>va
         </h1>
-        <p className="tagline">Build a life on a Lagos street. Earn your way, then go places.</p>
+        <p className="tagline">Build a virtual lifestyle and travel to places of your dreams.</p>
         {save && (
           <p className="continue-meta num">
             {save.profile.name} · ₦{save.wallet.balance.toLocaleString('en-NG')} · played {formatDuration(save.stats.playTimeMs)}

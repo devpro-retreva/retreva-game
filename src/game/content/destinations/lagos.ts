@@ -2,7 +2,7 @@ import type { DestinationPack } from '../types';
 
 /**
  * Lagos — Adeniyi Street (fictional), a compact mainland street.
- * All names, businesses and signage are original to Retriever.
+ * All names, businesses and signage are original to Retreva.
  *
  * Layout: the road runs north–south along z (north is -z).
  * East-side buildings face west onto the street; west-side buildings face east.

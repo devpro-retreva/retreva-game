@@ -1,4 +1,6 @@
-# Retriever
+# Retreva
+
+**Build a virtual lifestyle and travel to places of your dreams.**
 
 A mobile-first, third-person 3D virtual-life and travel game. This is **Milestone 1: the first playable** — one Lagos street, one job, money, a bag, a phone and local saves.
 

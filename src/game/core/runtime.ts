@@ -23,6 +23,6 @@ export function resetRuntime(x: number, z: number, yaw: number) {
 // Expose a read-only debug handle for automated playtests.
 declare global {
   interface Window {
-    __retriever?: unknown;
+    __retreva?: unknown;
   }
 }
