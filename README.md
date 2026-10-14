@@ -2,7 +2,7 @@
 
 **Build a virtual lifestyle and travel to places of your dreams.**
 
-A mobile-first, third-person 3D virtual-life and travel game. This is **Milestone 1: the first playable** — one Lagos street, one job, money, a bag, a phone and local saves.
+A mobile-first, third-person 3D virtual-life and travel game. This build covers four areas of Lagos State with jobs, bargaining, goals and local saves.
 
 ## Run it
 
@@ -36,6 +36,20 @@ Adeniyi Street (fictional) on the Lagos mainland: 14 buildings with painted faca
 - **Iya Bisi** sells provisions and souvenirs; **Mama Titi** sells food. Purchases go into the bag with where and for how much they were bought. Food and drink can be consumed.
 - **Kunle** (danfo conductor) and **Chidi** (okada rider) add local colour and point toward the travel features to come.
 - **Phone**: Map, Jobs, Bag, Wallet, Profile and Settings work. Messages, Travel, Events and Bookings are visible entry points, marked as coming later.
+
+## Lagos State areas
+
+| Area | Setting | Work | Shopping | Landmarks |
+|---|---|---|---|---|
+| **Yaba** (home) | Adeniyi Street — bukas, barbers, danfos | Jollof Run (delivery) | Mama Titi's menu, Iya Bisi provisions | 3 |
+| **Lagos Island** | Balogun market lane — stalls, bunting, old buildings | Bale Run (delivery) | Alhaja Kudi's wax prints — **bargaining** | 3 |
+| **Lekki** | Atlantic beachfront — sand, sea, palms, huts | Beach Clean-up (**collect 6 bottles**) | Musa's coconut & corn, Ada's crafts — **bargaining** | 3 |
+| **Ikeja** | Computer Village gadget street | Phone Run (delivery) | Chuka's Gadget Plug — **bargaining** | 3 |
+
+- **Travel:** talk to the conductor at each bus stop (teal marker). Fares come from map distance (₦450–₦750); you can't travel mid-job. A short trip screen animates the route.
+- **Bargaining:** sellers have a hidden floor price and limited patience. Fair offers get counters; insulting ones burn patience twice as fast; when patience runs out you get a final take-it-or-leave-it price.
+- **Goals:** 8 goals (first job, first ride, sharp bargainer, beach guardian, sightseer, souvenir hunter, Lagos hustler, Lagos explorer), each paid once through the wallet ledger.
+- **Notifications:** area title card on arrival, first-time tip cards (dismissible, never repeated, can be turned off), discovery and goal toasts, and texts from characters in the Messages app with unread badges.
 
 ## Architecture
 

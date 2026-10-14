@@ -4,7 +4,7 @@ import { runtime } from '../../game/core/runtime';
 import { useGame } from '../../game/store/gameStore';
 import { usePack } from '../../scene/worldContext';
 import { formatClock, useRaf } from '../hooks';
-import { IconCoin, IconPause, IconPhone } from '../icons/Icons';
+import { IconChat, IconCoin, IconFlag, IconPause, IconPhone, IconPin } from '../icons/Icons';
 import { MapView } from './MapView';
 
 function MoneyChip() {
@@ -56,7 +56,19 @@ function Objective() {
         <span className={`timer num ${low ? 'low' : ''}`}>{formatClock(active.remainingMs)}</span>
       </div>
       <div className="goal">
-        Take the {job.cargo.toLowerCase()} to <b>{npc?.name}</b>
+        {job.kind === 'collect' && job.collect ? (
+          (active.collected?.length ?? 0) >= job.collect.count ? (
+            <>Report back to <b>{npc?.name}</b></>
+          ) : (
+            <>
+              <b className="num">{active.collected?.length ?? 0}/{job.collect.count}</b> {job.collect.item}s picked up
+            </>
+          )
+        ) : (
+          <>
+            Take the {job.cargo.toLowerCase()} to <b>{npc?.name}</b>
+          </>
+        )}
       </div>
       <div className="bar" aria-hidden="true">
         <i className={low ? 'low' : ''} style={{ width: `${pct}%` }} />
@@ -111,6 +123,9 @@ export function Toasts() {
       {toasts.map((t) => (
         <div key={t.id} className={`toast cut-sm is-${t.kind}`}>
           {t.kind === 'money' && <IconCoin size={20} style={{ color: 'var(--danfo)', flex: 'none' }} />}
+          {t.kind === 'discover' && <IconPin size={20} style={{ color: 'var(--sky)', flex: 'none' }} />}
+          {t.kind === 'goal' && <IconFlag size={20} style={{ color: 'var(--danfo)', flex: 'none' }} />}
+          {t.kind === 'message' && <IconChat size={20} style={{ color: 'var(--cream)', flex: 'none' }} />}
           <div>
             <div className="t num">{t.title}</div>
             {t.detail && <div className="d">{t.detail}</div>}
@@ -165,6 +180,7 @@ export function Hud({ touch }: { touch: boolean }) {
   const pack = usePack();
   const openPhone = useGame((s) => s.openPhone);
   const togglePause = useGame((s) => s.togglePause);
+  const unread = useGame((s) => s.world.messages.filter((m) => !m.read).length);
   return (
     <>
       <div className="hud-tl">
@@ -173,8 +189,9 @@ export function Hud({ touch }: { touch: boolean }) {
       </div>
       <div className="hud-tr">
         <div className="stack">
-          <button className="icon-btn" onClick={() => openPhone()} aria-label="Open phone (P)" title="Phone (P)">
+          <button className="icon-btn phone-btn" onClick={() => openPhone()} aria-label="Open phone (P)" title="Phone (P)">
             <IconPhone />
+            {unread > 0 && <span className="hud-badge num" aria-label={`${unread} unread messages`}>{unread}</span>}
           </button>
           <button className="icon-btn" onClick={togglePause} aria-label="Pause (Esc)" title="Pause (Esc)">
             <IconPause size={18} />

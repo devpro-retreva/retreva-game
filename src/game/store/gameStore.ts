@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { getDestination, findItem, findJob, findNpc, findBusiness, formatMoney, DEFAULT_DESTINATION } from '../content';
-import type { DialogueOption } from '../content/types';
+import { getDestination, findItem, findJob, findNpc, findBusiness, formatMoney, DEFAULT_DESTINATION, areaOfJob, ALL_PACKS } from '../content';
+import type { DestinationPack, DialogueOption } from '../content/types';
 import { createWallet, credit, debit, makeId, type Wallet } from '../systems/economy';
 import { addItem, emptyInventory, removeFromStack, type Inventory } from '../systems/inventory';
 import {
   acceptJob as acceptJobFn,
+  collectSpot,
   completedCount,
   deliverJob as deliverJobFn,
   emptyJobs,
@@ -13,18 +14,21 @@ import {
   type JobsState,
 } from '../systems/jobs';
 import { resolveEntry, type DialogueContext } from '../systems/dialogue';
-import type { AvatarLook, Profile, SaveData, Settings } from '../persistence/types';
+import { acceptAsk, makeOffer, savings, startHaggle as startHaggleFn, walkAway, type HaggleState } from '../systems/negotiation';
+import { GOALS, TIPS, newlyCompleted, type PhoneMessage, type TipDef } from '../systems/progress';
+import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings, type WorldProgress } from '../persistence/types';
 import { sanitizeLook } from '../core/avatarPresets';
+import { fareBetween, findArea, LAGOS_AREAS } from '../content/regions/lagosState';
 import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe';
-export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit';
+export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel';
 
 export interface Toast {
   id: string;
-  kind: 'money' | 'item' | 'info' | 'warn';
+  kind: 'money' | 'item' | 'info' | 'warn' | 'discover' | 'goal' | 'message';
   title: string;
   detail?: string;
 }
@@ -43,6 +47,7 @@ export const DEFAULT_SETTINGS: Settings = {
   textScale: 1,
   shadows: 'auto',
   showFps: false,
+  tips: true,
 };
 
 interface GameState {
@@ -53,6 +58,7 @@ interface GameState {
   wallet: Wallet;
   inventory: Inventory;
   jobs: JobsState;
+  world: WorldProgress;
   settings: Settings;
   playTimeMs: number;
 
@@ -62,9 +68,14 @@ interface GameState {
   phoneApp: PhoneApp;
   nearby: Nearby | null;
   toasts: Toast[];
-  /** Bumps when a persistent slice changes; the save manager listens to this. */
+  tip: TipDef | null;
+  tipQueue: string[];
+  banner: { key: number; title: string; tagline: string } | null;
+  haggle: (HaggleState & { businessId: string }) | null;
+  transit: { from: string; to: string; fare: number; firstVisit: boolean } | null;
+  /** Set during travel; handled once the new area has rendered. */
+  arrival: { firstVisit: boolean } | null;
   dirty: number;
-  /** Set when money/items/job outcomes change and must be written immediately. */
   critical: number;
 
   // lifecycle
@@ -88,323 +99,613 @@ interface GameState {
   closePanel(): void;
   pushToast(t: Omit<Toast, 'id'>): void;
   dismissToast(id: string): void;
+  showTip(id: string): void;
+  dismissTip(): void;
+  clearBanner(): void;
+
+  // travel
+  openTravel(): void;
+  travelTo(areaId: string): void;
+  arrive(): void;
+
+  // world
+  discover(landmarkId: string): void;
+  collect(spotIndex: number): void;
+  sendMessage(from: string, text: string): void;
+  markMessagesRead(): void;
+  checkGoals(): void;
 
   // gameplay
   acceptJob(jobId: string): void;
   deliverJob(jobId: string): void;
   tick(dtMs: number): void;
   buy(businessId: string, itemId: string): boolean;
+  startHaggle(businessId: string, itemId: string): void;
+  offer(amount: number): void;
+  acceptHaggle(): void;
+  leaveHaggle(): void;
   consume(stackKey: string): void;
   updateSettings(patch: Partial<Settings>): void;
 }
 
-const pack = () => getDestination(useGame.getState().destinationId);
+const pack = (): DestinationPack => getDestination(useGame.getState().destinationId);
 
 function setUiMode(ui: UiMode) {
   input.enabled = ui === 'play';
   if (ui !== 'play') clearInput();
 }
 
-export const useGame = create<GameState>((set, get) => ({
-  phase: 'boot',
-  hasSave: false,
-  profile: null,
-  destinationId: DEFAULT_DESTINATION,
-  wallet: createWallet(0),
-  inventory: emptyInventory(),
-  jobs: emptyJobs(),
-  settings: DEFAULT_SETTINGS,
-  playTimeMs: 0,
-
-  ui: 'play',
-  dialogue: null,
-  shopId: null,
-  phoneApp: 'home',
-  nearby: null,
-  toasts: [],
-  dirty: 0,
-  critical: 0,
-
-  setPhase: (phase) => set({ phase }),
-  setHasSave: (hasSave) => set({ hasSave }),
-
-  startNewGame(profile) {
-    const p = getDestination(DEFAULT_DESTINATION);
-    resetRuntime(p.spawn.position[0], p.spawn.position[1], p.spawn.facing);
-    set({
-      profile: { ...profile, avatar: sanitizeLook(profile.avatar) },
-      destinationId: p.id,
-      wallet: createWallet(p.startingMoney),
-      inventory: emptyInventory(),
-      jobs: emptyJobs(),
-      playTimeMs: 0,
-      ui: 'play',
-      dialogue: null,
-      shopId: null,
-      nearby: null,
-      toasts: [],
-      hasSave: true,
-      critical: get().critical + 1,
-    });
-    setUiMode('play');
-  },
-
-  hydrate(save) {
-    const p = getDestination(save.destinationId);
-    resetRuntime(save.player.position[0], save.player.position[1], save.player.yaw);
-    set({
-      profile: save.profile,
-      destinationId: p.id,
-      wallet: save.wallet,
-      inventory: save.inventory,
-      jobs: save.jobs,
-      settings: { ...DEFAULT_SETTINGS, ...save.settings },
-      playTimeMs: save.stats?.playTimeMs ?? 0,
-      ui: 'play',
-      dialogue: null,
-      shopId: null,
-      hasSave: true,
-    });
-    setUiMode('play');
-  },
-
-  resetAll() {
-    set({
-      phase: 'title',
-      hasSave: false,
-      profile: null,
-      wallet: createWallet(0),
-      inventory: emptyInventory(),
-      jobs: emptyJobs(),
-      ui: 'play',
-      dialogue: null,
-      shopId: null,
-      toasts: [],
-    });
-  },
-
-  setNearby(nearby) {
-    const cur = get().nearby;
-    if (cur?.id === nearby?.id) return;
-    set({ nearby });
-  },
-
-  interact() {
-    const { ui, nearby } = get();
-    if (ui !== 'play' || !nearby) return;
-    if (nearby.kind === 'npc') get().openDialogue(nearby.id);
-  },
-
-  openDialogue(npcId) {
-    const p = pack();
-    const npc = findNpc(p, npcId);
-    if (!npc) return;
-    const s = get();
-    const now = Date.now();
-    const ctx: DialogueContext = {
-      jobAvailable: (id) => {
-        const j = findJob(p, id);
-        return !!j && isAvailable(s.jobs, j, now);
-      },
-      jobActive: (id) => s.jobs.active?.jobId === id,
-      isDropoff: (id) => s.jobs.active?.jobId === id && findJob(p, id)?.dropoffNpcId === npcId,
-      jobCompletedBefore: (id) => completedCount(s.jobs, id) > 0,
-    };
-    set({ ui: 'dialogue', dialogue: { npcId, nodeId: resolveEntry(npc.dialogue, ctx) } });
-    setUiMode('dialogue');
-  },
-
-  chooseOption(o) {
-    const a = o.action;
-    switch (a.kind) {
-      case 'goto': {
-        const d = get().dialogue;
-        if (d) set({ dialogue: { ...d, nodeId: a.node } });
-        return;
-      }
-      case 'close':
-        get().closePanel();
-        return;
-      case 'acceptJob':
-        get().acceptJob(a.jobId);
-        get().closePanel();
-        return;
-      case 'deliverJob':
-        get().deliverJob(a.jobId);
-        get().closePanel();
-        return;
-      case 'openShop':
-        get().openShop(a.businessId);
-        return;
-    }
-  },
-
-  openShop(id) {
-    set({ ui: 'shop', shopId: id, dialogue: null });
-    setUiMode('shop');
-  },
-
-  openPhone(app = 'home') {
-    if (get().ui === 'dialogue' || get().ui === 'shop') return;
-    set({ ui: 'phone', phoneApp: app });
-    setUiMode('phone');
-  },
-
-  setPhoneApp: (phoneApp) => set({ phoneApp }),
-
-  togglePause() {
-    const ui = get().ui;
-    if (ui === 'pause') {
-      set({ ui: 'play' });
-      setUiMode('play');
-    } else if (ui === 'play') {
-      set({ ui: 'pause' });
-      setUiMode('pause');
-    } else {
-      get().closePanel();
-    }
-  },
-
-  openWardrobe() {
-    set({ ui: 'wardrobe', dialogue: null, shopId: null });
-    setUiMode('wardrobe');
-  },
-
-  saveProfile(name, avatar) {
-    const cur = get().profile;
-    if (!cur) return;
-    const clean = name.trim().slice(0, 18);
-    if (clean.length < 2) return;
-    set({ profile: { ...cur, name: clean, avatar: sanitizeLook(avatar) }, critical: get().critical + 1 });
-    get().closePanel();
-    get().pushToast({ kind: 'info', title: 'Look updated', detail: 'Saved to your profile.' });
-  },
-
-  closePanel() {
-    set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home' });
-    setUiMode('play');
-  },
-
-  pushToast(t) {
-    const toast = { ...t, id: makeId('t') };
-    set({ toasts: [...get().toasts.slice(-2), toast] });
-  },
-  dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
-
-  acceptJob(jobId) {
-    const p = pack();
-    const job = findJob(p, jobId);
-    if (!job) return;
-    const r = acceptJobFn(get().jobs, job, Date.now(), makeId('run'));
-    if (!r.ok) {
-      get().pushToast({ kind: 'warn', title: r.reason === 'busy' ? 'Finish your current job first' : 'Not ready yet' });
-      return;
-    }
-    const dropoff = findNpc(p, job.dropoffNpcId);
-    set({ jobs: r.state, critical: get().critical + 1 });
-    get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `Take the ${job.cargo.toLowerCase()} to ${dropoff?.name}` });
-  },
-
-  deliverJob(jobId) {
-    const p = pack();
-    const job = findJob(p, jobId);
-    const npc = job && findNpc(p, job.dropoffNpcId);
-    if (!job || !npc) return;
-    const live = runtime.actors.get(npc.id) ?? { x: npc.position[0], z: npc.position[1] };
-    const distance = Math.hypot(runtime.player.x - live.x, runtime.player.z - live.z);
-    const r = deliverJobFn(get().jobs, job, { now: Date.now(), distanceToDropoff: distance });
-    if (!r.ok) {
-      const msg: Record<string, string> = {
-        'too-far': `Get closer to ${npc.name}`,
-        expired: 'Too late — the food went cold',
-        'no-job': 'No delivery in progress',
-        'wrong-job': 'That is not for this person',
-        'already-paid': 'Already delivered',
-      };
-      get().pushToast({ kind: 'warn', title: msg[r.reason] });
-      return;
-    }
-    const pay = credit(get().wallet, {
-      id: r.payout.txId,
-      amount: r.payout.total,
-      reason: `${job.title}${r.payout.bonus ? ' + speed bonus' : ''}`,
-      at: Date.now(),
-      destinationId: p.id,
-    });
-    // Job state advances regardless; money only moves if this tx id is new.
-    set({ jobs: r.state, wallet: pay.wallet, critical: get().critical + 1 });
-    if (pay.ok) {
-      const secs = (r.payout.elapsedMs / 1000).toFixed(1);
-      get().pushToast({
-        kind: 'money',
-        title: `+${formatMoney(p, r.payout.total)}`,
-        detail: r.payout.bonus
-          ? `Delivered in ${secs}s — includes ${formatMoney(p, r.payout.bonus)} speed bonus`
-          : `Delivered in ${secs}s`,
-      });
-    }
-  },
-
-  tick(dtMs) {
-    const s = get();
-    if (s.phase !== 'playing') return;
-    const paused = s.ui === 'pause';
-    if (paused) return;
-    const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
-    if (s.jobs.active) {
-      const p = pack();
-      const job = findJob(p, s.jobs.active.jobId);
-      const r = tickJob(s.jobs, job, dtMs, Date.now());
-      patch.jobs = r.state;
-      if (r.failed) {
-        patch.critical = s.critical + 1;
-        set(patch);
-        get().pushToast({ kind: 'warn', title: 'Delivery failed', detail: 'Time ran out. Talk to Mama Titi to try again.' });
-        return;
-      }
-    }
-    set(patch);
-  },
-
-  buy(businessId, itemId) {
+export const useGame = create<GameState>()((set, get): GameState => {
+  /** Debits the wallet and adds one item; shared by fixed-price buys and bargains. */
+  const purchase = (businessId: string, itemId: string, price: number, label?: string): boolean => {
     const p = pack();
     const biz = findBusiness(p, businessId);
-    const stock = biz?.stock.find((s) => s.itemId === itemId);
     const item = findItem(p, itemId);
-    if (!biz || !stock || !item) return false;
-    const r = debit(get().wallet, { id: makeId('buy'), amount: stock.price, reason: `${item.name} · ${biz.name}`, at: Date.now(), destinationId: p.id });
+    if (!biz || !item) return false;
+    const r = debit(get().wallet, { id: makeId('buy'), amount: price, reason: `${item.name} · ${biz.name}`, at: Date.now(), destinationId: p.id });
     if (!r.ok) {
-      get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, stock.price - get().wallet.balance)} more` });
+      get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, price - get().wallet.balance)} more` });
       return false;
     }
-    const inventory = addItem(get().inventory, {
-      itemId,
-      category: item.category,
-      quantity: 1,
-      purchasePrice: stock.price,
-      destinationId: p.id,
-      at: Date.now(),
-    });
+    const inventory = addItem(get().inventory, { itemId, category: item.category, quantity: 1, purchasePrice: price, destinationId: p.id, at: Date.now() });
     set({ wallet: r.wallet, inventory, critical: get().critical + 1 });
-    get().pushToast({ kind: 'item', title: `${item.name} added to bag`, detail: `−${formatMoney(p, stock.price)}` });
+    get().pushToast({ kind: 'item', title: `${item.name} added to bag`, detail: label ?? `−${formatMoney(p, price)}` });
+    if (r.wallet.balance < 300) get().showTip('low-money');
+    get().checkGoals();
     return true;
-  },
+  };
 
-  consume(stackKey) {
+  return {
+    phase: 'boot',
+    hasSave: false,
+    profile: null,
+    destinationId: DEFAULT_DESTINATION,
+    wallet: createWallet(0),
+    inventory: emptyInventory(),
+    jobs: emptyJobs(),
+    world: emptyWorld(DEFAULT_DESTINATION),
+    settings: DEFAULT_SETTINGS,
+    playTimeMs: 0,
+
+    ui: 'play',
+    dialogue: null,
+    shopId: null,
+    phoneApp: 'home',
+    nearby: null,
+    toasts: [],
+    tip: null,
+    tipQueue: [],
+    banner: null,
+    haggle: null,
+    transit: null,
+    arrival: null,
+    dirty: 0,
+    critical: 0,
+
+    setPhase(phase) {
+      const prev = get().phase;
+      set({ phase });
+      if (phase !== 'playing' || prev === 'playing') return;
+      // Entering the world: title card for the area, plus first-visit extras after travel.
+      const p = pack();
+      set({ banner: { key: Date.now(), title: p.area, tagline: p.tagline } });
+      const arrival = get().arrival;
+      if (arrival) {
+        set({ arrival: null });
+        if (arrival.firstVisit) {
+          if (p.welcome) setTimeout(() => get().sendMessage(p.welcome!.from, p.welcome!.text), 2600);
+          get().showTip('new-area');
+        }
+        get().checkGoals();
+      } else {
+        get().showTip('welcome');
+      }
+    },
+    setHasSave: (hasSave) => set({ hasSave }),
+
+    startNewGame(profile) {
+      const p = getDestination(DEFAULT_DESTINATION);
+      resetRuntime(p.spawn.position[0], p.spawn.position[1], p.spawn.facing);
+      set({
+        profile: { ...profile, avatar: sanitizeLook(profile.avatar) },
+        destinationId: p.id,
+        wallet: createWallet(p.startingMoney),
+        inventory: emptyInventory(),
+        jobs: emptyJobs(),
+        world: emptyWorld(p.id),
+        playTimeMs: 0,
+        ui: 'play',
+        dialogue: null,
+        shopId: null,
+        nearby: null,
+        toasts: [],
+        tip: null,
+        tipQueue: [],
+        haggle: null,
+        transit: null,
+        arrival: null,
+        hasSave: true,
+        critical: get().critical + 1,
+      });
+      setUiMode('play');
+    },
+
+    hydrate(save) {
+      const p = getDestination(save.destinationId);
+      resetRuntime(save.player.position[0], save.player.position[1], save.player.yaw);
+      set({
+        profile: save.profile,
+        destinationId: p.id,
+        wallet: save.wallet,
+        inventory: save.inventory,
+        jobs: save.jobs,
+        world: save.world ?? emptyWorld(p.id),
+        settings: { ...DEFAULT_SETTINGS, ...save.settings },
+        playTimeMs: save.stats?.playTimeMs ?? 0,
+        ui: 'play',
+        dialogue: null,
+        shopId: null,
+        tip: null,
+        tipQueue: [],
+        haggle: null,
+        transit: null,
+        arrival: null,
+        hasSave: true,
+      });
+      setUiMode('play');
+    },
+
+    resetAll() {
+      set({
+        phase: 'title',
+        hasSave: false,
+        profile: null,
+        destinationId: DEFAULT_DESTINATION,
+        wallet: createWallet(0),
+        inventory: emptyInventory(),
+        jobs: emptyJobs(),
+        world: emptyWorld(DEFAULT_DESTINATION),
+        ui: 'play',
+        dialogue: null,
+        shopId: null,
+        toasts: [],
+        tip: null,
+        tipQueue: [],
+        haggle: null,
+      });
+    },
+
+    setNearby(nearby) {
+      if (get().nearby?.id === nearby?.id) return;
+      set({ nearby });
+    },
+
+    interact() {
+      const { ui, nearby } = get();
+      if (ui !== 'play' || !nearby) return;
+      if (nearby.kind === 'npc') get().openDialogue(nearby.id);
+    },
+
+    openDialogue(npcId) {
+      const p = pack();
+      const npc = findNpc(p, npcId);
+      if (!npc) return;
+      const s = get();
+      const now = Date.now();
+      const ctx: DialogueContext = {
+        jobAvailable: (id) => {
+          const j = findJob(p, id);
+          return !!j && isAvailable(s.jobs, j, now);
+        },
+        jobActive: (id) => s.jobs.active?.jobId === id,
+        isDropoff: (id) => {
+          const j = findJob(p, id);
+          if (!j || s.jobs.active?.jobId !== id || j.dropoffNpcId !== npcId) return false;
+          return j.kind !== 'collect' || (s.jobs.active.collected?.length ?? 0) >= (j.collect?.count ?? 0);
+        },
+        jobCompletedBefore: (id) => completedCount(s.jobs, id) > 0,
+      };
+      set({ ui: 'dialogue', dialogue: { npcId, nodeId: resolveEntry(npc.dialogue, ctx) } });
+      setUiMode('dialogue');
+    },
+
+    chooseOption(o) {
+      const a = o.action;
+      switch (a.kind) {
+        case 'goto': {
+          const d = get().dialogue;
+          if (d) set({ dialogue: { ...d, nodeId: a.node } });
+          return;
+        }
+        case 'close':
+          get().closePanel();
+          return;
+        case 'acceptJob':
+          get().acceptJob(a.jobId);
+          get().closePanel();
+          return;
+        case 'deliverJob':
+          get().deliverJob(a.jobId);
+          get().closePanel();
+          return;
+        case 'openShop':
+          get().openShop(a.businessId);
+          return;
+        case 'openTravel':
+          get().openTravel();
+          return;
+      }
+    },
+
+    openShop(id) {
+      set({ ui: 'shop', shopId: id, dialogue: null, haggle: null });
+      setUiMode('shop');
+      if (findBusiness(pack(), id)?.haggle) get().showTip('haggle');
+    },
+
+    openPhone(app = 'home') {
+      const ui = get().ui;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit') return;
+      set({ ui: 'phone', phoneApp: app });
+      setUiMode('phone');
+      if (app === 'messages') get().markMessagesRead();
+    },
+
+    setPhoneApp(phoneApp) {
+      set({ phoneApp });
+      if (phoneApp === 'messages') get().markMessagesRead();
+    },
+
+    togglePause() {
+      const ui = get().ui;
+      if (ui === 'transit') return;
+      if (ui === 'pause') {
+        set({ ui: 'play' });
+        setUiMode('play');
+      } else if (ui === 'play') {
+        set({ ui: 'pause' });
+        setUiMode('pause');
+      } else {
+        get().closePanel();
+      }
+    },
+
+    openWardrobe() {
+      set({ ui: 'wardrobe', dialogue: null, shopId: null });
+      setUiMode('wardrobe');
+    },
+
+    saveProfile(name, avatar) {
+      const cur = get().profile;
+      if (!cur) return;
+      const clean = name.trim().slice(0, 18);
+      if (clean.length < 2) return;
+      set({ profile: { ...cur, name: clean, avatar: sanitizeLook(avatar) }, critical: get().critical + 1 });
+      get().closePanel();
+      get().pushToast({ kind: 'info', title: 'Look updated', detail: 'Saved to your profile.' });
+    },
+
+    closePanel() {
+      if (get().ui === 'transit') return;
+      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null });
+      setUiMode('play');
+    },
+
+    pushToast(t) {
+      const toast = { ...t, id: makeId('t') };
+      set({ toasts: [...get().toasts.slice(-2), toast] });
+    },
+    dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
+
+    showTip(id) {
+      const s = get();
+      const tip = TIPS[id];
+      if (!tip || !s.settings.tips || s.world.seenTips.includes(id)) return;
+      if (s.tip?.id === id || s.tipQueue.includes(id)) return;
+      if (!s.tip) set({ tip });
+      else set({ tipQueue: [...s.tipQueue, id] });
+    },
+
+    dismissTip() {
+      const s = get();
+      if (!s.tip) return;
+      const seenTips = [...s.world.seenTips, s.tip.id];
+      // job-specific tips are only useful while that kind of job is running
+      const relevant = (id: string) => {
+        if (id === 'collect' || id === 'job-started') return !!s.jobs.active;
+        return true;
+      };
+      const [next, ...rest] = s.tipQueue.filter((id) => !seenTips.includes(id) && relevant(id));
+      set({ world: { ...s.world, seenTips }, tip: next && s.settings.tips ? TIPS[next] : null, tipQueue: rest, dirty: s.dirty + 1 });
+    },
+
+    clearBanner: () => set({ banner: null }),
+
+    openTravel() {
+      if (get().jobs.active) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: 'Finish your job first', detail: 'You can travel once the current job is done.' });
+        return;
+      }
+      set({ ui: 'travel', dialogue: null });
+      setUiMode('travel');
+    },
+
+    travelTo(areaId) {
+      const s = get();
+      const from = s.destinationId;
+      const area = findArea(areaId);
+      if (!area || areaId === from || s.jobs.active) return;
+      const fare = fareBetween(from, areaId);
+      const p = pack();
+      const r = debit(s.wallet, { id: makeId('ride'), amount: fare, reason: `Danfo · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(p, fare - s.wallet.balance)} more. Every area has work.` });
+        return;
+      }
+      set({
+        wallet: r.wallet,
+        transit: { from, to: areaId, fare, firstVisit: !s.world.visited.includes(areaId) },
+        ui: 'transit',
+        dialogue: null,
+        nearby: null,
+        critical: s.critical + 1,
+      });
+      setUiMode('transit');
+    },
+
+    arrive() {
+      const s = get();
+      const t = s.transit;
+      if (!t) return;
+      const dest = getDestination(t.to);
+      resetRuntime(dest.arrival.position[0], dest.arrival.position[1], dest.arrival.facing);
+      const visited = s.world.visited.includes(t.to) ? s.world.visited : [...s.world.visited, t.to];
+      set({
+        destinationId: dest.id,
+        world: { ...s.world, visited, rides: s.world.rides + 1 },
+        transit: null,
+        arrival: { firstVisit: t.firstVisit },
+        ui: 'play',
+        nearby: null,
+        phase: 'loading',
+        critical: s.critical + 1,
+      });
+      setUiMode('play');
+    },
+
+    discover(landmarkId) {
+      const s = get();
+      if (s.world.discovered.includes(landmarkId)) return;
+      const lm = pack().landmarks.find((l) => l.id === landmarkId);
+      if (!lm) return;
+      set({ world: { ...s.world, discovered: [...s.world.discovered, landmarkId] }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'discover', title: `Discovered: ${lm.name}`, detail: lm.blurb });
+      get().showTip('discover');
+      get().checkGoals();
+    },
+
+    collect(spotIndex) {
+      const s = get();
+      const a = s.jobs.active;
+      const job = a && findJob(pack(), a.jobId);
+      if (!job || job.kind !== 'collect' || !job.collect) return;
+      const next = collectSpot(s.jobs, job, spotIndex);
+      if (!next) return;
+      set({ jobs: next, dirty: s.dirty + 1 });
+      const n = next.active?.collected?.length ?? 0;
+      const giver = findNpc(pack(), job.dropoffNpcId);
+      if (n >= job.collect.count) get().pushToast({ kind: 'info', title: `All ${n} collected`, detail: `Take them back to ${giver?.name}.` });
+      else get().pushToast({ kind: 'item', title: `Picked up a ${job.collect.item}`, detail: `${n} of ${job.collect.count}` });
+    },
+
+    sendMessage(from, text) {
+      const s = get();
+      const msg: PhoneMessage = { id: makeId('m'), from, text, at: Date.now(), read: false };
+      set({ world: { ...s.world, messages: [...s.world.messages, msg].slice(-60) }, dirty: s.dirty + 1 });
+      get().pushToast({ kind: 'message', title: `New message from ${from}`, detail: text.length > 70 ? `${text.slice(0, 68)}…` : text });
+      get().showTip('message');
+    },
+
+    markMessagesRead() {
+      const s = get();
+      if (!s.world.messages.some((m) => !m.read)) return;
+      set({ world: { ...s.world, messages: s.world.messages.map((m) => ({ ...m, read: true })) }, dirty: s.dirty + 1 });
+    },
+
+    checkGoals() {
+      const s = get();
+      const fresh = newlyCompleted(
+        {
+          jobs: s.jobs,
+          jobArea: (id) => areaOfJob(id)?.id,
+          visited: s.world.visited,
+          discovered: s.world.discovered,
+          inventory: s.inventory,
+          bestBargain: s.world.bestBargain,
+          rides: s.world.rides,
+          totalAreas: LAGOS_AREAS.length,
+        },
+        s.world.goalsDone,
+      );
+      if (!fresh.length) return;
+      let wallet = s.wallet;
+      for (const g of fresh) {
+        const r = credit(wallet, { id: `goal:${g.id}`, amount: g.reward, reason: `Goal · ${g.title}`, at: Date.now(), destinationId: s.destinationId });
+        wallet = r.wallet;
+      }
+      set({ wallet, world: { ...s.world, goalsDone: [...s.world.goalsDone, ...fresh.map((g) => g.id)] }, critical: s.critical + 1 });
+      const p = pack();
+      fresh.forEach((g, i) => setTimeout(() => get().pushToast({ kind: 'goal', title: `Goal complete: ${g.title}`, detail: `+${formatMoney(p, g.reward)} · ${g.description}` }), 900 * (i + 1)));
+    },
+
+    acceptJob(jobId) {
+      const p = pack();
+      const job = findJob(p, jobId);
+      if (!job) return;
+      const r = acceptJobFn(get().jobs, job, Date.now(), makeId('run'));
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: r.reason === 'busy' ? 'Finish your current job first' : 'Not ready yet' });
+        return;
+      }
+      const dropoff = findNpc(p, job.dropoffNpcId);
+      set({ jobs: r.state, critical: get().critical + 1 });
+      if (job.kind === 'collect' && job.collect) {
+        get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `Pick up ${job.collect.count} ${job.collect.item}s, then report to ${dropoff?.name}` });
+        get().showTip('collect');
+      } else {
+        get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `Take the ${job.cargo.toLowerCase()} to ${dropoff?.name}` });
+        get().showTip('job-started');
+      }
+    },
+
+    deliverJob(jobId) {
+      const p = pack();
+      const job = findJob(p, jobId);
+      const npc = job && findNpc(p, job.dropoffNpcId);
+      if (!job || !npc) return;
+      const live = runtime.actors.get(npc.id) ?? { x: npc.position[0], z: npc.position[1] };
+      const distance = Math.hypot(runtime.player.x - live.x, runtime.player.z - live.z);
+      const firstTime = completedCount(get().jobs, job.id) === 0;
+      const r = deliverJobFn(get().jobs, job, { now: Date.now(), distanceToDropoff: distance });
+      if (!r.ok) {
+        const msg: Record<string, string> = {
+          'too-far': `Get closer to ${npc.name}`,
+          expired: 'Too late — time ran out',
+          'no-job': 'No job in progress',
+          'wrong-job': 'That is not for this person',
+          'already-paid': 'Already delivered',
+          incomplete: `You still need more ${job.collect?.item ?? 'items'}s`,
+        };
+        get().pushToast({ kind: 'warn', title: msg[r.reason] });
+        return;
+      }
+      const pay = credit(get().wallet, {
+        id: r.payout.txId,
+        amount: r.payout.total,
+        reason: `${job.title}${r.payout.bonus ? ' + speed bonus' : ''}`,
+        at: Date.now(),
+        destinationId: p.id,
+      });
+      // Job state advances regardless; money only moves if this tx id is new.
+      set({ jobs: r.state, wallet: pay.wallet, critical: get().critical + 1 });
+      // drop job-specific tips that are no longer useful
+      const cur = get();
+      const stale = (id: string) => id === 'collect' || id === 'job-started';
+      if (cur.tip && stale(cur.tip.id)) {
+        const [next, ...rest] = cur.tipQueue.filter((id) => !stale(id));
+        set({ tip: next ? TIPS[next] : null, tipQueue: rest, world: { ...cur.world, seenTips: [...cur.world.seenTips, cur.tip.id] } });
+      } else {
+        set({ tipQueue: cur.tipQueue.filter((id) => !stale(id)) });
+      }
+      if (pay.ok) {
+        const secs = (r.payout.elapsedMs / 1000).toFixed(1);
+        get().pushToast({
+          kind: 'money',
+          title: `+${formatMoney(p, r.payout.total)}`,
+          detail: r.payout.bonus ? `Done in ${secs}s — includes ${formatMoney(p, r.payout.bonus)} speed bonus` : `Done in ${secs}s`,
+        });
+        get().showTip('first-money');
+        get().showTip('travel');
+        get().checkGoals();
+        if (firstTime) {
+          const giver = findNpc(p, job.giverNpcId);
+          if (giver) setTimeout(() => get().sendMessage(giver.name, `Thank you for the ${job.title.toLowerCase()}! You did well — come back anytime, there is always more work.`), 3200);
+        }
+      }
+    },
+
+    tick(dtMs) {
+      const s = get();
+      if (s.phase !== 'playing') return;
+      if (s.ui === 'pause' || s.ui === 'transit' || s.ui === 'wardrobe') return;
+      const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
+      if (s.jobs.active) {
+        const p = pack();
+        const job = findJob(p, s.jobs.active.jobId);
+        const r = tickJob(s.jobs, job, dtMs, Date.now());
+        patch.jobs = r.state;
+        if (r.failed && job) {
+          patch.critical = s.critical + 1;
+          set(patch);
+          const giver = findNpc(p, job.giverNpcId);
+          get().pushToast({ kind: 'warn', title: `${job.title} failed`, detail: `Time ran out. Talk to ${giver?.name ?? 'them'} to try again.` });
+          return;
+        }
+      }
+      set(patch);
+    },
+
+    buy(businessId, itemId) {
+      const stock = findBusiness(pack(), businessId)?.stock.find((x) => x.itemId === itemId);
+      if (!stock) return false;
+      return purchase(businessId, itemId, stock.price);
+    },
+
+    startHaggle(businessId, itemId) {
+      const biz = findBusiness(pack(), businessId);
+      const stock = biz?.stock.find((x) => x.itemId === itemId);
+      if (!biz?.haggle || !stock) return;
+      set({ haggle: { ...startHaggleFn(itemId, stock.price, biz.haggle), businessId } });
+    },
+
+    offer(amount) {
+      const h = get().haggle;
+      if (!h) return;
+      const next = makeOffer(h, amount);
+      set({ haggle: { ...next, businessId: h.businessId } });
+      if (next.status === 'deal') finishDeal({ ...next, businessId: h.businessId });
+    },
+
+    acceptHaggle() {
+      const h = get().haggle;
+      if (!h) return;
+      const next = acceptAsk(h);
+      set({ haggle: { ...next, businessId: h.businessId } });
+      if (next.status === 'deal') finishDeal({ ...next, businessId: h.businessId });
+    },
+
+    leaveHaggle() {
+      const h = get().haggle;
+      if (!h) return;
+      set({ haggle: h.status === 'deal' ? null : { ...walkAway(h), businessId: h.businessId } });
+    },
+
+    consume(stackKey) {
+      const p = pack();
+      const entry = get().inventory.entries.find((e) => e.key === stackKey);
+      const item = entry && findItem(p, entry.itemId);
+      if (!entry || !item?.consumable) return;
+      const r = removeFromStack(get().inventory, stackKey, 1);
+      if (!r.ok) return;
+      set({ inventory: r.inventory, critical: get().critical + 1 });
+      get().pushToast({ kind: 'info', title: item.category === 'drink' ? `You drank the ${item.name.toLowerCase()}` : `You ate the ${item.name.toLowerCase()}`, detail: 'Refreshed.' });
+    },
+
+    updateSettings(patch) {
+      const next = { ...get().settings, ...patch };
+      set({ settings: next, dirty: get().dirty + 1, ...(patch.tips === false ? { tip: null, tipQueue: [] } : {}) });
+    },
+  };
+
+  function finishDeal(h: HaggleState & { businessId: string }) {
     const p = pack();
-    const entry = get().inventory.entries.find((e) => e.key === stackKey);
-    const item = entry && findItem(p, entry.itemId);
-    if (!entry || !item?.consumable) return;
-    const r = removeFromStack(get().inventory, stackKey, 1);
-    if (!r.ok) return;
-    set({ inventory: r.inventory, critical: get().critical + 1 });
-    get().pushToast({ kind: 'info', title: item.category === 'drink' ? `You drank the ${item.name.toLowerCase()}` : `You ate the ${item.name.toLowerCase()}`, detail: 'Refreshed.' });
-  },
+    const saved = savings(h);
+    const label = saved > 0 ? `Paid ${formatMoney(p, h.dealPrice!)} — saved ${Math.round(saved * 100)}%` : undefined;
+    const ok = purchase(h.businessId, h.itemId, h.dealPrice!, label);
+    if (!ok) {
+      set({ haggle: { ...h, status: 'final', dealPrice: null } });
+      return;
+    }
+    const s = get();
+    if (saved > s.world.bestBargain) set({ world: { ...s.world, bestBargain: saved }, dirty: s.dirty + 1 });
+    get().checkGoals();
+  }
+});
 
-  updateSettings(patch) {
-    set({ settings: { ...get().settings, ...patch }, dirty: get().dirty + 1 });
-  },
-}));
+/** Ids of every goal, for the Goals list. */
+export const GOAL_IDS = GOALS.map((g) => g.id);
+export const AREA_COUNT = ALL_PACKS.length;
 
 /** Builds the persistent snapshot used by the save manager. */
 export function snapshotForSave() {
@@ -416,6 +717,7 @@ export function snapshotForSave() {
     wallet: s.wallet,
     inventory: s.inventory,
     jobs: s.jobs,
+    world: s.world,
     settings: s.settings,
     player: { position: [runtime.player.x, runtime.player.z] as [number, number], yaw: runtime.player.yaw },
     stats: { playTimeMs: s.playTimeMs },

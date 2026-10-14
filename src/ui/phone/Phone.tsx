@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { findItem, findNpc, formatMoney } from '../../game/content';
+import { areaOfJob, findItem, findNpc, formatMoney, getDestination } from '../../game/content';
 import type { ItemCategory } from '../../game/content/types';
 import { completedCount, isAvailable } from '../../game/systems/jobs';
 import { totalItems } from '../../game/systems/inventory';
@@ -7,10 +7,13 @@ import { useGame, type PhoneApp } from '../../game/store/gameStore';
 import { saves } from '../../game/persistence/instance';
 import { usePack } from '../../scene/worldContext';
 import { MapView } from '../hud/MapView';
+import { LagosMap } from '../travel/LagosMap';
+import { GOALS } from '../../game/systems/progress';
+import { LAGOS_AREAS, fareBetween } from '../../game/content/regions/lagosState';
 import { describeLook } from '../avatar/AvatarEditor';
 import { formatClock, formatDuration } from '../hooks';
 import {
-  IconBack, IconBag, IconBed, IconChat, IconGear, IconJobs, IconMap, IconPlane, IconTicket, IconUser, IconWallet, IconLock, ITEM_ICONS,
+  IconBack, IconBag, IconBed, IconBus, IconChat, IconGear, IconJobs, IconMap, IconPlane, IconTicket, IconUser, IconWallet, IconLock, ITEM_ICONS,
 } from '../icons/Icons';
 
 type AppId = PhoneApp | 'messages' | 'travel' | 'events' | 'bookings';
@@ -20,8 +23,8 @@ const APPS: { id: AppId; name: string; Icon: (p: { size?: number }) => JSX.Eleme
   { id: 'jobs', name: 'Jobs', Icon: IconJobs, live: true },
   { id: 'bag', name: 'Bag', Icon: IconBag, live: true },
   { id: 'wallet', name: 'Wallet', Icon: IconWallet, live: true },
-  { id: 'messages', name: 'Messages', Icon: IconChat, live: false },
-  { id: 'travel', name: 'Travel', Icon: IconPlane, live: false },
+  { id: 'messages', name: 'Messages', Icon: IconChat, live: true },
+  { id: 'travel', name: 'Travel', Icon: IconPlane, live: true },
   { id: 'events', name: 'Events', Icon: IconTicket, live: false },
   { id: 'bookings', name: 'Bookings', Icon: IconBed, live: false },
   { id: 'profile', name: 'Profile', Icon: IconUser, live: true },
@@ -99,6 +102,10 @@ export function Phone() {
                 <ProfileApp />
               ) : app === 'settings' ? (
                 <SettingsApp />
+              ) : app === 'messages' ? (
+                <MessagesApp />
+              ) : app === 'travel' ? (
+                <TravelApp />
               ) : null}
             </div>
           </>
@@ -116,6 +123,7 @@ function Home({ open, now }: { open: (id: AppId) => void; now: number }) {
   const jobs = useGame((s) => s.jobs);
   const close = useGame((s) => s.closePanel);
   const avail = pack.jobs.filter((j) => isAvailable(jobs, j, now)).length + (jobs.active ? 1 : 0);
+  const unread = useGame((s) => s.world.messages.filter((m) => !m.read).length);
   const d = new Date(now);
   return (
     <div className="phone-home">
@@ -125,10 +133,11 @@ function Home({ open, now }: { open: (id: AppId) => void; now: number }) {
       </div>
       <div className="apps">
         {APPS.map((a) => (
-          <button key={a.id} className={`app ${a.live ? '' : 'soon'} ${a.id === 'jobs' && avail ? 'live' : ''}`} onClick={() => open(a.id)} aria-label={a.live ? a.name : `${a.name} (coming later)`}>
+          <button key={a.id} className={`app ${a.live ? '' : 'soon'} ${a.id === 'jobs' && avail ? 'live' : ''}`} onClick={() => open(a.id)} aria-label={a.live ? (a.id === 'messages' && unread ? `Messages, ${unread} unread` : a.name) : `${a.name} (coming later)`}>
             <span className="tile">{a.live ? <a.Icon size={24} /> : <a.Icon size={22} />}</span>
             {a.name}
             {a.id === 'jobs' && avail > 0 && <span className="badge">{avail}</span>}
+            {a.id === 'messages' && unread > 0 && <span className="badge">{unread}</span>}
           </button>
         ))}
       </div>
@@ -150,6 +159,67 @@ function Locked({ id }: { id: string }) {
 }
 
 function JobsApp() {
+  const [tab, setTab] = useState<'work' | 'goals'>('work');
+  return (
+    <>
+      <div className="seg tabs" role="tablist" aria-label="Jobs or goals">
+        <button role="tab" aria-selected={tab === 'work'} aria-pressed={tab === 'work'} onClick={() => setTab('work')}>
+          Work here
+        </button>
+        <button role="tab" aria-selected={tab === 'goals'} aria-pressed={tab === 'goals'} onClick={() => setTab('goals')}>
+          Goals
+        </button>
+      </div>
+      {tab === 'work' ? <WorkList /> : <GoalsList />}
+    </>
+  );
+}
+
+function GoalsList() {
+  const pack = usePack();
+  const s = useGame();
+  const snap = {
+    jobs: s.jobs,
+    jobArea: (id: string) => areaOfJob(id)?.id,
+    visited: s.world.visited,
+    discovered: s.world.discovered,
+    inventory: s.inventory,
+    bestBargain: s.world.bestBargain,
+    rides: s.world.rides,
+    totalAreas: LAGOS_AREAS.length,
+  };
+  const doneCount = s.world.goalsDone.length;
+  return (
+    <>
+      <div className="eyelabel" style={{ margin: '12px 0 4px' }}>
+        {doneCount} of {GOALS.length} complete
+      </div>
+      {GOALS.map((g) => {
+        const [cur, target] = g.progress(snap);
+        const done = s.world.goalsDone.includes(g.id);
+        return (
+          <div className={`goal-row ${done ? 'done' : ''}`} key={g.id}>
+            <div style={{ minWidth: 0 }}>
+              <div className="goal-title">{g.title}</div>
+              <div className="sub">{g.description}</div>
+              {!done && target > 1 && (
+                <div className="goal-bar" aria-hidden="true">
+                  <i style={{ width: `${(cur / target) * 100}%` }} />
+                </div>
+              )}
+            </div>
+            <div className="goal-side num">
+              {done ? <span className="chip done">Done</span> : target > 1 ? `${cur}/${target}` : ''}
+              <span className="sub">+{formatMoney(pack, g.reward)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function WorkList() {
   const pack = usePack();
   const jobs = useGame((s) => s.jobs);
   const now = useNow(500);
@@ -289,14 +359,93 @@ function WalletApp() {
 
 function MapApp() {
   const pack = usePack();
+  const discovered = useGame((s) => s.world.discovered);
   return (
     <>
       <div className="cut" style={{ height: 380, background: '#2a231b', border: '1px solid var(--line)' }}>
         <MapView pack={pack} mode="full" />
       </div>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', lineHeight: 1.5 }}>
-        {pack.area}, {pack.name}. The yellow ring marks where you are needed. More of the city opens as you travel.
+        {pack.area}, {pack.name}. Yellow marks work, teal marks the danfo stop.
       </p>
+      <div className="eyelabel section-title">Landmarks here</div>
+      {pack.landmarks.map((l) => {
+        const found = discovered.includes(l.id);
+        return (
+          <div className="card-line" key={l.id}>
+            <div>
+              <div style={{ color: found ? 'var(--cream)' : 'var(--faint)' }}>{found ? l.name : 'Undiscovered'}</div>
+              <div className="sub">{found ? l.blurb : 'Explore to find it.'}</div>
+            </div>
+            {found ? <span className="chip done">Found</span> : <span className="chip">?</span>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function MessagesApp() {
+  const messages = useGame((s) => s.world.messages);
+  if (!messages.length) {
+    return (
+      <div className="empty">
+        <IconChat size={34} style={{ color: 'var(--faint)' }} />
+        <p>No messages yet. People you work with and meet around Lagos will text you here.</p>
+      </div>
+    );
+  }
+  return (
+    <ul className="messages" aria-label="Messages">
+      {[...messages].reverse().map((m) => (
+        <li key={m.id} className="message">
+          <div className="avatar" aria-hidden="true">{m.from.replace(/^(Engr\.|Mrs\.|Mallam|Alhaja)\s+/, '').slice(0, 1)}</div>
+          <div style={{ minWidth: 0 }}>
+            <div className="msg-head">
+              <b>{m.from}</b>
+              <span className="sub num">{new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <p>{m.text}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TravelApp() {
+  const current = useGame((s) => s.destinationId);
+  const visited = useGame((s) => s.world.visited);
+  const discovered = useGame((s) => s.world.discovered);
+  const pack = usePack();
+  return (
+    <>
+      <div className="travel-map cut-sm" style={{ marginBottom: 12 }}>
+        <LagosMap current={current} visited={visited} />
+      </div>
+      {LAGOS_AREAS.map((a) => {
+        const dest = getDestination(a.id);
+        const found = dest.landmarks.filter((l) => discovered.includes(l.id)).length;
+        const here = a.id === current;
+        return (
+          <div className="card-line" key={a.id}>
+            <div style={{ minWidth: 0 }}>
+              <div>
+                {a.district} {here && <span className="chip live" style={{ marginLeft: 6 }}>You are here</span>}
+              </div>
+              <div className="sub">{a.known} · landmarks {found}/{dest.landmarks.length}</div>
+            </div>
+            <span className="num" style={{ color: here ? 'var(--muted)' : 'var(--cream)', fontWeight: 750 }}>
+              {here ? '—' : formatMoney(pack, fareBetween(current, a.id))}
+            </span>
+          </div>
+        );
+      })}
+      <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', lineHeight: 1.5, marginTop: 12 }}>
+        <IconBus size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />
+        To ride, talk to the conductor at the bus stop (look for the teal marker).
+      </p>
+      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--faint)' }}>Flights to Accra, Abuja and beyond open with the airport.</p>
     </>
   );
 }
@@ -398,6 +547,13 @@ function SettingsApp() {
           ))}
         </div>
       </div>
+      <label className="setting">
+        <div>
+          Tips
+          <div className="sub">First-time hints about what to do next</div>
+        </div>
+        <input type="checkbox" className="toggle" checked={settings.tips} onChange={(e) => update({ tips: e.target.checked })} />
+      </label>
       <label className="setting">
         <div>Show frame rate</div>
         <input type="checkbox" className="toggle" checked={settings.showFps} onChange={(e) => update({ showFps: e.target.checked })} />

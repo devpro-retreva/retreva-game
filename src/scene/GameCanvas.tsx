@@ -5,6 +5,7 @@ import { input } from '../game/core/input';
 import { useGame } from '../game/store/gameStore';
 import { makeSkyTexture } from './builders/painters';
 import { Beacons } from './Beacons';
+import { Collectibles } from './Collectibles';
 import { CameraRig } from './CameraRig';
 import { Lighting } from './Lighting';
 import { Npcs } from './Npcs';
@@ -18,7 +19,7 @@ export const isCoarsePointer = () => typeof matchMedia !== 'undefined' && matchM
 export function GameCanvas() {
   const pack = usePack();
   const shadowSetting = useGame((s) => s.settings.shadows);
-  const paused = useGame((s) => s.ui === 'wardrobe');
+  const paused = useGame((s) => s.ui === 'wardrobe' || s.ui === 'transit');
   const coarse = useMemo(isCoarsePointer, []);
   const shadows = shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse);
   const sky = useMemo(makeSkyTexture, []);
@@ -51,7 +52,7 @@ export function GameCanvas() {
       onPointerCancel={onPointerUp}
     >
       <Canvas
-        key={shadows ? 'sh' : 'nosh'}
+        key={`${pack.id}-${shadows ? 'sh' : 'nosh'}`}
         frameloop={paused ? 'never' : 'always'}
         shadows={shadows ? { type: THREE.PCFSoftShadowMap } : false}
         dpr={coarse ? [1, 1.5] : [1, 2]}
@@ -69,6 +70,7 @@ export function GameCanvas() {
         <Npcs />
         <Player />
         <Beacons />
+        <Collectibles />
         <CameraRig />
         <InteractionSystem />
         <GameLoop />

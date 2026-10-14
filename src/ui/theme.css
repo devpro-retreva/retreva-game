@@ -4,6 +4,8 @@
    ───────────────────────────────────────────────────────────── */
 
 :root {
+  --sky: #6fc3d6;
+  --teal: #3fc1c9;
   --ink: #15130f;
   --ink-2: #221e18;
   --ink-3: #2e2921;
@@ -447,6 +449,19 @@ input {
 }
 .toast.is-item {
   border-color: var(--green);
+}
+.toast.is-discover {
+  border-color: var(--sky);
+}
+.toast.is-goal {
+  border-color: var(--danfo);
+  background: linear-gradient(90deg, rgba(242, 183, 5, 0.16), transparent 60%), var(--panel);
+}
+.toast.is-goal .t {
+  color: var(--danfo);
+}
+.toast.is-message {
+  border-color: var(--teal);
 }
 .toast.is-warn {
   border-color: var(--coral);
@@ -1225,6 +1240,332 @@ input[type='range'] {
   color: var(--cream-2);
 }
 
+/* ── travel, arrival, tips ───────────────────────────────── */
+
+.lagos-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.travel-map {
+  aspect-ratio: 1;
+  width: min(100%, 300px);
+  margin: 0 auto var(--s2);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #2d6f86;
+}
+.travel-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.travel-row .name {
+  display: flex;
+  align-items: center;
+}
+.transit {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 13, 10, 0.92);
+  animation: fade 240ms var(--ease);
+  padding: var(--s4);
+}
+.transit-card {
+  width: min(460px, 100%);
+  text-align: center;
+}
+.transit-card h2 {
+  margin: 6px 0 14px;
+  font-size: var(--fs-xxl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.transit-map {
+  aspect-ratio: 1;
+  width: min(100%, 360px);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+}
+.transit-line {
+  margin: 14px 0 6px;
+  color: var(--cream-2);
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+.transit-meta {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 650;
+}
+.area-banner {
+  position: absolute;
+  top: 30vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 32px));
+  text-align: center;
+  pointer-events: none !important;
+  animation: bannerIn 3800ms var(--ease) forwards;
+}
+.area-title {
+  font-size: clamp(40px, 8vw, 72px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  color: var(--cream);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+.area-tag {
+  margin-top: 8px;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--cream);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
+}
+.area-banner .eyelabel {
+  color: var(--cream-2);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+@keyframes bannerIn {
+  0% { opacity: 0; transform: translate(-50%, 10px); }
+  12% { opacity: 1; transform: translate(-50%, 0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.tip-card {
+  position: absolute;
+  left: var(--edge);
+  bottom: calc(var(--edge-bottom) + 64px);
+  width: min(340px, calc(100vw - 2 * var(--edge)));
+  padding: var(--s3) var(--s4) var(--s4);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  animation: sheetIn 260ms var(--ease);
+}
+.tip-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-md);
+}
+.tip-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--teal);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 12px;
+  font-style: italic;
+}
+.tip-card p {
+  margin: 8px 0 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--cream-2);
+}
+.tip-actions {
+  display: flex;
+  gap: 8px;
+}
+.tip-actions .btn {
+  min-height: 36px;
+  font-size: var(--fs-xs);
+}
+.touch .tip-card {
+  bottom: auto;
+  top: calc(var(--edge-top) + 112px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(380px, calc(100vw - 28px));
+}
+.phone-btn {
+  position: relative;
+  overflow: visible;
+}
+.hud-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--coral);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+
+/* ── haggling ─────────────────────────────────────────────── */
+
+.haggle {
+  padding: var(--s3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.haggle-item .name {
+  font-weight: 800;
+  font-size: var(--fs-lg);
+}
+.haggle-seller {
+  padding: var(--s3);
+  background: var(--ink-3);
+  border-left: 3px solid var(--danfo);
+}
+.haggle-line {
+  margin: 4px 0 10px;
+  font-size: var(--fs-md);
+  line-height: 1.4;
+}
+.haggle-ask {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.haggle-ask b {
+  font-size: var(--fs-xl);
+  font-weight: 800;
+}
+.patience {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 4px;
+}
+.patience i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--coral);
+}
+.haggle-offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+.haggle-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.haggle-actions .btn {
+  flex: 1 1 140px;
+}
+.link-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  align-self: flex-start;
+  padding: 4px 0;
+  min-height: 32px;
+}
+
+/* ── phone: tabs, goals, messages ─────────────────────────── */
+
+.seg.tabs {
+  display: flex;
+  margin-bottom: 4px;
+}
+.seg.tabs button {
+  flex: 1;
+  min-height: 38px;
+  font-size: var(--fs-sm);
+}
+.goal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.goal-title {
+  font-weight: 750;
+  font-size: var(--fs-sm);
+}
+.goal-row.done .goal-title {
+  color: var(--muted);
+}
+.goal-row .sub {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 2px;
+}
+.goal-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  font-size: var(--fs-sm);
+  font-weight: 750;
+  flex: none;
+}
+.goal-bar {
+  margin-top: 6px;
+  height: 4px;
+  width: 160px;
+  max-width: 100%;
+  background: rgba(246, 239, 226, 0.12);
+}
+.goal-bar i {
+  display: block;
+  height: 100%;
+  background: var(--danfo);
+}
+.messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.message {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.message .avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+.msg-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+.msg-head .sub {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}
+.message p {
+  margin: 4px 0 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--cream-2);
+}
+
 /* ── avatar editor ─────────────────────────────────────────── */
 
 .gender-toggle {
@@ -1371,6 +1712,9 @@ input[type='range'] {
 /* ── responsive ────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
+  .travel-map {
+    width: min(100%, 220px);
+  }
   .minimap {
     width: 96px;
     height: 96px;

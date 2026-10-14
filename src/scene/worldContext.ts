@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { getDestination } from '../game/content';
+import { getDestination, type DestinationPack } from '../game/content';
 import { buildCollisionWorld, type CollisionWorld } from '../game/systems/collision';
 import { useGame } from '../game/store/gameStore';
 
@@ -24,10 +24,11 @@ export function useCollisionWorld() {
   return useMemo(() => getCollisionWorld(id), [id]);
 }
 
-/** Sidewalks are raised slightly; the player steps up onto them. */
-export function groundHeight(x: number, halfWidth: number, sidewalk: number): number {
+/** Sidewalks are raised slightly; the player steps up onto them. Beaches are flat. */
+export function groundHeight(x: number, road: DestinationPack['road']): number {
+  if (road.style === 'sand') return 0;
   const ax = Math.abs(x);
-  return ax > halfWidth + 0.36 && ax < halfWidth + sidewalk + 0.05 ? 0.12 : 0;
+  return ax > road.halfWidth + 0.36 && ax < road.halfWidth + road.sidewalk + 0.05 ? 0.12 : 0;
 }
 
 export function lerpAngle(a: number, b: number, t: number): number {

@@ -27,6 +27,11 @@ export function InteractionSystem() {
     }
     const npc = best && pack.npcs.find((n) => n.id === best!.id);
     s.setNearby(npc ? { id: npc.id, kind: 'npc', label: npc.name, verb: npc.promptVerb } : null);
+    // landmarks discover themselves when you walk close
+    for (const lm of pack.landmarks) {
+      if (s.world.discovered.includes(lm.id)) continue;
+      if (Math.hypot(lm.position[0] - p.x, lm.position[1] - p.z) < lm.radius) s.discover(lm.id);
+    }
   });
   return null;
 }

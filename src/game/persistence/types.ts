@@ -1,8 +1,9 @@
 import type { Wallet } from '../systems/economy';
 import type { Inventory } from '../systems/inventory';
 import type { JobsState } from '../systems/jobs';
+import type { PhoneMessage } from '../systems/progress';
 
-export const SAVE_SCHEMA_VERSION = 2;
+export const SAVE_SCHEMA_VERSION = 3;
 
 export type Gender = 'male' | 'female';
 export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
@@ -41,7 +42,30 @@ export interface Settings {
   textScale: 1 | 1.15 | 1.3;
   shadows: 'auto' | 'on' | 'off';
   showFps: boolean;
+  /** Show first-time tip cards. */
+  tips: boolean;
 }
+
+/** Exploration and social progress across all areas. */
+export interface WorldProgress {
+  visited: string[];
+  discovered: string[];
+  goalsDone: string[];
+  seenTips: string[];
+  messages: PhoneMessage[];
+  bestBargain: number;
+  rides: number;
+}
+
+export const emptyWorld = (home: string): WorldProgress => ({
+  visited: [home],
+  discovered: [],
+  goalsDone: [],
+  seenTips: [],
+  messages: [],
+  bestBargain: 0,
+  rides: 0,
+});
 
 export interface SaveData {
   schemaVersion: number;
@@ -55,6 +79,7 @@ export interface SaveData {
   wallet: Wallet;
   inventory: Inventory;
   jobs: JobsState;
+  world: WorldProgress;
   settings: Settings;
   player: { position: [number, number]; yaw: number };
   stats: { playTimeMs: number };

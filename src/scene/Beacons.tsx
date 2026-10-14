@@ -1,50 +1,73 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { findNpc } from '../game/content';
+import type { DestinationPack, NpcDef } from '../game/content/types';
 import { isAvailable } from '../game/systems/jobs';
 import { useGame } from '../game/store/gameStore';
-import { beaconMaterial, ringMaterial } from './materials';
+import { beaconMaterial, ringMaterial, travelBeaconMaterial } from './materials';
 import { usePack } from './worldContext';
 
+/** NPCs whose dialogue can open travel (danfo conductors, keke riders). */
+function conductors(pack: DestinationPack): NpcDef[] {
+  return pack.npcs.filter((n) => Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === 'openTravel')));
+}
+
 /**
- * Floating job markers: a diamond over whoever has work for you,
- * and a diamond + ground ring over the delivery target while a job is live.
- * Visibility is decided per frame from store snapshots — no React re-renders.
+ * Floating markers, decided per frame from store snapshots (no React renders):
+ *  - yellow diamond over anyone with work for you, or over the drop-off while a job is live
+ *  - yellow ground ring at the drop-off
+ *  - teal diamond over conductors who can take you to another area
  */
 export function Beacons() {
   const pack = usePack();
-  const diamond = useRef<THREE.Mesh>(null);
+  const travel = useMemo(() => conductors(pack), [pack]);
+  const diamonds = useRef<(THREE.Mesh | null)[]>([]);
+  const travelMarks = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
     const s = useGame.getState();
     const t = clock.elapsedTime;
-    const job = pack.jobs[0];
-    let npcId: string | null = null;
-    let active = false;
-    if (job) {
-      if (s.jobs.active?.jobId === job.id) {
-        npcId = job.dropoffNpcId;
-        active = true;
-      } else if (isAvailable(s.jobs, job, Date.now())) {
+    const reduced = s.settings.reducedMotion;
+    const hidden = s.ui === 'dialogue' || s.ui === 'transit';
+    const bob = reduced ? 0 : Math.sin(t * 2.4) * 0.08;
+    const spin = reduced ? 0 : t * 1.6;
+    const now = Date.now();
+    let ringAt: [number, number] | null = null;
+
+    pack.jobs.forEach((job, i) => {
+      const m = diamonds.current[i];
+      if (!m) return;
+      let npcId: string | null = null;
+      const a = s.jobs.active;
+      if (a?.jobId === job.id) {
+        const ready = job.kind !== 'collect' || (a.collected?.length ?? 0) >= (job.collect?.count ?? 0);
+        if (ready) npcId = job.dropoffNpcId;
+      } else if (!a && isAvailable(s.jobs, job, now)) {
         npcId = job.giverNpcId;
       }
-    }
-    const npc = npcId ? findNpc(pack, npcId) : undefined;
-    const show = !!npc && s.ui !== 'dialogue';
-    const reduced = s.settings.reducedMotion;
-    if (diamond.current) {
-      diamond.current.visible = show;
+      const npc = npcId ? pack.npcs.find((n) => n.id === npcId) : undefined;
+      m.visible = !!npc && !hidden;
       if (npc) {
-        diamond.current.position.set(npc.position[0], 2.35 + (reduced ? 0 : Math.sin(t * 2.4) * 0.08), npc.position[1]);
-        diamond.current.rotation.y = reduced ? 0 : t * 1.6;
+        m.position.set(npc.position[0], 2.35 + bob, npc.position[1]);
+        m.rotation.y = spin;
+        if (a?.jobId === job.id) ringAt = npc.position;
       }
-    }
+    });
+
+    travel.forEach((npc, i) => {
+      const m = travelMarks.current[i];
+      if (!m) return;
+      m.visible = !hidden && !s.jobs.active;
+      m.position.set(npc.position[0], 2.3 + bob * 0.6, npc.position[1]);
+      m.rotation.y = -spin * 0.7;
+    });
+
     if (ring.current) {
-      ring.current.visible = show && active;
-      if (npc) {
-        ring.current.position.set(npc.position[0], 0.14, npc.position[1]);
+      ring.current.visible = !!ringAt && !hidden;
+      if (ringAt) {
+        const [x, z] = ringAt as [number, number];
+        ring.current.position.set(x, 0.14, z);
         const k = reduced ? 1 : 1 + ((t * 0.8) % 1) * 0.6;
         ring.current.scale.setScalar(k);
         (ring.current.material as THREE.MeshBasicMaterial).opacity = reduced ? 0.45 : 0.6 * (1 - ((t * 0.8) % 1));
@@ -54,9 +77,16 @@ export function Beacons() {
 
   return (
     <>
-      <mesh ref={diamond} material={beaconMaterial} visible={false} renderOrder={2}>
-        <octahedronGeometry args={[0.2, 0]} />
-      </mesh>
+      {pack.jobs.map((j, i) => (
+        <mesh key={j.id} ref={(m) => (diamonds.current[i] = m)} material={beaconMaterial} visible={false} renderOrder={2}>
+          <octahedronGeometry args={[0.2, 0]} />
+        </mesh>
+      ))}
+      {travel.map((n, i) => (
+        <mesh key={n.id} ref={(m) => (travelMarks.current[i] = m)} material={travelBeaconMaterial} visible={false} renderOrder={2}>
+          <octahedronGeometry args={[0.16, 0]} />
+        </mesh>
+      ))}
       <mesh ref={ring} rotation-x={-Math.PI / 2} material={ringMaterial} visible={false} renderOrder={2}>
         <ringGeometry args={[1.2, 1.38, 40]} />
       </mesh>

@@ -145,6 +145,17 @@ export const IconPin = (p: P) => (
     <circle cx="12" cy="10" r="2.2" />
   </Base>
 );
+export const IconFlag = (p: P) => (
+  <Base {...p}>
+    <path d="M5.5 21V4M5.5 4.5h11l-2 4 2 4h-11" />
+  </Base>
+);
+export const IconBus = (p: P) => (
+  <Base {...p}>
+    <rect x="4" y="4.5" width="16" height="12.5" rx="2" />
+    <path d="M4 11h16M8 17v2.5M16 17v2.5M7.5 14h.01M16.5 14h.01" />
+  </Base>
+);
 export const IconLock = (p: P) => (
   <Base {...p}>
     <rect x="5.5" y="10.5" width="13" height="9" rx="1.5" />

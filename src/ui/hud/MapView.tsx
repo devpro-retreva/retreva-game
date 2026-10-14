@@ -15,6 +15,7 @@ export function MapView({ pack, mode }: { pack: DestinationPack; mode: 'follow' 
   const me = useRef<SVGGElement>(null);
   const target = useRef<SVGGElement>(null);
   const jobs = useGame((s) => s.jobs);
+  const discovered = useGame((s) => s.world.discovered);
 
   const [minX, minZ, maxX, maxZ] = useMemo(() => {
     const xs = pack.buildings.flatMap((b) => [b.position[0] - b.size[2] / 2, b.position[0] + b.size[2] / 2]);
@@ -22,8 +23,9 @@ export function MapView({ pack, mode }: { pack: DestinationPack; mode: 'follow' 
     return [Math.min(...xs) - 2, Math.min(...zs) - 4, Math.max(...xs) + 2, Math.max(...zs) + 4];
   }, [pack]);
 
-  const job = pack.jobs[0];
-  const goalNpc = jobs.active ? pack.npcs.find((n) => n.id === job?.dropoffNpcId) : pack.npcs.find((n) => n.id === job?.giverNpcId);
+  const activeJob = jobs.active ? pack.jobs.find((j) => j.id === jobs.active!.jobId) : undefined;
+  const job = activeJob ?? pack.jobs[0];
+  const goalNpc = activeJob ? pack.npcs.find((n) => n.id === activeJob.dropoffNpcId) : pack.npcs.find((n) => n.id === job?.giverNpcId);
 
   useRaf(() => {
     const p = runtime.player;
@@ -85,9 +87,16 @@ export function MapView({ pack, mode }: { pack: DestinationPack; mode: 'follow' 
               {b.sign!.text}
             </text>
           ))}
-      {pack.npcs.map((n) => (
-        <circle key={n.id} cx={n.position[0]} cy={n.position[1]} r={full ? 0.9 : 0.7} fill="#f6efe2" opacity={0.85} />
-      ))}
+      {pack.npcs.map((n) => {
+        const conductor = Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === 'openTravel'));
+        return <circle key={n.id} cx={n.position[0]} cy={n.position[1]} r={conductor ? (full ? 1.3 : 1.1) : full ? 0.9 : 0.7} fill={conductor ? '#3fc1c9' : '#f6efe2'} opacity={0.9} />;
+      })}
+      {full &&
+        pack.landmarks
+          .filter((l) => discovered.includes(l.id))
+          .map((l) => (
+            <rect key={l.id} x={l.position[0] - 0.9} y={l.position[1] - 0.9} width={1.8} height={1.8} transform={`rotate(45 ${l.position[0]} ${l.position[1]})`} fill="#6fc3d6" stroke="#15130f" strokeWidth={0.3} />
+          ))}
       {goalNpc && (
         <g ref={target}>
           <circle cx={goalNpc.position[0]} cy={goalNpc.position[1]} r={full ? 2.6 : 2} fill="none" stroke="#f2b705" strokeWidth={0.5} />

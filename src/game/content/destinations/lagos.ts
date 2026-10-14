@@ -15,10 +15,18 @@ const BLD_DEPTH = 8;
 export const lagos: DestinationPack = {
   id: 'lagos-adeniyi',
   name: 'Lagos',
-  area: 'Adeniyi Street',
+  area: 'Yaba',
+  tagline: 'Adeniyi Street — bukas, barbers and busy danfos on the mainland.',
   country: 'Nigeria',
   currency: { code: 'NGN', symbol: '₦', locale: 'en-NG' },
   spawn: { position: [2.4, 41], facing: Math.PI },
+  arrival: { position: [-4.4, 16.5], facing: Math.PI },
+  landmarks: [
+    { id: 'yaba-buka', name: "Mama Titi's Buka", blurb: 'The smokiest jollof on Adeniyi Street.', position: [6.2, 36.6], radius: 4 },
+    { id: 'yaba-danfo', name: 'Adeniyi danfo stop', blurb: 'Yellow buses to every corner of Lagos.', position: [-5, 14], radius: 3.5 },
+    { id: 'yaba-okada', name: 'Okada park', blurb: 'Where riders wait out the afternoon heat.', position: [-11, -7], radius: 4 },
+  ],
+  welcome: { from: 'Kunle', text: 'Welcome back to Yaba! Danfo dey for Adeniyi stop anytime you wan move.' },
   walkable: [
     [-6.9, -44, 6.9, 44], // street + both sidewalks
     [-15.4, -12, -6, -2], // open lot on the west side
@@ -125,6 +133,7 @@ export const lagos: DestinationPack = {
 
   props: [
     { id: 'danfo', kind: 'danfo', position: [-2.1, 11.5], rotation: 0, collide: true },
+    { id: 'busstop', kind: 'busstop', position: [-6.3, 16.2], rotation: Math.PI / 2, collide: true },
     { id: 'okada-1', kind: 'okada', position: [-10.4, -9.4], rotation: 0.4, collide: true },
     { id: 'okada-2', kind: 'okada', position: [-11.8, -9.0], rotation: 0.2, collide: true },
     { id: 'kiosk-lot', kind: 'kiosk', position: [-13.6, -4.4], rotation: Math.PI / 2, color: '#1f6f4a', collide: true },
@@ -269,15 +278,19 @@ export const lagos: DestinationPack = {
         entries: [{ node: 'hello' }],
         nodes: {
           hello: {
-            text: 'Oshodi! Ojota! CMS! You dey go? Ah — not today, this motor is waiting for a new tyre. When it is ready, I can drop you at the airport road.',
+            text: 'CMS! Lekki! Ikeja! Where you dey go? Enter, enter — this danfo dey move now now.',
             options: [
-              { label: 'Where can I fly to?', action: { kind: 'goto', node: 'routes' } },
+              { label: 'Take a danfo', action: { kind: 'openTravel' } },
+              { label: 'Where can I go?', action: { kind: 'goto', node: 'routes' } },
               { label: 'Later, Kunle', action: { kind: 'close' } },
             ],
           },
           routes: {
-            text: 'From the airport? Accra, Abuja, even Dubai. Tickets are not cheap o — hustle small, save your money, then come and see me.',
-            options: [{ label: "I'll save up", action: { kind: 'close' } }],
+            text: 'Lagos Island for market — you fit price fabric there. Lekki for beach and coconut. Ikeja for phones and gadgets. Airport road go open soon, then Accra, Dubai…',
+            options: [
+              { label: 'Take a danfo', action: { kind: 'openTravel' } },
+              { label: 'Thanks, Kunle', action: { kind: 'close' } },
+            ],
           },
         },
       },

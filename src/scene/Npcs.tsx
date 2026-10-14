@@ -12,7 +12,7 @@ function Npc({ def }: { def: NpcDef }) {
   const anim = useRef<CharacterAnim>({ speed: 0, idle: def.idle });
   const yaw = useRef(def.facing);
   const pack = usePack();
-  const y = groundHeight(def.position[0], pack.road.halfWidth, pack.road.sidewalk);
+  const y = groundHeight(def.position[0], pack.road);
 
   useEffect(() => {
     runtime.actors.set(def.id, { x: def.position[0], z: def.position[1] });
@@ -79,7 +79,7 @@ function Walker({ def }: { def: WalkerDef }) {
     }
     anim.current.speed = speed;
     runtime.actors.set(def.id, { x: s.x, z: s.z });
-    g.position.set(s.x, groundHeight(s.x, pack.road.halfWidth, pack.road.sidewalk), s.z);
+    g.position.set(s.x, groundHeight(s.x, pack.road), s.z);
     g.rotation.y = s.yaw;
   });
 

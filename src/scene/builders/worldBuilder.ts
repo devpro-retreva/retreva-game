@@ -3,7 +3,7 @@ import type { BuildingDef, DestinationPack, PropDef } from '../../game/content/t
 import { ColorGeometryBuilder, TextureAtlas } from './geometryBuilder';
 import { paintFacade, paintSign, seeded, shade, STOREY_H } from './painters';
 
-const PPM = 40; // facade pixels per metre
+const MAX_PPM = 40; // facade pixels per metre (lowered automatically for big areas)
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 export interface StaticWorld {
@@ -19,7 +19,7 @@ function placer(x: number, z: number, r: number) {
   return (lx: number, ly: number, lz: number): [number, number, number] => [x + lx * c + lz * s, ly, z - lx * s + lz * c];
 }
 
-function building(g: ColorGeometryBuilder, a: TextureAtlas, b: BuildingDef) {
+function building(g: ColorGeometryBuilder, a: TextureAtlas, b: BuildingDef, PPM: number) {
   const [w, h, d] = b.size;
   const [x, z] = b.position;
   const out = b.facing === 'west' ? -1 : 1; // street direction along x
@@ -215,6 +215,93 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       g.cylinder(shade(c, -0.15), at(0, 0.65, 0), 0.37, 0.37, 0.05, 12);
       break;
     }
+    case 'palm': {
+      const rnd = seeded(p.id);
+      const lean = (rnd() - 0.5) * 0.3;
+      for (let i = 0; i < 6; i++) {
+        const t = i / 6;
+        g.cylinder(i % 2 ? '#8a6a48' : '#7a5c3c', at(lean * t * 6, 0.5 + i * 0.95, 0), 0.15 - t * 0.04, 0.17 - t * 0.04, 0.98, 7);
+      }
+      const top = at(lean * 6, 6.2, 0);
+      g.sphere('#6b4a2a', top, 0.28, [1, 0.8, 1], 0);
+      const greens = ['#3f8a3a', '#4f9a44', '#367a33'];
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2 + rnd();
+        g.boxR(greens[i % 3], [top[0] + Math.sin(a) * 1.1, top[1] - 0.25, top[2] + Math.cos(a) * 1.1], [0.5, 0.06, 2.3], [0.45, a, 0]);
+      }
+      for (let i = 0; i < 3; i++) g.sphere('#6a4a20', [top[0] + (rnd() - 0.5) * 0.4, top[1] - 0.35, top[2] + (rnd() - 0.5) * 0.4], 0.13, [1, 1, 1], 0);
+      break;
+    }
+    case 'stall': {
+      // trading table with an awning, stacked cloth bolts and goods; faces local +z
+      const c = p.color ?? '#d8452b';
+      g.box('#6d5236', at(0, 0.8, 0), [2.0, 0.08, 1.3], r);
+      for (const [lx, lz] of [[0.9, 0.55], [-0.9, 0.55], [0.9, -0.55], [-0.9, -0.55]]) g.box('#4a3624', at(lx, 0.4, lz), [0.06, 0.8, 0.06], r);
+      for (const [lx, lz] of [[0.95, -0.6], [-0.95, -0.6]]) g.box('#3a2a1c', at(lx, 1.4, lz), [0.05, 1.3, 0.05], r);
+      g.boxR(c, at(0, 2.1, 0.05), [2.3, 0.05, 1.6], [0.18, r, 0]);
+      g.box('#f4f0e6', at(0, 1.98, 0.85), [2.3, 0.18, 0.03], r);
+      const rnd = seeded(p.id);
+      const bolts = ['#f2b705', '#2d3f8f', '#e4572e', '#1f6f4a', '#7a3b72', '#f4f0e6', '#1d7f86', '#c9583b'];
+      for (let i = 0; i < 6; i++) {
+        const lx = -0.75 + i * 0.3;
+        const h = 0.18 + rnd() * 0.2;
+        g.box(bolts[Math.floor(rnd() * bolts.length)], at(lx, 0.84 + h / 2, -0.1 + rnd() * 0.3), [0.26, h, 0.5], r);
+      }
+      g.box(bolts[Math.floor(rnd() * bolts.length)], at(0.2, 1.1, -0.45), [1.2, 0.5, 0.12], r);
+      break;
+    }
+    case 'beachhut': {
+      g.box('#c9a26b', at(0, 1.1, 0), [2.6, 2.2, 2.4], r);
+      g.box('#2a1d14', at(0, 1.0, 1.205), [1.8, 0.9, 0.02], r);
+      g.box('#e8d4a8', at(0, 0.95, 1.4), [2.2, 0.08, 0.4], r);
+      g.cone('#b08a48', at(0, 2.85, 0), 2.3, 1.4, 6);
+      g.cone('#9a7638', at(0, 3.55, 0), 0.5, 0.4, 6);
+      g.box('#e4572e', at(-0.6, 1.08, 1.42), [0.22, 0.2, 0.2], r);
+      g.box('#7fbf4a', at(0.2, 1.08, 1.42), [0.24, 0.22, 0.22], r);
+      break;
+    }
+    case 'lifeguard': {
+      for (const [lx, lz] of [[0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) g.box('#f4f0e6', at(lx, 1.2, lz), [0.12, 2.4, 0.12]);
+      g.box('#d8452b', at(0, 2.5, 0), [1.8, 0.14, 1.8]);
+      g.box('#d8452b', at(0, 3.0, -0.85), [1.8, 1.0, 0.1]);
+      g.box('#d8452b', at(0.85, 3.0, 0), [0.1, 1.0, 1.8]);
+      g.box('#d8452b', at(-0.85, 3.0, 0), [0.1, 1.0, 1.8]);
+      g.cone('#f4f0e6', at(0, 3.85, 0), 1.45, 0.7, 4);
+      g.boxR('#bfb6a4', at(0, 1.2, 1.4), [0.6, 0.06, 2.8], [0.9, 0, 0]);
+      g.cylinder('#2a2622', at(0, 4.6, 0), 0.03, 0.03, 1.1, 5);
+      g.box('#f2b705', at(0.25, 5.0, 0), [0.5, 0.3, 0.02]);
+      break;
+    }
+    case 'lounger': {
+      g.box('#f4f0e6', at(0, 0.32, 0.2), [0.6, 0.06, 1.4], r);
+      g.boxR('#f4f0e6', at(0, 0.5, -0.65), [0.6, 0.06, 0.6], [-0.6, r, 0]);
+      g.box('#1d7f86', at(0, 0.36, 0.2), [0.56, 0.03, 1.36], r);
+      for (const [lx, lz] of [[0.25, 0.8], [-0.25, 0.8], [0.25, -0.4], [-0.25, -0.4]]) g.box('#8a7a66', at(lx, 0.15, lz), [0.05, 0.3, 0.05], r);
+      break;
+    }
+    case 'busstop': {
+      // shelter: back panel at local -z, roof, bench, sign post; long side along local x
+      g.box('#3a5a7a', at(0, 1.25, -0.45), [3.0, 2.3, 0.08], r);
+      g.box('#e8e2d4', at(0, 2.45, 0), [3.2, 0.12, 1.2], r);
+      g.box('#2a2622', at(1.5, 1.2, 0.45), [0.08, 2.4, 0.08], r);
+      g.box('#2a2622', at(-1.5, 1.2, 0.45), [0.08, 2.4, 0.08], r);
+      g.box('#8a6a48', at(0, 0.48, -0.2), [2.4, 0.08, 0.4], r);
+      g.box('#f2b705', at(1.75, 2.1, 0.5), [0.5, 0.5, 0.06], r);
+      g.box('#15130f', at(1.75, 2.1, 0.535), [0.32, 0.12, 0.01], r);
+      g.box('#2a2622', at(1.75, 1.0, 0.5), [0.06, 2.0, 0.06], r);
+      break;
+    }
+    case 'keke': {
+      const Y = '#f2b705';
+      g.box(Y, at(0, 0.85, -0.2), [1.25, 1.0, 1.6], r);
+      g.box('#2a2a2a', at(0, 1.55, -0.1), [1.3, 0.08, 1.9], r);
+      g.box('#24292c', at(0, 1.15, 0.62), [1.0, 0.55, 0.04], r);
+      g.box('#1f6f4a', at(0, 0.62, -0.2), [1.27, 0.12, 1.62], r);
+      g.box(Y, at(0, 0.7, 0.85), [0.35, 0.6, 0.6], r);
+      for (const [lx, lz] of [[0.55, -0.6], [-0.55, -0.6], [0, 1.0]]) g.cylinder('#151515', at(lx, 0.25, lz), 0.25, 0.25, 0.14, 10, [0, r, Math.PI / 2]);
+      for (const [lx, lz] of [[0.6, 0.35], [-0.6, 0.35], [0.6, -0.7], [-0.6, -0.7]]) g.box('#2a2a2a', at(lx, 1.2, lz), [0.04, 0.7, 0.04], r);
+      break;
+    }
     case 'pole': {
       g.cylinder('#5b4636', at(0, 4, 0), 0.1, 0.14, 8, 6);
       g.box('#4a3a2c', at(0, 7.6, 0), [1.4, 0.1, 0.1]);
@@ -250,6 +337,35 @@ function powerLines(g: ColorGeometryBuilder, pack: DestinationPack) {
 function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
   const { halfWidth: hw, sidewalk: sw, length } = pack.road;
   const L = length / 2;
+  const style = pack.road.style ?? 'asphalt';
+  if (style === 'sand') {
+    // beach: driftwood and rocks close each end; nothing else on the sand
+    const rnd = seeded(pack.id + 'rocks');
+    for (const end of [-1, 1]) {
+      for (let x = -8; x < 11; x += 0.9 + rnd() * 0.7) {
+        g.blob(rnd() > 0.5 ? '#8a8379' : '#a39b8e', [x, 0.3, end * (L - 1.4 + rnd() * 1.2)], 0.45 + rnd() * 0.45, [1.2, 0.7, 1]);
+      }
+    }
+    return;
+  }
+  if (style === 'paved') {
+    // market lane: low kerbs, colourful bunting strung between the buildings
+    for (const side of [-1, 1]) g.box('#c9bfac', [side * (hw + 0.18), 0.05, 0], [0.3, 0.1, length]);
+    const flags = ['#f2b705', '#1f6f4a', '#e4572e', '#2c5f9e', '#f4f0e6', '#7a3b72'];
+    const span = (hw + sw) * 2 + 0.6;
+    for (let z = -L + 6, k = 0; z < L - 3; z += 8, k++) {
+      g.box('#2a2622', [0, 4.6, z], [span, 0.02, 0.02]);
+      for (let x = -span / 2 + 0.3, i = 0; x < span / 2; x += 0.55, i++) {
+        const sag = 0.35 * (1 - Math.pow((2 * x) / span, 2));
+        g.boxR(flags[(i + k) % flags.length], [x, 4.42 - sag, z], [0.3, 0.32, 0.01], [0, 0, Math.PI / 4]);
+      }
+    }
+    for (const end of [-1, 1]) {
+      const z = end * (L - 1.6);
+      for (let x = -hw - sw + 0.6, i = 0; x < hw + sw; x += 1.25, i++) g.box(i % 2 ? '#f4f0e6' : '#d8452b', [x, 0.42, z], [1.15, 0.84, 0.5]);
+    }
+    return;
+  }
   // gutters (open drains) and curbs
   for (const side of [-1, 1]) {
     g.box(pack.palette.gutter, [side * (hw + 0.18), -0.02, 0], [0.36, 0.04, length]);
@@ -275,11 +391,13 @@ function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
   }
 }
 
-function backdrop(g: ColorGeometryBuilder) {
-  const rnd = seeded('backdrop');
+function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
+  const rnd = seeded('backdrop' + pack.id);
+  const seaSide = !!pack.sea;
   const tones = ['#c9a98a', '#b99c84', '#d4b896', '#a98f7a', '#bfa58e'];
   // behind both rows
   for (const side of [-1, 1]) {
+    if (seaSide && side === 1) continue;
     for (let z = -50; z < 50; z += 6 + rnd() * 4) {
       const h = 6 + rnd() * 14;
       const x = side * (19 + rnd() * 8);
@@ -288,7 +406,8 @@ function backdrop(g: ColorGeometryBuilder) {
   }
   // street ends: a near row closing the view, and a taller far row for depth
   for (const end of [-1, 1]) {
-    for (let x = -30; x < 30; ) {
+    const maxX = seaSide ? 6 : 30;
+    for (let x = -30; x < maxX; ) {
       const w = 5 + rnd() * 4;
       const h = 6 + rnd() * 7;
       const z = end * (49 + rnd() * 1.5);
@@ -300,7 +419,7 @@ function backdrop(g: ColorGeometryBuilder) {
       }
       x += w;
     }
-    for (let x = -34; x < 34; x += 5 + rnd() * 4) {
+    for (let x = -34; x < (seaSide ? 6 : 34); x += 5 + rnd() * 4) {
       const h = 12 + rnd() * 14;
       g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, end * (58 + rnd() * 6)], [5 + rnd() * 3, h, 6]);
     }
@@ -311,13 +430,25 @@ function backdrop(g: ColorGeometryBuilder) {
 }
 
 export function buildStaticWorld(pack: DestinationPack): StaticWorld {
-  const g = new ColorGeometryBuilder();
-  const a = new TextureAtlas(2048);
-  for (const b of pack.buildings) building(g, a, b);
-  for (const p of pack.props) prop(g, p);
-  powerLines(g, pack);
-  streetFurniture(g, pack);
-  backdrop(g);
-  const atlas = a.build();
-  return { colorGeometry: g.build(), atlasGeometry: atlas.geometry, atlasTexture: atlas.texture };
+  // Pick a facade resolution that fits every facade into one 2048² atlas,
+  // stepping down if the shelf packer still runs out of room.
+  const area = pack.buildings.reduce((n, b) => n + b.size[0] * b.size[1], 0);
+  let ppm = Math.min(MAX_PPM, Math.floor(Math.sqrt((0.55 * 2048 * 2048) / Math.max(area, 1))));
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const g = new ColorGeometryBuilder();
+      const a = new TextureAtlas(2048);
+      for (const b of pack.buildings) building(g, a, b, ppm);
+      for (const p of pack.props) prop(g, p);
+      powerLines(g, pack);
+      streetFurniture(g, pack);
+      backdrop(g, pack);
+      const atlas = a.build();
+      return { colorGeometry: g.build(), atlasGeometry: atlas.geometry, atlasTexture: atlas.texture };
+    } catch (e) {
+      if (!(e instanceof Error) || e.message !== 'Atlas full') throw e;
+      ppm = Math.floor(ppm * 0.85);
+    }
+  }
+  throw new Error('Could not fit facades into the atlas');
 }

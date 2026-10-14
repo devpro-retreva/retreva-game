@@ -6,6 +6,13 @@ import { resolveEntry } from './dialogue';
 import { lagos } from '../content/destinations/lagos';
 import { MemorySaveAdapter } from '../persistence/adapters';
 import { SaveManager, migrate } from '../persistence/saveManager';
+import { emptyWorld } from '../persistence/types';
+import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
+import { collectSpot } from './jobs';
+import { GOALS, newlyCompleted } from './progress';
+import { fareBetween, LAGOS_AREAS } from '../content/regions/lagosState';
+import { ALL_PACKS } from '../content';
+import { emptyInventory as emptyInv } from './inventory';
 import { DEFAULT_AVATAR, OPTIONS, defaultLookFor, sanitizeLook, switchGender, upgradeAvatarV1 } from '../core/avatarPresets';
 
 const job = lagos.jobs[0];
@@ -134,7 +141,8 @@ describe('persistence', () => {
       wallet: { balance, ledger: [] },
       inventory: { entries: [] },
       jobs: emptyJobs(),
-      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, showFps: false },
+      world: emptyWorld('lagos-adeniyi'),
+      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, showFps: false, tips: true },
       player: { position: [1, 2] as [number, number], yaw: 0 },
       stats: { playTimeMs: 0 },
     });
@@ -241,9 +249,126 @@ describe('avatar options', () => {
       settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 0 },
     };
     const m = migrate(v1);
-    expect(m?.schemaVersion).toBe(2);
+    expect(m?.schemaVersion).toBe(3);
+    expect(m?.world.visited).toEqual(['lagos-adeniyi']);
     expect(m?.profile.avatar.gender).toBe('male');
     expect(m?.profile.avatar.headwear).toBe('cap');
     expect(m?.wallet.balance).toBe(900);
+  });
+});
+
+describe('negotiation', () => {
+  const fixed = () => 0; // no floor wobble
+  it('a fair offer gets a counter, then a deal below list price', () => {
+    let h = startHaggle('ankara-6yd', 9000, { floor: 0.68, patience: 3 }, fixed);
+    expect(h.floorPrice).toBe(6100);
+    h = makeOffer(h, 6500);
+    expect(h.status).toBe('open');
+    expect(h.ask).toBeLessThan(9000);
+    h = makeOffer(h, 7200);
+    expect(h.status).toBe('deal');
+    expect(h.dealPrice).toBeLessThan(9000);
+    expect(savings(h)).toBeGreaterThan(0.15);
+  });
+  it('never sells below the floor', () => {
+    let h = startHaggle('x', 10000, { floor: 0.7, patience: 5 }, fixed);
+    for (let i = 0; i < 6 && h.status === 'open'; i++) h = makeOffer(h, 5000);
+    expect(h.ask).toBeGreaterThanOrEqual(h.floorPrice);
+    expect(h.status === 'final' || h.status === 'open').toBe(true);
+    h = acceptAsk(h);
+    expect(h.dealPrice).toBeGreaterThanOrEqual(7000);
+  });
+  it('insulting offers burn patience twice as fast and end in a final price', () => {
+    let h = startHaggle('x', 10000, { floor: 0.7, patience: 3 }, fixed);
+    h = makeOffer(h, 1000);
+    expect(h.mood).toBe('insulted');
+    h = makeOffer(h, 1000);
+    expect(h.status).toBe('final');
+  });
+  it('offering the asking price is an instant deal', () => {
+    const h = makeOffer(startHaggle('x', 4000, { floor: 0.7, patience: 3 }, fixed), 4000);
+    expect(h.status).toBe('deal');
+    expect(h.dealPrice).toBe(4000);
+  });
+});
+
+describe('collect jobs', () => {
+  const lekki = ALL_PACKS.find((p) => p.id === 'lekki-beach')!;
+  const job = lekki.jobs.find((j) => j.id === 'beach-cleanup')!;
+  it('requires the full count before reporting, and ignores duplicates', () => {
+    let st = acceptJob(emptyJobs(), job, 0, 'r1').state;
+    expect(deliverJob(st, job, { now: 0, distanceToDropoff: 1 }).ok).toBe(false);
+    st = collectSpot(st, job, 0)!;
+    expect(collectSpot(st, job, 0)).toBeNull();
+    for (let i = 1; i < 6; i++) st = collectSpot(st, job, i)!;
+    expect(collectSpot(st, job, 7)).toBeNull(); // already at count
+    const d = deliverJob(st, job, { now: 0, distanceToDropoff: 1 });
+    expect(d.ok).toBe(true);
+  });
+});
+
+describe('Lagos travel', () => {
+  it('every region area has a pack, an arrival point and at least one job and landmark', () => {
+    for (const a of LAGOS_AREAS) {
+      const p = ALL_PACKS.find((x) => x.id === a.id);
+      expect(p, a.id).toBeDefined();
+      expect(p!.jobs.length).toBeGreaterThan(0);
+      expect(p!.landmarks.length).toBeGreaterThan(0);
+      const w = buildCollisionWorld(p!);
+      expect(isBlocked(w, p!.arrival.position[0], p!.arrival.position[1]), `${a.id} arrival`).toBe(false);
+    }
+  });
+  it('fares are symmetric, positive and rounded to ₦50', () => {
+    for (const a of LAGOS_AREAS) for (const b of LAGOS_AREAS) {
+      if (a.id === b.id) continue;
+      const f = fareBetween(a.id, b.id);
+      expect(f).toBe(fareBetween(b.id, a.id));
+      expect(f % 50).toBe(0);
+      expect(f).toBeGreaterThan(200);
+      expect(f).toBeLessThan(1500);
+    }
+  });
+  it('every NPC in every area can be reached and every job references real NPCs', () => {
+    for (const p of ALL_PACKS) {
+      const w = buildCollisionWorld(p);
+      for (const n of p.npcs) {
+        const dir = n.position[0] > 0 ? -1 : 1;
+        expect(isBlocked(w, n.position[0] + dir * 1.2, n.position[1]), `${p.id}/${n.id}`).toBe(false);
+      }
+      for (const j of p.jobs) {
+        expect(p.npcs.find((n) => n.id === j.giverNpcId), j.id).toBeDefined();
+        expect(p.npcs.find((n) => n.id === j.dropoffNpcId), j.id).toBeDefined();
+        for (const s of j.collect?.spots ?? []) expect(isBlocked(w, s[0], s[1]), `${j.id} spot ${s}`).toBe(false);
+      }
+      for (const b of p.businesses) for (const st of b.stock) expect(p.items.find((i) => i.id === st.itemId), st.itemId).toBeDefined();
+      for (const n of p.npcs) {
+        for (const node of Object.values(n.dialogue.nodes)) for (const o of node.options) {
+          if (o.action.kind === 'goto') expect(n.dialogue.nodes[o.action.node]).toBeDefined();
+          if (o.action.kind === 'openShop') { const id = o.action.businessId; expect(p.businesses.find((b) => b.id === id), id).toBeDefined(); }
+        }
+      }
+    }
+  });
+});
+
+describe('goals', () => {
+  const snap = (over: Partial<Parameters<typeof newlyCompleted>[0]> = {}) => ({
+    jobs: emptyJobs(), jobArea: () => undefined, visited: ['lagos-adeniyi'], discovered: [], inventory: emptyInv(), bestBargain: 0, rides: 0, totalAreas: 4, ...over,
+  });
+  it('nothing is complete at the start', () => {
+    expect(newlyCompleted(snap(), [])).toHaveLength(0);
+  });
+  it('explorer completes once every area is visited, and is not repeated', () => {
+    const s = snap({ visited: ['a', 'b', 'c', 'd'], rides: 3 });
+    const ids = newlyCompleted(s, []).map((g) => g.id);
+    expect(ids).toContain('explorer');
+    expect(ids).toContain('first-ride');
+    expect(newlyCompleted(s, ids)).toHaveLength(0);
+  });
+  it('goal rewards pay once through the ledger', () => {
+    let w = createWallet(0);
+    const g = GOALS[0];
+    for (let i = 0; i < 3; i++) w = credit(w, { id: `goal:${g.id}`, amount: g.reward, reason: '', at: 0 }).wallet;
+    expect(w.balance).toBe(g.reward);
   });
 });

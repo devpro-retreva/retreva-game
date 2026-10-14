@@ -15,6 +15,8 @@ export interface ActiveJob {
   runId: string;
   remainingMs: number;
   acceptedAt: number;
+  /** For collect jobs: indices of the spots already picked up. */
+  collected?: number[];
 }
 
 export interface JobRecord {
@@ -54,8 +56,25 @@ export function acceptJob(state: JobsState, job: JobDef, now: number, runId: str
   if ((state.cooldownUntil[job.id] ?? 0) > now) return { ok: false, state, reason: 'cooldown' };
   return {
     ok: true,
-    state: { ...state, active: { jobId: job.id, runId, remainingMs: job.timeLimitMs, acceptedAt: now } },
+    state: { ...state, active: { jobId: job.id, runId, remainingMs: job.timeLimitMs, acceptedAt: now, collected: job.kind === 'collect' ? [] : undefined } },
   };
+}
+
+/** Distance within which a collect item is picked up by walking over it. */
+export const PICKUP_RANGE = 1.1;
+
+/** Picks up one collect spot. Returns null when nothing changed. */
+export function collectSpot(state: JobsState, job: JobDef, spotIndex: number): JobsState | null {
+  const a = state.active;
+  if (!a || a.jobId !== job.id || job.kind !== 'collect' || !job.collect) return null;
+  if (spotIndex < 0 || spotIndex >= job.collect.spots.length) return null;
+  const got = a.collected ?? [];
+  if (got.includes(spotIndex) || got.length >= job.collect.count) return null;
+  return { ...state, active: { ...a, collected: [...got, spotIndex] } };
+}
+
+export function collectedCount(state: JobsState): number {
+  return state.active?.collected?.length ?? 0;
 }
 
 /** Advance the job timer. Returns the record if the job just failed. */
@@ -79,7 +98,7 @@ export interface Payout {
 
 export type DeliverResult =
   | { ok: true; state: JobsState; payout: Payout }
-  | { ok: false; state: JobsState; reason: 'no-job' | 'wrong-job' | 'expired' | 'too-far' | 'already-paid' };
+  | { ok: false; state: JobsState; reason: 'no-job' | 'wrong-job' | 'expired' | 'too-far' | 'already-paid' | 'incomplete' };
 
 export function deliverJob(
   state: JobsState,
@@ -92,6 +111,7 @@ export function deliverJob(
   if (a.remainingMs <= 0) return { ok: false, state, reason: 'expired' };
   if (ctx.distanceToDropoff > DELIVERY_RANGE) return { ok: false, state, reason: 'too-far' };
   if (state.history.some((h) => h.runId === a.runId)) return { ok: false, state, reason: 'already-paid' };
+  if (job.kind === 'collect' && (a.collected?.length ?? 0) < (job.collect?.count ?? 0)) return { ok: false, state, reason: 'incomplete' };
 
   const elapsedMs = job.timeLimitMs - a.remainingMs;
   const bonus = elapsedMs <= job.bonus.underMs ? job.bonus.amount : 0;

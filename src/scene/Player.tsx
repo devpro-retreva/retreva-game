@@ -60,7 +60,7 @@ export function Player() {
       if (npc) p.yaw = lerpAngle(p.yaw, Math.atan2(npc.x - p.x, npc.z - p.z), Math.min(1, d * 8));
     }
 
-    const gy = groundHeight(p.x, pack.road.halfWidth, pack.road.sidewalk);
+    const gy = groundHeight(p.x, pack.road);
     vel.current.y += (gy - vel.current.y) * Math.min(1, d * 18);
     g.position.set(p.x, vel.current.y, p.z);
     g.rotation.y = p.yaw;

@@ -30,6 +30,13 @@ const PROP_SHAPES: Partial<Record<PropKind, { box?: [number, number]; r?: number
   grill: { box: [0.35, 0.55], h: 0.9 },
   crates: { box: [0.5, 0.5], h: 1.2 },
   drum: { r: 0.38, h: 0.95 },
+  palm: { r: 0.32, h: 7 },
+  stall: { box: [1.0, 0.65], h: 2.4 },
+  beachhut: { box: [1.4, 1.3], h: 3.2 },
+  lifeguard: { box: [0.85, 0.85], h: 4.2 },
+  lounger: { box: [0.35, 0.95], h: 0.6 },
+  busstop: { box: [1.5, 0.55], h: 2.6 },
+  keke: { box: [0.7, 1.25], h: 1.8 },
 };
 
 export const PLAYER_RADIUS = 0.32;

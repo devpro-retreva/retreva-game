@@ -341,3 +341,42 @@ export function makeSkyTexture() {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+
+export function paintSand(base: string) {
+  return (ctx: CanvasRenderingContext2D, s: number) => {
+    const rnd = seeded('sand');
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 18; i++) {
+      ctx.fillStyle = `rgba(${rnd() > 0.5 ? '255,250,235' : '150,110,60'},${0.06 + rnd() * 0.07})`;
+      ctx.beginPath();
+      ctx.ellipse(rnd() * s, rnd() * s, 20 + rnd() * 50, 4 + rnd() * 10, rnd() * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < s * s * 0.03; i++) {
+      ctx.fillStyle = rnd() > 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(110,80,40,0.16)';
+      ctx.fillRect(rnd() * s, rnd() * s, 1.2, 1.2);
+    }
+  };
+}
+
+export function paintWater() {
+  return (ctx: CanvasRenderingContext2D, s: number) => {
+    const rnd = seeded('water');
+    const g = ctx.createLinearGradient(0, 0, s, 0);
+    g.addColorStop(0, '#3d93a8');
+    g.addColorStop(1, '#2a6f8f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, s, s);
+    for (let i = 0; i < 70; i++) {
+      ctx.strokeStyle = `rgba(255,255,255,${0.1 + rnd() * 0.18})`;
+      ctx.lineWidth = 1 + rnd() * 1.5;
+      const y = rnd() * s;
+      const x = rnd() * s;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + 8, y - 3, x + 16 + rnd() * 20, y);
+      ctx.stroke();
+    }
+  };
+}

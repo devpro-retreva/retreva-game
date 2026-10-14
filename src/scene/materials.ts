@@ -4,4 +4,5 @@ import * as THREE from 'three';
 export const characterMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 export const worldColorMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 export const beaconMaterial = new THREE.MeshBasicMaterial({ color: '#f2b705', transparent: true, opacity: 0.95, depthWrite: false });
+export const travelBeaconMaterial = new THREE.MeshBasicMaterial({ color: '#3fc1c9', transparent: true, opacity: 0.95, depthWrite: false });
 export const ringMaterial = new THREE.MeshBasicMaterial({ color: '#f2b705', transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide });

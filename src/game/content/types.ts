@@ -72,7 +72,14 @@ export type PropKind =
   | 'umbrella'
   | 'crates'
   | 'tank'
-  | 'grill';
+  | 'grill'
+  | 'palm'
+  | 'stall'
+  | 'beachhut'
+  | 'lifeguard'
+  | 'lounger'
+  | 'busstop'
+  | 'keke';
 
 export interface PropDef {
   id: string;
@@ -111,7 +118,8 @@ export type DialogueAction =
   | { kind: 'close' }
   | { kind: 'acceptJob'; jobId: string }
   | { kind: 'deliverJob'; jobId: string }
-  | { kind: 'openShop'; businessId: string };
+  | { kind: 'openShop'; businessId: string }
+  | { kind: 'openTravel' };
 
 export interface DialogueOption {
   label: string;
@@ -159,10 +167,27 @@ export interface BusinessDef {
   ownerNpcId: string;
   stock: { itemId: string; price: number }[];
   greeting: string;
+  /**
+   * Market stalls let you bargain. `floor` is the lowest fraction of the asking
+   * price the seller will ever accept; `patience` is how many offers they hear.
+   */
+  haggle?: { floor: number; patience: number };
+}
+
+/** A place worth finding. Walking within `radius` discovers it once. */
+export interface LandmarkDef {
+  id: string;
+  name: string;
+  blurb: string;
+  position: Vec2;
+  radius: number;
 }
 
 export interface JobDef {
   id: string;
+  /** delivery: carry cargo to the drop-off. collect: pick up items, then report to the drop-off. */
+  kind?: 'delivery' | 'collect';
+  collect?: { item: string; spots: Vec2[]; count: number };
   title: string;
   summary: string;
   giverNpcId: string;
@@ -182,7 +207,12 @@ export interface DestinationPack {
   area: string;
   country: string;
   currency: { code: string; symbol: string; locale: string };
+  /** One-line description shown on arrival and in the Travel app. */
+  tagline: string;
+  /** Where new games start (only used by the home area). */
   spawn: { position: Vec2; facing: number };
+  /** Where you step off the danfo when travelling here. */
+  arrival: { position: Vec2; facing: number };
   /** Union of walkable rectangles: [minX, minZ, maxX, maxZ]. */
   walkable: [number, number, number, number][];
   /** Low boundary walls drawn around open lots: [x0, z0, x1, z1]. */
@@ -197,7 +227,12 @@ export interface DestinationPack {
     gutter: string;
     sun: string;
   };
-  road: { halfWidth: number; sidewalk: number; length: number };
+  road: { halfWidth: number; sidewalk: number; length: number; style?: 'asphalt' | 'paved' | 'sand' };
+  /** Open sea beyond this x (east side), for beach areas. */
+  sea?: { fromX: number };
+  landmarks: LandmarkDef[];
+  /** Text from a local when you first arrive. */
+  welcome?: { from: string; text: string };
   buildings: BuildingDef[];
   props: PropDef[];
   npcs: NpcDef[];

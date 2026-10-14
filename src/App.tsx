@@ -10,6 +10,7 @@ import { DialoguePanel } from './ui/panels/DialoguePanel';
 import { ShopPanel } from './ui/panels/ShopPanel';
 import { PauseMenu } from './ui/panels/PauseMenu';
 import { Wardrobe } from './ui/panels/Wardrobe';
+import { AreaBanner, TipCard, TransitOverlay, TravelPanel } from './ui/travel/TravelPanels';
 import { Phone } from './ui/phone/Phone';
 import { TouchControls } from './ui/controls/TouchControls';
 import { useKeyboard } from './ui/controls/useKeyboard';
@@ -44,6 +45,10 @@ function World({ touch }: { touch: boolean }) {
         {ui === 'phone' && <Phone />}
         {ui === 'pause' && <PauseMenu />}
         {ui === 'wardrobe' && <Wardrobe />}
+        {ui === 'travel' && <TravelPanel />}
+        {ui === 'transit' && <TransitOverlay />}
+        <AreaBanner />
+        <TipCard />
       </div>
     </>
   );

@@ -1,4 +1,4 @@
-import { SAVE_SCHEMA_VERSION, type SaveAdapter, type SaveData } from './types';
+import { SAVE_SCHEMA_VERSION, emptyWorld, type SaveAdapter, type SaveData } from './types';
 import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
 export const MAIN_SLOT = 'main';
@@ -15,7 +15,20 @@ export function migrate(raw: unknown): SaveData | null {
   const avatar = d.schemaVersion < 2
     ? upgradeAvatarV1(d.profile.avatar as unknown as Record<string, unknown>)
     : sanitizeLook(d.profile.avatar ?? {});
-  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar } };
+  // v2 → v3: exploration progress (areas, landmarks, goals, tips, messages).
+  const w = (d.world ?? {}) as Partial<SaveData['world']>;
+  const home = d.destinationId ?? 'lagos-adeniyi';
+  const base = emptyWorld(home);
+  const world: SaveData['world'] = {
+    visited: Array.isArray(w.visited) && w.visited.length ? w.visited : base.visited,
+    discovered: Array.isArray(w.discovered) ? w.discovered : [],
+    goalsDone: Array.isArray(w.goalsDone) ? w.goalsDone : [],
+    seenTips: Array.isArray(w.seenTips) ? w.seenTips : [],
+    messages: Array.isArray(w.messages) ? w.messages.slice(-60) : [],
+    bestBargain: typeof w.bestBargain === 'number' ? w.bestBargain : 0,
+    rides: typeof w.rides === 'number' ? w.rides : 0,
+  };
+  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar }, world };
 }
 
 export function getDeviceId(): string {
