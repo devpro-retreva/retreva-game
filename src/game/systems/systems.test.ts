@@ -176,3 +176,18 @@ describe('collision', () => {
     expect(segmentHit(w, 0, 1.5, 0, 0, 3, 5)).toBe(1);
   });
 });
+
+describe('collision sliding', () => {
+  const w = buildCollisionWorld(lagos);
+  it('walking straight into a street tree slides around it instead of sticking', () => {
+    // tree-2 sits at (6.2, 21); approach from the south along its centre line
+    let x = 6.2;
+    let z = 23.5;
+    for (let i = 0; i < 120; i++) {
+      const r = resolveMove(w, x, z, x, z - 0.05);
+      x = r.x;
+      z = r.z;
+    }
+    expect(z).toBeLessThan(20);
+  });
+});

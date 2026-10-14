@@ -3,7 +3,7 @@ import type { BuildingDef, DestinationPack, PropDef } from '../../game/content/t
 import { ColorGeometryBuilder, TextureAtlas } from './geometryBuilder';
 import { paintFacade, paintSign, seeded, shade, STOREY_H } from './painters';
 
-const PPM = 26; // facade pixels per metre
+const PPM = 40; // facade pixels per metre
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 export interface StaticWorld {
@@ -176,7 +176,7 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       const rnd = seeded(p.id);
       g.cylinder('#5a3b26', at(0, 1.4, 0), 0.16, 0.24, 2.8, 7);
       g.cylinder('#d9d2c2', at(0, 0.5, 0), 0.25, 0.25, 1.0, 7); // whitewashed base
-      const greens = ['#2f6b3a', '#3d7a3f', '#285c33'];
+      const greens = ['#4f8f45', '#5f9e4a', '#437d3d'];
       for (let i = 0; i < 4; i++) {
         g.blob(greens[i % 3], at((rnd() - 0.5) * 1.6, 3.4 + rnd() * 1.2, (rnd() - 0.5) * 1.6), 1.0 + rnd() * 0.6, [1, 0.75, 1]);
       }
@@ -286,11 +286,23 @@ function backdrop(g: ColorGeometryBuilder) {
       g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, z], [6 + rnd() * 4, h, 5 + rnd() * 3]);
     }
   }
-  // street ends
+  // street ends: a near row closing the view, and a taller far row for depth
   for (const end of [-1, 1]) {
-    for (let x = -26; x < 26; x += 5 + rnd() * 4) {
-      const h = 7 + rnd() * 16;
-      g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, end * (54 + rnd() * 8)], [5 + rnd() * 3, h, 6]);
+    for (let x = -30; x < 30; ) {
+      const w = 5 + rnd() * 4;
+      const h = 6 + rnd() * 7;
+      const z = end * (49 + rnd() * 1.5);
+      g.box(tones[Math.floor(rnd() * tones.length)], [x + w / 2, h / 2, z], [w, h, 5]);
+      g.box('#2b2724', [x + w / 2, h + 0.3, z], [w, 0.6, 5]);
+      const face = z - end * 2.52;
+      for (let fy = 2.2; fy < h - 1; fy += 3.1) {
+        for (let fx = x + 1.1; fx < x + w - 0.9; fx += 1.9) g.box('#3a3029', [fx, fy, face], [1.0, 1.2, 0.06]);
+      }
+      x += w;
+    }
+    for (let x = -34; x < 34; x += 5 + rnd() * 4) {
+      const h = 12 + rnd() * 14;
+      g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, end * (58 + rnd() * 6)], [5 + rnd() * 3, h, 6]);
     }
   }
   // a distant tower, for skyline character

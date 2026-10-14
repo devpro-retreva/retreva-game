@@ -90,12 +90,60 @@ export function isBlocked(w: CollisionWorld, x: number, z: number, r = PLAYER_RA
   return false;
 }
 
-/** Axis-separated slide: try the full move, then each axis, so the player glides along walls. */
+/**
+ * Slide resolution so the player glides along walls and around round props:
+ *  1. the full move
+ *  2. the larger axis component, then the smaller (walls)
+ *  3. the move deflected ±30°/±60°, shortened by cos(angle) (trees, NPCs, corners)
+ * Zero-length axis components are never "accepted" as a move.
+ */
 export function resolveMove(w: CollisionWorld, x: number, z: number, nx: number, nz: number, r = PLAYER_RADIUS) {
   if (!isBlocked(w, nx, nz, r)) return { x: nx, z: nz };
-  if (!isBlocked(w, nx, z, r)) return { x: nx, z };
-  if (!isBlocked(w, x, nz, r)) return { x, z: nz };
+  const dx = nx - x;
+  const dz = nz - z;
+  const len = Math.hypot(dx, dz);
+  if (len < 1e-6) return { x, z };
+  const min = len * 0.15;
+  const axes: [number, number][] = Math.abs(dx) >= Math.abs(dz) ? [[dx, 0], [0, dz]] : [[0, dz], [dx, 0]];
+  for (const [ax, az] of axes) {
+    if (Math.hypot(ax, az) > min && !isBlocked(w, x + ax, z + az, r)) return { x: x + ax, z: z + az };
+  }
+  // 1.48 rad ≈ 85°: the tangent option needed when walking dead-centre into a round prop
+  for (const a of [0.52, 1.05, 1.48]) {
+    // try both sides at this angle; prefer the one with more room so we never wedge into a pocket
+    let best: { x: number; z: number; room: number } | null = null;
+    const k = Math.max(Math.cos(a), 0.45);
+    for (const sign of [1, -1]) {
+      const c = Math.cos(a * sign);
+      const s = Math.sin(a * sign);
+      const px = x + (dx * c - dz * s) * k;
+      const pz = z + (dx * s + dz * c) * k;
+      if (isBlocked(w, px, pz, r)) continue;
+      // look ~0.9m further along this side: a dead end there means a pocket
+      const sl = Math.hypot(px - x, pz - z) || 1;
+      const ahead = !isBlocked(w, x + ((px - x) / sl) * 0.9, z + ((pz - z) / sl) * 0.9, r);
+      const room = (ahead ? 10 : 0) + clearance(w, px, pz);
+      if (!best || room > best.room) best = { x: px, z: pz, room };
+    }
+    if (best) return { x: best.x, z: best.z };
+  }
   return { x, z };
+}
+
+/** Distance from a point to the nearest obstacle or walkable edge. */
+export function clearance(w: CollisionWorld, x: number, z: number): number {
+  let d = Infinity;
+  for (const b of w.boxes) {
+    const cx = Math.max(b.minX, Math.min(x, b.maxX));
+    const cz = Math.max(b.minZ, Math.min(z, b.maxZ));
+    d = Math.min(d, Math.hypot(x - cx, z - cz));
+  }
+  for (const c of w.circles) d = Math.min(d, Math.hypot(x - c.x, z - c.z) - c.r);
+  let edge = 0;
+  for (const [x0, z0, x1, z1] of w.walkable) {
+    if (x >= x0 && x <= x1 && z >= z0 && z <= z1) edge = Math.max(edge, Math.min(x - x0, x1 - x, z - z0, z1 - z));
+  }
+  return Math.min(d, edge);
 }
 
 /**

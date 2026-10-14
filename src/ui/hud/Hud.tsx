@@ -109,7 +109,7 @@ export function Toasts() {
   return (
     <div className="toasts" aria-live="polite" role="status">
       {toasts.map((t) => (
-        <div key={t.id} className={`toast cut-sm ${t.kind}`}>
+        <div key={t.id} className={`toast cut-sm is-${t.kind}`}>
           {t.kind === 'money' && <IconCoin size={20} style={{ color: 'var(--danfo)', flex: 'none' }} />}
           <div>
             <div className="t num">{t.title}</div>
@@ -129,7 +129,7 @@ export function ControlsHint({ touch }: { touch: boolean }) {
   }, []);
   if (touch) {
     return (
-      <div className={`hint cut-sm ${gone ? 'gone' : ''}`} style={{ bottom: 'calc(var(--edge-bottom) + 170px)' }} aria-hidden={gone}>
+      <div className={`hint cut-sm ${gone ? 'gone' : ''}`} aria-hidden={gone}>
         <span>Left thumb: move</span>
         <span>Right thumb: look</span>
         <span>Push the stick far to run</span>

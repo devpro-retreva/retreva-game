@@ -21,7 +21,8 @@ export function Lighting({ shadows, sun }: { shadows: boolean; sun: string }) {
 
   return (
     <>
-      <hemisphereLight args={['#fde9cf', '#9a5a3a', 1.35]} />
+      <hemisphereLight args={['#fde9cf', '#9a5a3a', 1.5]} />
+      <ambientLight color="#ffe1c4" intensity={0.55} />
       <directionalLight
         ref={light}
         color={sun}

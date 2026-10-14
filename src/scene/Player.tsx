@@ -22,7 +22,11 @@ export function Player() {
   useFrame((_, dt) => {
     const g = group.current;
     if (!g) return;
-    const d = Math.min(dt, 0.05);
+    // Allow long frames (slow phones) but integrate in small fixed steps so
+    // speed stays correct and collision never tunnels through thin props.
+    const d = Math.min(dt, 0.1);
+    const steps = Math.max(1, Math.ceil(d / (1 / 30)));
+    const h = d / steps;
     const p = runtime.player;
     const s = useGame.getState();
 
@@ -35,13 +39,16 @@ export function Player() {
     const tx = mag > 0.01 ? (dx / Math.hypot(dx, dz)) * speed : 0;
     const tz = mag > 0.01 ? (dz / Math.hypot(dx, dz)) * speed : 0;
     const accel = mag > 0.01 ? 11 : 14;
-    vel.current.x += (tx - vel.current.x) * Math.min(1, d * accel);
-    vel.current.z += (tz - vel.current.z) * Math.min(1, d * accel);
 
-    const next = resolveMove(world, p.x, p.z, p.x + vel.current.x * d, p.z + vel.current.z * d);
-    const moved = Math.hypot(next.x - p.x, next.z - p.z);
-    p.x = next.x;
-    p.z = next.z;
+    let moved = 0;
+    for (let i = 0; i < steps; i++) {
+      vel.current.x += (tx - vel.current.x) * Math.min(1, h * accel);
+      vel.current.z += (tz - vel.current.z) * Math.min(1, h * accel);
+      const next = resolveMove(world, p.x, p.z, p.x + vel.current.x * h, p.z + vel.current.z * h);
+      moved += Math.hypot(next.x - p.x, next.z - p.z);
+      p.x = next.x;
+      p.z = next.z;
+    }
     p.speed = d > 0 ? moved / d : 0;
     p.moving = p.speed > 0.2;
 

@@ -11,21 +11,22 @@ export function DialoguePanel() {
   const reduced = useGame((s) => s.settings.reducedMotion);
   const npc = dialogue ? findNpc(pack, dialogue.npcId) : undefined;
   const node = npc && dialogue ? npc.dialogue.nodes[dialogue.nodeId] : undefined;
-  const [shown, setShown] = useState(0);
-  const first = useRef<HTMLButtonElement>(null);
   const text = node?.text ?? '';
+  // Progress is tied to the exact line, so switching nodes can never briefly
+  // report the previous line as "finished".
+  const [typed, setTyped] = useState<{ text: string; n: number }>({ text: '', n: 0 });
+  const shown = reduced ? text.length : typed.text === text ? typed.n : 0;
+  const setShown = (n: number) => setTyped({ text, n });
+  const first = useRef<HTMLButtonElement>(null);
   const done = shown >= text.length;
 
   useEffect(() => {
-    if (reduced) {
-      setShown(text.length);
-      return;
-    }
-    setShown(0);
+    if (reduced) return;
     let n = 0;
+    setTyped({ text, n: 0 });
     const id = setInterval(() => {
       n += 3;
-      setShown(n);
+      setTyped((t) => (t.text === text ? { text, n: Math.max(t.n, n) } : t));
       if (n >= text.length) clearInterval(id);
     }, 30);
     return () => clearInterval(id);

@@ -442,20 +442,20 @@ input {
   border-left: 3px solid var(--cream-2);
   animation: toastIn 220ms var(--ease);
 }
-.toast.money {
+.toast.is-money {
   border-color: var(--danfo);
 }
-.toast.item {
+.toast.is-item {
   border-color: var(--green);
 }
-.toast.warn {
+.toast.is-warn {
   border-color: var(--coral);
 }
 .toast .t {
   font-weight: 750;
   font-size: var(--fs-sm);
 }
-.toast.money .t {
+.toast.is-money .t {
   color: var(--danfo);
   font-size: var(--fs-md);
 }
@@ -555,10 +555,9 @@ input {
 .sheet {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  top: 50%;
-  transform: translateY(-50%);
+  top: calc(var(--edge-top) + 150px);
   width: min(400px, calc(100vw - 28px));
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - var(--edge-top) - 170px);
   display: flex;
   flex-direction: column;
   background: var(--panel);
@@ -566,8 +565,8 @@ input {
   animation: sideIn 220ms var(--ease);
 }
 @keyframes sideIn {
-  from { opacity: 0; transform: translate(14px, -50%); }
-  to { opacity: 1; transform: translate(0, -50%); }
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: none; }
 }
 .sheet-head {
   padding: var(--s4) var(--s4) var(--s3);
@@ -663,7 +662,8 @@ input {
   right: max(18px, env(safe-area-inset-right));
   bottom: var(--edge-bottom);
   width: 350px;
-  height: min(680px, calc(100vh - 36px));
+  height: min(680px, calc(100vh - var(--edge-top) - 166px));
+  min-height: 460px;
   display: flex;
   flex-direction: column;
   background: #0f0e0b;
@@ -978,8 +978,8 @@ input[type='range'] {
 .skyline {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
+  width: 100%;
   height: 46%;
   pointer-events: none;
 }
@@ -1394,8 +1394,14 @@ input[type='range'] {
 
 /* touch devices use the action button instead of the keyboard prompt */
 .touch .prompt,
-.touch .hint.desktop {
+.touch .hint.desktop,
+.touch .choice .key {
   display: none;
+}
+.touch .hint {
+  bottom: auto;
+  top: calc(var(--edge-top) + 70px);
+  max-width: calc(100vw - 150px);
 }
 
 @media (max-height: 480px) and (orientation: landscape) {

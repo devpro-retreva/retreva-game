@@ -53,8 +53,9 @@ export function CreateScreen({ onDone, onBack }: { onDone: (p: Profile) => void;
   return (
     <main className="create">
       <div className="preview">
-        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 1.25, 3.4], fov: 32 }} gl={{ antialias: true }} onCreated={({ camera }) => camera.lookAt(0, 1.0, 0)}>
+        <Canvas dpr={[1, 1.5]} camera={{ position: [0, 1.15, 5.2], fov: 26 }} gl={{ antialias: true }} onCreated={({ camera }) => camera.lookAt(0, 0.95, 0)}>
           <hemisphereLight args={['#fde9cf', '#9a5a3a', 1.6]} />
+          <ambientLight color="#ffe1c4" intensity={0.6} />
           <directionalLight position={[-3, 4, 3]} intensity={2.2} color="#ffd9a0" />
           <Turntable look={look} />
           <mesh rotation-x={-Math.PI / 2} position={[0, 0.001, 0]}>

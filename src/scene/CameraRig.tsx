@@ -30,7 +30,7 @@ export function CameraRig() {
   const tmp = new THREE.Vector3();
 
   useFrame(({ camera }, dt) => {
-    const d = Math.min(dt, 0.05);
+    const d = Math.min(dt, 0.1);
     const s = st.current;
     s.t += d;
     const g = useGame.getState();
@@ -103,6 +103,12 @@ export function CameraRig() {
     s.target.lerp(target, 1 - Math.exp(-d * 12));
     camera.position.copy(s.pos);
     camera.lookAt(s.target);
+    const cam = camera as THREE.PerspectiveCamera;
+    const fov = cam.aspect < 0.8 ? 70 : cam.aspect < 1.2 ? 62 : 55;
+    if (cam.fov !== fov) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
+    }
   });
 
   return null;

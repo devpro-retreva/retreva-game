@@ -32,10 +32,13 @@ interface Parts {
 
 const cache = new Map<string, Parts>();
 
-function buildParts(l: CharacterLook): Parts {
-  const key = JSON.stringify(l);
+function buildParts(look: CharacterLook): Parts {
+  const key = JSON.stringify(look);
   const hit = cache.get(key);
   if (hit) return hit;
+  // Deep browns crush to near-black under linear lighting + filmic tone mapping,
+  // which hides faces. Lift lightness at render time; saved data keeps the chosen tone.
+  const l = { ...look, skin: shade(look.skin, 0.13) };
   const w = l.build === 'slim' ? 0.9 : l.build === 'broad' ? 1.14 : 1;
   const hair = '#17110c';
 
@@ -46,8 +49,13 @@ function buildParts(l: CharacterLook): Parts {
   b.cylinder(shade(l.top, -0.12), [0, 1.03, 0], 0.18 * w, 0.18 * w, 0.06, 8); // belt line
   b.cylinder(l.skin, [0, 1.6, 0], 0.055, 0.06, 0.12, 6);
   b.sphere(l.skin, [0, 1.75, 0.005], 0.125, [0.95, 1.08, 1]);
-  b.box('#1a120c', [0.045, 1.77, 0.118], [0.025, 0.02, 0.01]);
-  b.box('#1a120c', [-0.045, 1.77, 0.118], [0.025, 0.02, 0.01]);
+  for (const ex of [0.045, -0.045]) {
+    b.box('#f4ede2', [ex, 1.772, 0.114], [0.04, 0.024, 0.012]);
+    b.box('#120c08', [ex, 1.772, 0.121], [0.018, 0.02, 0.006]);
+    b.box('#120c08', [ex, 1.80, 0.116], [0.042, 0.008, 0.01]);
+  }
+  b.box(shade(l.skin, -0.08), [0, 1.74, 0.126], [0.03, 0.04, 0.02]); // nose
+  b.box('#4a2216', [0, 1.705, 0.117], [0.05, 0.01, 0.01]); // mouth
   const hc = l.headColor ?? '#f4f0e6';
   switch (l.headwear) {
     case 'cap':
@@ -59,9 +67,11 @@ function buildParts(l: CharacterLook): Parts {
       b.cylinder(shade(hc, -0.15), [0, 1.82, 0], 0.132, 0.132, 0.02, 10);
       break;
     case 'gele':
-      b.sphere(hc, [0, 1.88, -0.02], 0.15, [1.35, 0.75, 1.25]);
-      b.boxR(hc, [0, 1.97, -0.06], [0.42, 0.18, 0.04], [-0.5, 0, 0]);
-      b.boxR(shade(hc, -0.1), [0.1, 1.94, 0.02], [0.18, 0.14, 0.03], [-0.2, 0.5, 0.3]);
+      b.sphere(hc, [0, 1.86, -0.015], 0.145, [1.12, 0.62, 1.12]);
+      b.sphere(shade(hc, -0.08), [0, 1.93, -0.04], 0.13, [1.2, 0.55, 1.05]);
+      b.boxR(hc, [0, 1.99, -0.1], [0.38, 0.13, 0.035], [-0.95, 0, 0]);
+      b.boxR(shade(hc, 0.06), [0.09, 2.0, 0.0], [0.2, 0.16, 0.03], [-0.15, 0.55, 0.35]);
+      b.boxR(shade(hc, -0.12), [-0.09, 2.0, 0.0], [0.2, 0.16, 0.03], [-0.15, -0.55, -0.35]);
       break;
     default:
       b.sphere(hair, [0, 1.8, -0.01], 0.128, [1, 0.72, 1]);

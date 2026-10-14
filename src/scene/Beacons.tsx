@@ -37,7 +37,7 @@ export function Beacons() {
     if (diamond.current) {
       diamond.current.visible = show;
       if (npc) {
-        diamond.current.position.set(npc.position[0], 2.55 + (reduced ? 0 : Math.sin(t * 2.4) * 0.08), npc.position[1]);
+        diamond.current.position.set(npc.position[0], 2.35 + (reduced ? 0 : Math.sin(t * 2.4) * 0.08), npc.position[1]);
         diamond.current.rotation.y = reduced ? 0 : t * 1.6;
       }
     }
