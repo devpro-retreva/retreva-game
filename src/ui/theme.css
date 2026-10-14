@@ -1225,6 +1225,51 @@ input[type='range'] {
   color: var(--cream-2);
 }
 
+/* ── avatar editor ─────────────────────────────────────────── */
+
+.gender-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.gender-btn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--cream-2);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: 750;
+  cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm), 100% 100%, 0 100%);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.gender-btn:hover {
+  background: rgba(246, 239, 226, 0.06);
+}
+.gender-btn[aria-checked='true'] {
+  background: var(--danfo);
+  border-color: var(--danfo);
+  color: var(--ink);
+}
+.wardrobe {
+  z-index: 40;
+}
+.wardrobe-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+  background: linear-gradient(transparent, var(--ink) 30%);
+}
+
 /* ── touch controls ────────────────────────────────────────── */
 
 .touch-zone {

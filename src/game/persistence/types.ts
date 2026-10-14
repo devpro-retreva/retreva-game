@@ -2,14 +2,29 @@ import type { Wallet } from '../systems/economy';
 import type { Inventory } from '../systems/inventory';
 import type { JobsState } from '../systems/jobs';
 
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
+
+export type Gender = 'male' | 'female';
+export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
+export type FacialHair = 'none' | 'moustache' | 'goatee' | 'beard';
+export type OutfitStyle = 'shirt' | 'kaftan' | 'tee-shorts' | 'dress' | 'top-skirt' | 'top-trousers';
+export type Headwear = 'none' | 'cap' | 'kufi' | 'gele' | 'wrap';
+export type Accessory = 'none' | 'glasses' | 'earrings';
 
 export interface AvatarLook {
+  gender: Gender;
   skin: string;
+  hair: HairStyle;
+  hairColor: string;
+  facialHair: FacialHair;
+  outfit: OutfitStyle;
+  /** Main garment colour (shirt, top, dress, kaftan). */
   top: string;
+  /** Trousers, shorts or skirt colour. */
   bottom: string;
-  headwear: 'none' | 'cap' | 'kufi' | 'gele';
+  headwear: Headwear;
   headColor: string;
+  accessory: Accessory;
   build: 'slim' | 'regular' | 'broad';
 }
 

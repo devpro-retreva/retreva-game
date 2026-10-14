@@ -157,7 +157,7 @@ export const lagos: DestinationPack = {
       personality: 'Warm, loud, always busy. Runs the best jollof on the street.',
       position: [5.2, 36.6],
       facing: -Math.PI / 2,
-      look: { skin: '#6b4026', top: '#e2a400', bottom: '#2f7a52', headwear: 'gele', headColor: '#d8452b', height: 1.62 },
+      look: { gender: 'female', skin: '#6b4026', top: '#e2a400', bottom: '#2f7a52', outfit: 'top-skirt', hair: 'short', headwear: 'gele', headColor: '#d8452b', accessory: 'earrings', height: 1.62 },
       promptVerb: 'Talk to',
       idle: 'busy',
       dialogue: {
@@ -204,7 +204,7 @@ export const lagos: DestinationPack = {
       personality: 'Easygoing, impatient only when hungry.',
       position: [5.2, -37],
       facing: -Math.PI / 2,
-      look: { skin: '#4a2c1c', top: '#f4f0e6', bottom: '#1b2a3a', headwear: 'none', height: 1.8 },
+      look: { gender: 'male', skin: '#4a2c1c', top: '#f4f0e6', bottom: '#1b2a3a', outfit: 'shirt', hair: 'hightop', facialHair: 'goatee', height: 1.8 },
       promptVerb: 'Talk to',
       idle: 'sway',
       dialogue: {
@@ -239,7 +239,7 @@ export const lagos: DestinationPack = {
       personality: 'Patient, sharp with numbers, knows everyone.',
       position: [5.2, -6.2],
       facing: -Math.PI / 2,
-      look: { skin: '#5a3420', top: '#2c5f9e', bottom: '#f0c75e', headwear: 'gele', headColor: '#f2b705', height: 1.6 },
+      look: { gender: 'female', skin: '#5a3420', top: '#2c5f9e', bottom: '#f0c75e', outfit: 'dress', hair: 'bun', headwear: 'wrap', headColor: '#f2b705', accessory: 'glasses', height: 1.6 },
       promptVerb: 'Shop with',
       idle: 'sway',
       dialogue: {
@@ -262,7 +262,7 @@ export const lagos: DestinationPack = {
       personality: 'Fast talker, knows every route in Lagos.',
       position: [-5.2, 11.5],
       facing: Math.PI / 2,
-      look: { skin: '#5b3622', top: '#c9583b', bottom: '#2a2a2a', headwear: 'cap', headColor: '#f2b705', height: 1.74 },
+      look: { gender: 'male', skin: '#5b3622', top: '#c9583b', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'moustache', headwear: 'cap', headColor: '#f2b705', height: 1.74 },
       promptVerb: 'Talk to',
       idle: 'wave',
       dialogue: {
@@ -289,7 +289,7 @@ export const lagos: DestinationPack = {
       personality: 'Laid-back, generous with advice.',
       position: [-9.6, -6.6],
       facing: Math.PI / 2,
-      look: { skin: '#3f2516', top: '#1f6f4a', bottom: '#4b4033', headwear: 'kufi', headColor: '#f4f0e6', height: 1.76 },
+      look: { gender: 'male', skin: '#3f2516', top: '#1f6f4a', bottom: '#4b4033', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#f4f0e6', height: 1.76 },
       promptVerb: 'Talk to',
       idle: 'sway',
       dialogue: {
@@ -314,13 +314,13 @@ export const lagos: DestinationPack = {
   walkers: [
     {
       id: 'walker-1',
-      look: { skin: '#5a3420', top: '#6b3f8f', bottom: '#e8d9b0', headwear: 'gele', headColor: '#6b3f8f', height: 1.64 },
+      look: { gender: 'female', skin: '#5a3420', top: '#6b3f8f', bottom: '#e8d9b0', outfit: 'dress', hair: 'braids', headwear: 'none', headColor: '#6b3f8f', height: 1.64 },
       path: [[-5.4, 38], [-5.4, 16], [-5.4, -28], [-5.4, 16]],
       speed: 1.3,
     },
     {
       id: 'walker-2',
-      look: { skin: '#3f2516', top: '#f4f0e6', bottom: '#2c5f9e', headwear: 'none', height: 1.78 },
+      look: { gender: 'male', skin: '#3f2516', top: '#f4f0e6', bottom: '#2c5f9e', outfit: 'shirt', hair: 'locs', height: 1.78 },
       path: [[5.3, -30], [5.3, 0], [5.3, 28], [5.3, 0]],
       speed: 1.5,
     },

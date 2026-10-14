@@ -6,6 +6,7 @@ import { resolveEntry } from './dialogue';
 import { lagos } from '../content/destinations/lagos';
 import { MemorySaveAdapter } from '../persistence/adapters';
 import { SaveManager, migrate } from '../persistence/saveManager';
+import { DEFAULT_AVATAR, OPTIONS, defaultLookFor, sanitizeLook, switchGender, upgradeAvatarV1 } from '../core/avatarPresets';
 
 const job = lagos.jobs[0];
 
@@ -128,7 +129,7 @@ describe('persistence', () => {
     const adapter = new MemorySaveAdapter();
     let balance = 2000;
     const snap = () => ({
-      profile: { name: 'Ade', avatar: { skin: '#000', top: '#111', bottom: '#222', headwear: 'none' as const, headColor: '#fff', build: 'regular' as const }, createdAt: 0 },
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
       destinationId: 'lagos-adeniyi',
       wallet: { balance, ledger: [] },
       inventory: { entries: [] },
@@ -189,5 +190,60 @@ describe('collision sliding', () => {
       z = r.z;
     }
     expect(z).toBeLessThan(20);
+  });
+});
+
+describe('avatar options', () => {
+  it('gender defaults only use options offered for that gender', () => {
+    for (const g of ['male', 'female'] as const) {
+      const d = defaultLookFor(g);
+      const o = OPTIONS[g];
+      expect(o.hair.some((x) => x.id === d.hair)).toBe(true);
+      expect(o.outfit.some((x) => x.id === d.outfit)).toBe(true);
+      expect(o.headwear.some((x) => x.id === d.headwear)).toBe(true);
+      expect(o.accessory.some((x) => x.id === d.accessory)).toBe(true);
+    }
+  });
+
+  it('switching gender resets gender-specific choices but keeps skin, colours and build', () => {
+    const male = { ...defaultLookFor('male'), skin: '#3a2216', facialHair: 'beard' as const, hair: 'locs' as const, build: 'broad' as const, top: '#7a3b72' };
+    const female = switchGender(male, 'female');
+    expect(female.gender).toBe('female');
+    expect(female.facialHair).toBe('none');
+    expect(OPTIONS.female.hair.some((h) => h.id === female.hair)).toBe(true);
+    expect(female.skin).toBe('#3a2216');
+    expect(female.build).toBe('broad');
+    expect(female.top).toBe('#7a3b72');
+  });
+
+  it('sanitizeLook rejects options from the other gender', () => {
+    const bad = sanitizeLook({ ...defaultLookFor('female'), facialHair: 'beard', outfit: 'kaftan', headwear: 'kufi' });
+    expect(bad.facialHair).toBe('none');
+    expect(bad.outfit).toBe('dress');
+    expect(bad.headwear).toBe('none');
+  });
+
+  it('upgrades a schema-1 avatar and keeps its colours', () => {
+    const v1 = { skin: '#6b4026', top: '#1d7f86', bottom: '#e9dcc0', headwear: 'gele', headColor: '#d8452b', build: 'slim' };
+    const up = upgradeAvatarV1(v1);
+    expect(up.gender).toBe('female');
+    expect(up.headwear).toBe('gele');
+    expect(up.top).toBe('#1d7f86');
+    expect(up.build).toBe('slim');
+    expect(upgradeAvatarV1({ ...v1, headwear: 'kufi' }).gender).toBe('male');
+  });
+
+  it('migrate() upgrades a whole schema-1 save to the current version', () => {
+    const v1 = {
+      schemaVersion: 1, revision: 4, updatedAt: 0, deviceId: 'd',
+      profile: { name: 'Ade', createdAt: 0, avatar: { skin: '#000', top: '#111', bottom: '#222', headwear: 'cap', headColor: '#fff', build: 'regular' } },
+      destinationId: 'lagos-adeniyi', wallet: { balance: 900, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 0 },
+    };
+    const m = migrate(v1);
+    expect(m?.schemaVersion).toBe(2);
+    expect(m?.profile.avatar.gender).toBe('male');
+    expect(m?.profile.avatar.headwear).toBe('cap');
+    expect(m?.wallet.balance).toBe(900);
   });
 });

@@ -7,6 +7,7 @@ import { useGame, type PhoneApp } from '../../game/store/gameStore';
 import { saves } from '../../game/persistence/instance';
 import { usePack } from '../../scene/worldContext';
 import { MapView } from '../hud/MapView';
+import { describeLook } from '../avatar/AvatarEditor';
 import { formatClock, formatDuration } from '../hooks';
 import {
   IconBack, IconBag, IconBed, IconChat, IconGear, IconJobs, IconMap, IconPlane, IconTicket, IconUser, IconWallet, IconLock, ITEM_ICONS,
@@ -314,19 +315,24 @@ function ProfileApp() {
   const s = useGame();
   if (!s.profile) return null;
   const a = s.profile.avatar;
+  const hairShown = a.hair !== 'bald' && a.headwear === 'none';
   const deliveries = s.jobs.history.filter((h) => h.outcome === 'completed').length;
   const earned = s.wallet.ledger.filter((t) => t.amount > 0 && t.id !== 'start').reduce((n, t) => n + t.amount, 0);
   return (
     <>
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', margin: '6px 0 10px' }}>
         <div className="cut" style={{ width: 64, height: 64, background: a.top, display: 'grid', placeItems: 'center' }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: a.skin, boxShadow: `0 -6px 0 ${a.headwear === 'none' ? '#17110c' : a.headColor}` }} />
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: a.skin, boxShadow: a.headwear !== 'none' ? `0 -6px 0 ${a.headColor}` : hairShown ? `0 -6px 0 ${a.hairColor}` : 'none' }} />
         </div>
         <div>
           <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800 }}>{s.profile.name}</div>
-          <div style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}>Living in {pack.name} · since {new Date(s.profile.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+          <div style={{ color: 'var(--muted)', fontSize: 'var(--fs-sm)' }}>{describeLook(a)}</div>
+          <div style={{ color: 'var(--muted)', fontSize: 'var(--fs-xs)' }}>Living in {pack.name} · since {new Date(s.profile.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
         </div>
       </div>
+      <button className="btn block" style={{ margin: '4px 0 14px' }} onClick={s.openWardrobe}>
+        Change look &amp; name
+      </button>
       <Stat k="Time played" v={formatDuration(s.playTimeMs)} />
       <Stat k="Deliveries" v={deliveries} />
       <Stat k="Money earned" v={formatMoney(pack, earned)} />

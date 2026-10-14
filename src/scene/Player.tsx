@@ -6,6 +6,7 @@ import { runtime } from '../game/core/runtime';
 import { resolveMove } from '../game/systems/collision';
 import { useGame } from '../game/store/gameStore';
 import { Character, type CharacterAnim } from './Character';
+import { HEIGHT } from '../game/core/avatarPresets';
 import { groundHeight, lerpAngle, useCollisionWorld, usePack } from './worldContext';
 
 const WALK = 3.4;
@@ -68,7 +69,7 @@ export function Player() {
   });
 
   if (!profile) return null;
-  const look = { ...profile.avatar, height: 1.76 };
+  const look = { ...profile.avatar, height: HEIGHT[profile.avatar.gender] };
   return (
     <group ref={group}>
       <Character look={look} anim={anim} />

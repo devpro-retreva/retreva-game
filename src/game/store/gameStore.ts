@@ -13,12 +13,13 @@ import {
   type JobsState,
 } from '../systems/jobs';
 import { resolveEntry, type DialogueContext } from '../systems/dialogue';
-import type { Profile, SaveData, Settings } from '../persistence/types';
+import type { AvatarLook, Profile, SaveData, Settings } from '../persistence/types';
+import { sanitizeLook } from '../core/avatarPresets';
 import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe';
 export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings';
 
 export interface Toast {
@@ -82,6 +83,8 @@ interface GameState {
   openPhone(app?: PhoneApp): void;
   setPhoneApp(app: PhoneApp): void;
   togglePause(): void;
+  openWardrobe(): void;
+  saveProfile(name: string, avatar: AvatarLook): void;
   closePanel(): void;
   pushToast(t: Omit<Toast, 'id'>): void;
   dismissToast(id: string): void;
@@ -129,7 +132,7 @@ export const useGame = create<GameState>((set, get) => ({
     const p = getDestination(DEFAULT_DESTINATION);
     resetRuntime(p.spawn.position[0], p.spawn.position[1], p.spawn.facing);
     set({
-      profile,
+      profile: { ...profile, avatar: sanitizeLook(profile.avatar) },
       destinationId: p.id,
       wallet: createWallet(p.startingMoney),
       inventory: emptyInventory(),
@@ -260,6 +263,21 @@ export const useGame = create<GameState>((set, get) => ({
     } else {
       get().closePanel();
     }
+  },
+
+  openWardrobe() {
+    set({ ui: 'wardrobe', dialogue: null, shopId: null });
+    setUiMode('wardrobe');
+  },
+
+  saveProfile(name, avatar) {
+    const cur = get().profile;
+    if (!cur) return;
+    const clean = name.trim().slice(0, 18);
+    if (clean.length < 2) return;
+    set({ profile: { ...cur, name: clean, avatar: sanitizeLook(avatar) }, critical: get().critical + 1 });
+    get().closePanel();
+    get().pushToast({ kind: 'info', title: 'Look updated', detail: 'Saved to your profile.' });
   },
 
   closePanel() {

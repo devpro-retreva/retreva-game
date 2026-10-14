@@ -1,4 +1,5 @@
 import { SAVE_SCHEMA_VERSION, type SaveAdapter, type SaveData } from './types';
+import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
 export const MAIN_SLOT = 'main';
 
@@ -9,8 +10,12 @@ export function migrate(raw: unknown): SaveData | null {
   if (typeof d.schemaVersion !== 'number' || d.schemaVersion > SAVE_SCHEMA_VERSION) return null;
   if (!d.profile || !d.wallet || !d.inventory || !d.jobs) return null;
   if (typeof d.wallet.balance !== 'number' || !Array.isArray(d.wallet.ledger)) return null;
-  // v1 is current; future versions add upgrade steps here.
-  return d as SaveData;
+  // v1 → v2: avatars gained gender, hair, facial hair, outfit style and accessory.
+  // Every save also passes through sanitizeLook so bad values can't reach the renderer.
+  const avatar = d.schemaVersion < 2
+    ? upgradeAvatarV1(d.profile.avatar as unknown as Record<string, unknown>)
+    : sanitizeLook(d.profile.avatar ?? {});
+  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar } };
 }
 
 export function getDeviceId(): string {

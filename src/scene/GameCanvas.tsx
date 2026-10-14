@@ -18,6 +18,7 @@ export const isCoarsePointer = () => typeof matchMedia !== 'undefined' && matchM
 export function GameCanvas() {
   const pack = usePack();
   const shadowSetting = useGame((s) => s.settings.shadows);
+  const paused = useGame((s) => s.ui === 'wardrobe');
   const coarse = useMemo(isCoarsePointer, []);
   const shadows = shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse);
   const sky = useMemo(makeSkyTexture, []);
@@ -51,6 +52,7 @@ export function GameCanvas() {
     >
       <Canvas
         key={shadows ? 'sh' : 'nosh'}
+        frameloop={paused ? 'never' : 'always'}
         shadows={shadows ? { type: THREE.PCFSoftShadowMap } : false}
         dpr={coarse ? [1, 1.5] : [1, 2]}
         gl={{ antialias: !coarse, powerPreference: 'high-performance', stencil: false }}

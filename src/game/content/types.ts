@@ -5,6 +5,8 @@
  * or Toronto means writing another pack, not changing the engine.
  */
 
+import type { Accessory, FacialHair, Gender, HairStyle, Headwear, OutfitStyle } from '../persistence/types';
+
 /** Ground-plane position: [x, z] in metres. */
 export type Vec2 = [number, number];
 
@@ -83,11 +85,17 @@ export interface PropDef {
 }
 
 export interface NpcLook {
+  gender: Gender;
   skin: string;
   top: string;
   bottom: string;
-  headwear?: 'gele' | 'cap' | 'kufi' | 'none';
+  hair?: HairStyle;
+  hairColor?: string;
+  facialHair?: FacialHair;
+  outfit?: OutfitStyle;
+  headwear?: Headwear;
   headColor?: string;
+  accessory?: Accessory;
   height?: number;
 }
 
