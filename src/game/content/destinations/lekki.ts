@@ -197,6 +197,8 @@ export const lekki: DestinationPack = {
   ],
 
   walkers: [
+    { id: 'lw-3', look: { gender: 'female', skin: '#f1d3b3', top: '#f4f0e6', bottom: '#5b8fc4', outfit: 'top-trousers', hair: 'long', hairColor: '#120c08', accessory: 'glasses', height: 1.62 }, path: [[7.2, -24], [7.2, 14], [7.2, -24]], speed: 0.95, stops: [{ at: 1, activity: 'photo', seconds: 8, face: Math.PI / 2 }] },
+    { id: 'lw-4', look: { gender: 'male', skin: '#3f2516', top: '#f2b705', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'hightop' }, path: [[3.2, 30], [3.2, -10], [3.2, 30]], speed: 1.2, stops: [{ at: 1, activity: 'wait', seconds: 9, face: Math.PI / 2 }] },
     { id: 'lw-1', look: { gender: 'male', skin: '#4a2c1c', top: '#1d7f86', bottom: '#f4f0e6', outfit: 'tee-shorts', hair: 'locs' }, path: [[6.5, 36], [6.5, -36]], speed: 1.1 },
     { id: 'lw-2', look: { gender: 'female', skin: '#5a3420', top: '#ff9f80', bottom: '#f4f0e6', outfit: 'dress', hair: 'braids', accessory: 'glasses' }, path: [[0.5, -30], [0.5, 30]], speed: 0.9 },
   ],

@@ -6,6 +6,7 @@ import { useGame } from '../game/store/gameStore';
 import { makeSkyTexture } from './builders/painters';
 import { Beacons } from './Beacons';
 import { Collectibles } from './Collectibles';
+import { Traffic } from './Traffic';
 import { CameraRig } from './CameraRig';
 import { Lighting } from './Lighting';
 import { Npcs } from './Npcs';
@@ -68,6 +69,7 @@ export function GameCanvas() {
         <Lighting shadows={shadows} sun={pack.palette.sun} />
         <StaticWorld pack={pack} shadows={shadows} />
         <Npcs />
+        <Traffic />
         <Player />
         <Beacons />
         <Collectibles />

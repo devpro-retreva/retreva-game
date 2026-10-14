@@ -67,6 +67,7 @@ PLAYTEST_URL=http://localhost:5173/ node playtests/run.mjs regression   # agains
 | `regression` (40 checks) | title, character creation, movement, camera, Jollof Run (pay once, no duplicate reward), shop, phone apps, pause, save + continue after refresh, mobile touch layout |
 | `expansion` (31) | danfo travel to all four areas (fare charged once), beach clean-up collect job, landmarks, bargaining, goals paid once, tips, messages, persistence, mobile travel |
 | `life` (47) | needs drain, kitchen shift (pay, perfect tip, cooking XP/level-up, regard, staff meal), too-tired gate, no running when exhausted, bench rest, eating, sell-with-confirm, renting a room, sleeping, persistence of all of it — desktop and mobile |
+| `city` (11) | traffic moves, keeps lanes, stops for a person in its lane, steers around the parked danfo; walkers stop to shop/wait/eat/chat/photo; draw-call and triangle budget; Ikeja traffic, Island/Lekki pedestrian-only |
 | `wardrobe` (14) | gender + look + name changes from the phone, saved across refresh, desktop and mobile |
 
 Options: `PLAYTEST_GPU=1` uses the real GPU instead of SwiftShader software GL, `PLAYTEST_HEADED=1` shows the browser, `PLAYTEST_OUT` sets the screenshot folder. With software GL the game runs at ~2–11 fps, so a full run takes 10+ minutes; checks wait on game state rather than fixed times where they can. The scripts drive the game through `window.__retreva = { store, runtime, saves }` (read state, teleport by setting `runtime.player.x/z`). When game text or flows change on purpose, update the matching check rather than the game. Real-device performance has not been measured yet.
@@ -76,6 +77,8 @@ Options: `PLAYTEST_GPU=1` uses the real GPU instead of SwiftShader software GL, 
 Title screen (`ui/shell/TitleScreen.tsx`) is the game cover: art placed on a fixed design stage (1920×1080 landscape, 1080×2080 portrait, chosen by aspect ratio) scaled with container units (`--u`), with sky/skyline bleeding to the edges; the Start button has a CSS glass-sweep + sparkle (off under reduced motion). Keep `.wordmark` and the button texts — the playtests rely on them.
 
 Done: Yaba street slice; gendered avatar creator + wardrobe; four Lagos State areas; danfo travel with fares; bargaining; delivery and collect jobs; 8 goals; tip cards, area banners, toasts; Messages and Travel phone apps; save schema v3.
+
+Characters (`scene/Character.tsx`): smooth sculpted primitives (lathed torso, capsule limbs, hands, shoes, face with lids/nose/lips), Phong material, two LODs (`near`/`far`, switched by distance in `Npcs.tsx`). Traffic (`scene/Traffic.tsx`) is data-driven via `pack.traffic`; state is mirrored in `runtime.traffic` for tests. Walker `stops` in pack data give pedestrians purposes.
 
 Known gaps: the README's "What's in the slice" section predates the expansion (it still calls Messages/Travel "coming later"); performance on a real budget Android phone is untested; no PWA/service worker.
 

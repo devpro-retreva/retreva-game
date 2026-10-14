@@ -204,6 +204,8 @@ export const ikeja: DestinationPack = {
   ],
 
   walkers: [
+    { id: 'kw-3', look: { gender: 'male', skin: '#a8714f', top: '#6b3f8f', bottom: '#2b2f3a', outfit: 'shirt', hair: 'low', accessory: 'glasses', height: 1.72 }, path: [[5.4, 24], [5.4, -6], [5.4, 24]], speed: 1.25, stops: [{ at: 1, activity: 'shop', seconds: 9, face: Math.PI / 2 }] },
+    { id: 'kw-4', look: { gender: 'female', skin: '#5a3420', top: '#e8e6e0', bottom: '#1d1d1f', outfit: 'top-skirt', hair: 'bun' }, path: [[-5.4, -20], [-5.4, 26], [-5.4, -20]], speed: 1.3, stops: [{ at: 1, activity: 'wait', seconds: 10, face: Math.PI / 2 }] },
     { id: 'kw-1', look: { gender: 'male', skin: '#3f2516', top: '#f4f0e6', bottom: '#2c5f9e', outfit: 'shirt', hair: 'low', accessory: 'glasses' }, path: [[-5.4, 30], [-5.4, -34]], speed: 1.5 },
     { id: 'kw-2', look: { gender: 'female', skin: '#5a3420', top: '#1d7f86', bottom: '#2a2a2a', outfit: 'top-trousers', hair: 'braids' }, path: [[5.4, -30], [5.4, 28]], speed: 1.3 },
   ],
@@ -245,5 +247,10 @@ export const ikeja: DestinationPack = {
     },
   ],
 
+  traffic: {
+    lanes: [{ x: 2, dir: 1 }, { x: -2, dir: -1 }],
+    vehicles: [{ kind: 'car', color: '#9aa3ad' }, { kind: 'danfo' }, { kind: 'car', color: '#1d1d1f' }, { kind: 'keke' }, { kind: 'car', color: '#2f7a52' }],
+    speed: [4.5, 7.5],
+  },
   startingMoney: 0,
 };

@@ -8,6 +8,10 @@ export const runtime = {
   /** Live positions of NPCs and walkers, keyed by id. */
   actors: new Map<string, { x: number; z: number }>(),
   perf: { fps: 0, drawCalls: 0, triangles: 0 },
+  /** Moving vehicles this frame (read-only outside Traffic). */
+  /** What each walker is doing right now (null while walking). */
+  activity: new Map<string, string | null>(),
+  traffic: [] as { x: number; z: number; speed: number; lane: number }[],
 };
 
 export function resetRuntime(x: number, z: number, yaw: number) {

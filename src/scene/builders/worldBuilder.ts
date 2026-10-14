@@ -429,6 +429,31 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   g.box('#c4b19c', [26, 16, -84], [10, 32, 9]);
 }
 
+/** One moving vehicle as its own geometry (front faces +z), reusing the parked-prop builders. */
+export function vehicleGeometry(kind: 'danfo' | 'keke' | 'car', color?: string): THREE.BufferGeometry {
+  const g = new ColorGeometryBuilder();
+  if (kind === 'car') {
+    const c = color ?? '#c0392b';
+    g.box(c, [0, 0.62, 0], [1.7, 0.6, 4.1]);
+    g.box(c, [0, 1.12, -0.25], [1.5, 0.5, 2.1]);
+    g.box('#22282c', [0, 1.13, -0.25], [1.52, 0.38, 1.9]);
+    g.box('#22282c', [0, 1.1, 0.83], [1.36, 0.4, 0.04]);
+    g.box('#3b3b3b', [0, 0.42, 2.06], [1.7, 0.18, 0.1]);
+    g.box('#3b3b3b', [0, 0.42, -2.06], [1.7, 0.18, 0.1]);
+    for (const lx of [0.55, -0.55]) {
+      g.box('#fff6d0', [lx, 0.7, 2.06], [0.3, 0.14, 0.04]);
+      g.box('#c0392b', [lx, 0.7, -2.06], [0.3, 0.14, 0.04]);
+    }
+    for (const [lx, lz] of [[0.8, 1.35], [-0.8, 1.35], [0.8, -1.35], [-0.8, -1.35]]) {
+      g.cylinder('#1a1a1a', [lx, 0.34, lz], 0.34, 0.34, 0.24, 12, [0, 0, Math.PI / 2]);
+      g.cylinder('#9a9a9a', [lx * 1.02, 0.34, lz], 0.16, 0.16, 0.25, 8, [0, 0, Math.PI / 2]);
+    }
+  } else {
+    prop(g, { id: 'v', kind, position: [0, 0], rotation: 0 });
+  }
+  return g.build();
+}
+
 export function buildStaticWorld(pack: DestinationPack): StaticWorld {
   // Pick a facade resolution that fits every facade into one 2048² atlas,
   // stepping down if the shelf packer still runs out of room.

@@ -6,6 +6,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * into a single BufferGeometry → one draw call for the whole static world.
  */
 export class ColorGeometryBuilder {
+  /** Scales segment counts of the smooth shapes (ellipsoid, capsule, lathe) — used for character LOD. */
+  constructor(private segScale = 1) {}
+  private seg = (n: number, min = 4) => Math.max(min, Math.round(n * this.segScale));
   private parts: THREE.BufferGeometry[] = [];
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
@@ -55,6 +58,22 @@ export class ColorGeometryBuilder {
 
   sphere(color: string, pos: [number, number, number], r: number, scale: [number, number, number] = [1, 1, 1], detail = 1) {
     this.push(new THREE.IcosahedronGeometry(r, detail), color, pos, [0, 0, 0], scale);
+  }
+
+  /** Smooth UV sphere (rounder than the icosphere; for characters). */
+  ellipsoid(color: string, pos: [number, number, number], r: number, scale: [number, number, number] = [1, 1, 1], seg: [number, number] = [14, 10], rot: [number, number, number] = [0, 0, 0]) {
+    this.push(new THREE.SphereGeometry(r, this.seg(seg[0], 5), this.seg(seg[1], 3)), color, pos, rot, scale);
+  }
+
+  /** Capsule along Y (length excludes the round caps). */
+  capsule(color: string, pos: [number, number, number], r: number, len: number, rot: [number, number, number] = [0, 0, 0], radial = 10, scale: [number, number, number] = [1, 1, 1]) {
+    this.push(new THREE.CapsuleGeometry(r, len, Math.max(1, this.seg(3, 1)), this.seg(radial)), color, pos, rot, scale);
+  }
+
+  /** Surface of revolution from a [radius, y] profile (bottom → top), e.g. a sculpted torso or a flared skirt. */
+  lathe(color: string, pos: [number, number, number], profile: [number, number][], seg = 16, scale: [number, number, number] = [1, 1, 1]) {
+    const pts = profile.map(([r, y]) => new THREE.Vector2(r, y));
+    this.push(new THREE.LatheGeometry(pts, this.seg(seg, 6)), color, pos, [0, 0, 0], scale);
   }
 
   build(): THREE.BufferGeometry {

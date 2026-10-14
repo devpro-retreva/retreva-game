@@ -157,11 +157,15 @@ export interface NpcDef {
   idle?: 'sway' | 'wave' | 'busy';
 }
 
+export type WalkerActivity = 'shop' | 'wait' | 'chat' | 'eat' | 'photo';
+
 export interface WalkerDef {
   id: string;
   look: NpcLook;
   path: Vec2[];
   speed: number;
+  /** What this person stops to do at a path point: pose, how long, which way they face (yaw). */
+  stops?: { at: number; activity: WalkerActivity; seconds: number; face: number }[];
 }
 
 export interface BusinessDef {
@@ -215,6 +219,14 @@ export interface SpotDef {
   homeId?: string;
 }
 
+/** Moving traffic on the main road: simple lane paths, bounded and data-driven. */
+export interface TrafficDef {
+  lanes: { x: number; dir: 1 | -1 }[];
+  vehicles: { kind: 'danfo' | 'keke' | 'car'; color?: string }[];
+  /** Cruising speed range in m/s. */
+  speed: [number, number];
+}
+
 /** A home the player can rent in this area. */
 export interface HomeDef {
   id: string;
@@ -266,6 +278,7 @@ export interface DestinationPack {
   /** Skill-based shift work (different mechanic from delivery jobs). */
   shifts?: ShiftDef[];
   spots?: SpotDef[];
+  traffic?: TrafficDef;
   homes?: HomeDef[];
   startingMoney: number;
 }

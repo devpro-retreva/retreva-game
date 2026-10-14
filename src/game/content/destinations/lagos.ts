@@ -328,6 +328,27 @@ export const lagos: DestinationPack = {
 
   walkers: [
     {
+      id: 'walker-commuter',
+      look: { gender: 'male', skin: '#4a2c1c', top: '#dfe6ee', bottom: '#2b2f3a', outfit: 'shirt', hair: 'low', facialHair: 'goatee', height: 1.8 },
+      path: [[-5.4, -30], [-5.4, 18.4], [-5.4, 40]],
+      speed: 1.45,
+      stops: [{ at: 1, activity: 'wait', seconds: 11, face: Math.PI / 2 }],
+    },
+    {
+      id: 'walker-shopper',
+      look: { gender: 'female', skin: '#6b4026', top: '#2f7a52', bottom: '#e2a400', outfit: 'top-skirt', hair: 'short', headwear: 'gele', headColor: '#e2a400', accessory: 'earrings', height: 1.64 },
+      path: [[5.4, 20], [5.4, -4.4], [5.4, 30], [4.4, 34.4], [5.4, 20]],
+      speed: 1.15,
+      stops: [{ at: 1, activity: 'shop', seconds: 8, face: Math.PI }, { at: 3, activity: 'eat', seconds: 10, face: 0 }],
+    },
+    {
+      id: 'walker-visitor',
+      look: { gender: 'male', skin: '#e3b48f', top: '#2c5f9e', bottom: '#c7b38a', outfit: 'tee-shorts', hair: 'short', hairColor: '#6b4a2a', headwear: 'cap', headColor: '#f4f0e6', height: 1.76 },
+      path: [[-5.4, 36], [-5.4, 2], [-5.4, 36]],
+      speed: 1.1,
+      stops: [{ at: 1, activity: 'photo', seconds: 7, face: Math.PI / 2 }],
+    },
+    {
       id: 'walker-1',
       look: { gender: 'female', skin: '#5a3420', top: '#6b3f8f', bottom: '#e8d9b0', outfit: 'dress', hair: 'braids', headwear: 'none', headColor: '#6b3f8f', height: 1.64 },
       path: [[-5.4, 38], [-5.4, 16], [-5.4, -28], [-5.4, 16]],
@@ -433,5 +454,10 @@ export const lagos: DestinationPack = {
   homes: [
     { id: 'yaba-room', name: 'Room on Adeniyi Street', description: 'A self-contained room upstairs: bed, fan, a lock that works. Rest here for free whenever you like.', moveInCost: 6000 },
   ],
+  traffic: {
+    lanes: [{ x: 2, dir: 1 }, { x: -2, dir: -1 }],
+    vehicles: [{ kind: 'danfo' }, { kind: 'car', color: '#b3261e' }, { kind: 'keke' }, { kind: 'car', color: '#e8e6e0' }, { kind: 'danfo' }, { kind: 'car', color: '#2c5f9e' }],
+    speed: [4.5, 7.5],
+  },
   startingMoney: 2000,
 };

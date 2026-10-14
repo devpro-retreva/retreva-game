@@ -218,6 +218,8 @@ export const lagosIsland: DestinationPack = {
   ],
 
   walkers: [
+    { id: 'iw-4', look: { gender: 'male', skin: '#c99a74', top: '#f4f0e6', bottom: '#3a3f4a', outfit: 'shirt', hair: 'short', hairColor: '#2a1e16', facialHair: 'moustache', height: 1.74 }, path: [[1.2, -20], [1.2, 12], [1.2, -20]], speed: 1.1, stops: [{ at: 1, activity: 'shop', seconds: 9, face: Math.PI / 2 }] },
+    { id: 'iw-5', look: { gender: 'female', skin: '#3f2516', top: '#d8452b', bottom: '#f2b705', outfit: 'dress', hair: 'braids', headwear: 'gele', headColor: '#f2b705' }, path: [[-1.0, -10], [-1.0, 26], [-1.0, -10]], speed: 1.0, stops: [{ at: 1, activity: 'chat', seconds: 8, face: -Math.PI / 2 }] },
     { id: 'iw-1', look: { gender: 'female', skin: '#5a3420', top: '#f2b705', bottom: '#2c5f9e', outfit: 'top-skirt', hair: 'puff' }, path: [[-1.2, 34], [-1.2, -36]], speed: 1.2 },
     { id: 'iw-2', look: { gender: 'male', skin: '#3f2516', top: '#2d3f8f', bottom: '#c7b38a', outfit: 'kaftan', hair: 'low', headwear: 'kufi', headColor: '#f4f0e6' }, path: [[1.3, -34], [1.3, 33]], speed: 1.35 },
     { id: 'iw-3', look: { gender: 'female', skin: '#6b4026', top: '#7a3b72', bottom: '#2b2b33', outfit: 'dress', hair: 'long', headwear: 'wrap', headColor: '#7a3b72' }, path: [[0.2, 20], [0.2, -20]], speed: 1.0 },

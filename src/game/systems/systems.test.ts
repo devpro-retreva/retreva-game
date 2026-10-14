@@ -456,3 +456,23 @@ describe('daily life', () => {
     }
   });
 });
+
+describe('living city data', () => {
+  it('traffic lanes sit inside the road and walker stops point at real path points', () => {
+    for (const p of ALL_PACKS) {
+      for (const l of p.traffic?.lanes ?? []) expect(Math.abs(l.x) + 0.9, `${p.id} lane`).toBeLessThanOrEqual(p.road.halfWidth);
+      if (p.traffic) expect(p.traffic.speed[0]).toBeLessThanOrEqual(p.traffic.speed[1]);
+      for (const w of p.walkers) for (const st of w.stops ?? []) {
+        expect(st.at, `${w.id}`).toBeGreaterThanOrEqual(0);
+        expect(st.at, `${w.id}`).toBeLessThan(w.path.length);
+        expect(st.seconds).toBeGreaterThan(0);
+      }
+    }
+  });
+  it('every area has people of more than one appearance', () => {
+    for (const p of ALL_PACKS) {
+      const skins = new Set([...p.npcs.map((n) => n.look.skin), ...p.walkers.map((w) => w.look.skin)]);
+      expect(skins.size, p.id).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
