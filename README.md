@@ -12,7 +12,10 @@ npm run dev        # http://localhost:5173
 npm test           # unit tests (economy, jobs, inventory, dialogue, collision, saves)
 npm run build      # type-check + production build into dist/
 npm run preview    # serve the production build
+npm run playtest   # build + browser playtests (run `npx playwright install chromium` once first)
 ```
+
+The browser playtests in `playtests/` play the game in headless Chromium: the regression suite (40 checks), the Lagos expansion (31) and the wardrobe (14). See `CLAUDE.md` for options.
 
 No account, server, API key or paid service is needed. Progress saves to IndexedDB on the device (falls back to localStorage).
 

@@ -14,7 +14,7 @@ npm run build      # type-check + production build into dist/ (base: './', runs 
 npm run preview    # serve dist/
 ```
 
-Before calling work done: `npm run typecheck`, `npm test`, `npm run build` must all pass. Report real results — never claim a test passed that wasn't run.
+Before calling work done: `npm run typecheck`, `npm test`, `npm run build` must all pass, and for gameplay or UI changes `npm run playtest` too (see below). Report real results — never claim a test passed that wasn't run.
 
 ## Stack
 
@@ -48,9 +48,25 @@ src/ui/              DOM UI over the canvas: hud/, panels/ (dialogue, shop + hag
 - **Original identity.** No copied protected assets, characters, logos or branding.
 - **Safety.** Never commit secrets. No paid dependencies or services without the owner's approval. No destructive changes (deleting features, rewriting history, force-push) without approval. Don't claim offline/PWA support — there's no service worker yet.
 
-## Debugging and playtests
+## Browser playtests (`playtests/`)
 
-`window.__retreva = { store, runtime, saves }` is exposed for automated browser tests (e.g. Playwright: `__retreva.store.getState()`, teleport by setting `runtime.player.x/z`). Headless Chromium needs software GL (SwiftShader) and runs at only ~2–11 fps, so timing-based checks need generous waits; real-device performance has not been measured yet.
+Playwright scripts that play the real game in Chromium and print PASS/FAIL per check (screenshots go to `qa-shots/`, gitignored).
+
+```bash
+npx playwright install chromium         # once per machine
+npm run playtest                        # build, start vite preview on :4173, run regression + expansion + wardrobe
+node playtests/run.mjs expansion        # one suite against an existing build (npm run build first)
+node playtests/run.mjs avatar-gallery   # screenshots of avatar looks, no pass/fail
+PLAYTEST_URL=http://localhost:5173/ node playtests/run.mjs regression   # against a running dev server
+```
+
+| Suite | Covers |
+|---|---|
+| `regression` (40 checks) | title, character creation, movement, camera, Jollof Run (pay once, no duplicate reward), shop, phone apps, pause, save + continue after refresh, mobile touch layout |
+| `expansion` (31) | danfo travel to all four areas (fare charged once), beach clean-up collect job, landmarks, bargaining, goals paid once, tips, messages, persistence, mobile travel |
+| `wardrobe` (14) | gender + look + name changes from the phone, saved across refresh, desktop and mobile |
+
+Options: `PLAYTEST_GPU=1` uses the real GPU instead of SwiftShader software GL, `PLAYTEST_HEADED=1` shows the browser, `PLAYTEST_OUT` sets the screenshot folder. With software GL the game runs at ~2–11 fps, so a full run takes 10+ minutes; checks wait on game state rather than fixed times where they can. The scripts drive the game through `window.__retreva = { store, runtime, saves }` (read state, teleport by setting `runtime.player.x/z`). When game text or flows change on purpose, update the matching check rather than the game. Real-device performance has not been measured yet.
 
 ## Status and next steps
 
