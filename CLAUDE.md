@@ -35,6 +35,8 @@ src/game/            pure game logic — no React, no Three.js
   core/              per-frame runtime + input objects (live outside React), avatar presets
 src/scene/           React Three Fiber: static world builder (merged mesh + texture atlas), Player, CameraRig, Npcs, Beacons, Collectibles, Systems
 src/ui/              DOM UI over the canvas: hud/, panels/ (dialogue, shop + haggle), phone/, travel/, avatar/, shell/, icons/, theme.css
+src/assets/splash/   cover-art SVGs for the title screen (characters, postcards, car, jet, globe, skyline);
+                     regenerate with `python3 src/assets/splash/generate.py`
 ```
 
 ## Rules that must not break
@@ -69,6 +71,8 @@ PLAYTEST_URL=http://localhost:5173/ node playtests/run.mjs regression   # agains
 Options: `PLAYTEST_GPU=1` uses the real GPU instead of SwiftShader software GL, `PLAYTEST_HEADED=1` shows the browser, `PLAYTEST_OUT` sets the screenshot folder. With software GL the game runs at ~2–11 fps, so a full run takes 10+ minutes; checks wait on game state rather than fixed times where they can. The scripts drive the game through `window.__retreva = { store, runtime, saves }` (read state, teleport by setting `runtime.player.x/z`). When game text or flows change on purpose, update the matching check rather than the game. Real-device performance has not been measured yet.
 
 ## Status and next steps
+
+Title screen (`ui/shell/TitleScreen.tsx`) is the game cover: art placed on a fixed design stage (1920×1080 landscape, 1080×2080 portrait, chosen by aspect ratio) scaled with container units (`--u`), with sky/skyline bleeding to the edges; the Start button has a CSS glass-sweep + sparkle (off under reduced motion). Keep `.wordmark` and the button texts — the playtests rely on them.
 
 Done: Yaba street slice; gendered avatar creator + wardrobe; four Lagos State areas; danfo travel with fares; bargaining; delivery and collect jobs; 8 goals; tip cards, area banners, toasts; Messages and Travel phone apps; save schema v3.
 

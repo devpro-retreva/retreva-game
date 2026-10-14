@@ -1,115 +1,202 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { SaveData } from '../../game/persistence/types';
-import { seeded } from '../../scene/builders/painters';
 import { formatDuration } from '../hooks';
+import car from '../../assets/splash/car.svg';
+import dubai from '../../assets/splash/dubai.svg';
+import globe from '../../assets/splash/globe.svg';
+import heroes from '../../assets/splash/heroes.svg';
+import horizon from '../../assets/splash/horizon.svg';
+import jet from '../../assets/splash/jet.svg';
+import jewelry from '../../assets/splash/jewelry.svg';
+import maldives from '../../assets/splash/maldives.svg';
+import newyork from '../../assets/splash/newyork.svg';
+import paris from '../../assets/splash/paris.svg';
+import santorini from '../../assets/splash/santorini.svg';
+import tokyo from '../../assets/splash/tokyo.svg';
+import villa from '../../assets/splash/villa.svg';
 
-/** Layered street-silhouette illustration built from shapes, not images. */
-function Skyline() {
-  const shapes = useMemo(() => {
-    const rnd = seeded('title-skyline');
-    const far: JSX.Element[] = [];
-    const near: JSX.Element[] = [];
-    let x = -20;
-    while (x < 1440) {
-      const w = 60 + rnd() * 90;
-      const h = 120 + rnd() * 220;
-      far.push(<rect key={`f${x}`} x={x} y={400 - h} width={w} height={h} />);
-      x += w + rnd() * 10;
-    }
-    x = -10;
-    let i = 0;
-    while (x < 1440) {
-      const w = 110 + rnd() * 120;
-      const h = 90 + rnd() * 110;
-      const y = 400 - h;
-      near.push(<rect key={`n${i}`} x={x} y={y} width={w} height={h} />);
-      // parapet + rooftop tank
-      if (rnd() > 0.35) {
-        const tx = x + 16 + rnd() * (w - 50);
-        near.push(<rect key={`ts${i}`} x={tx} y={y - 10} width={30} height={10} />);
-        near.push(<rect key={`t${i}`} x={tx + 3} y={y - 34} width={24} height={26} rx={4} />);
-      }
-      // windows punched out as lighter ink
-      for (let r = 0; r < Math.floor(h / 48); r++) {
-        for (let c = 0; c < Math.floor(w / 46); c++) {
-          if (rnd() > 0.75) continue;
-          near.push(<rect key={`w${i}-${r}-${c}`} x={x + 14 + c * 46} y={y + 18 + r * 48} width={22} height={24} fill="#3a2a1c" />);
-        }
-      }
-      x += w + 6;
-      i++;
-    }
-    return { far, near };
+/*
+ * The title screen is the game's cover art. The art lives on a fixed design "stage"
+ * (1920×1080 for landscape screens, 1080×2080 for portrait phones) that is scaled to fit
+ * the screen; the sky, globe glow and skyline bleed past it so any aspect ratio is filled.
+ * Positions below are in stage units: `u(n)` turns a design pixel into a CSS length.
+ */
+const u = (n: number) => `calc(var(--u) * ${n})`;
+const at = (x: number, y: number, w: number, extra: CSSProperties = {}): CSSProperties => ({ left: u(x), top: u(y), width: u(w), ...extra });
+
+type Card = { src: string; label: string; alt: string; pin?: boolean };
+const CARDS: Record<string, Card> = {
+  paris: { src: paris, label: 'Paris', alt: 'Paris at dusk with the Eiffel Tower lit gold', pin: true },
+  tokyo: { src: tokyo, label: 'Tokyo', alt: 'Mount Fuji at sunrise with a pagoda and cherry blossom', pin: true },
+  dubai: { src: dubai, label: 'Dubai', alt: 'Dubai skyline with palms and the sea', pin: true },
+  newyork: { src: newyork, label: 'New York', alt: 'New York skyline at night', pin: true },
+  santorini: { src: santorini, label: 'Santorini', alt: 'Santorini houses and blue domes at sunset', pin: true },
+  maldives: { src: maldives, label: 'Maldives', alt: 'Overwater villas on a turquoise lagoon', pin: true },
+  villa: { src: villa, label: 'Your dream home', alt: 'Modern villa with an infinity pool' },
+  jewelry: { src: jewelry, label: 'Treat yourself', alt: 'Diamond necklace, ring and gold watch' },
+};
+
+type Placed = [key: keyof typeof CARDS, x: number, y: number, rot: number];
+const LAYOUT = {
+  land: {
+    w: 1920,
+    h: 1080,
+    cardW: 250,
+    globe: [880, 110, 960],
+    jet: [1446, 300, 280],
+    car: [650, 840, 560],
+    heroes: [1020, 206, 640],
+    chip: [1594, 978, 300] as [number, number, number] | null,
+    cards: [
+      ['paris', 760, 64, -7], ['tokyo', 1046, 30, 4], ['dubai', 1336, 52, -3], ['newyork', 1626, 98, 7],
+      ['santorini', 812, 392, -5], ['maldives', 1642, 424, 5], ['villa', 1652, 716, -4], ['jewelry', 800, 640, 6],
+    ] as Placed[],
+  },
+  port: {
+    w: 1080,
+    h: 2080,
+    cardW: 290,
+    globe: [40, 640, 1000],
+    jet: [806, 14, 260],
+    car: [-60, 1386, 600],
+    heroes: [180, 716, 720],
+    chip: null,
+    cards: [
+      ['paris', 30, 476, -8], ['tokyo', 395, 458, 3], ['dubai', 760, 484, -4],
+      ['newyork', 14, 800, -6], ['maldives', 776, 806, 6],
+      ['santorini', 22, 1112, 4], ['villa', 770, 1116, -4], ['jewelry', 774, 1378, 5],
+    ] as Placed[],
+  },
+} as const;
+
+function useOrientation(): 'land' | 'port' {
+  const query = '(min-aspect-ratio: 1/1)';
+  const get = () => (typeof matchMedia === 'undefined' || matchMedia(query).matches ? 'land' : 'port');
+  const [o, setO] = useState<'land' | 'port'>(get);
+  useEffect(() => {
+    const mq = matchMedia(query);
+    const on = () => setO(mq.matches ? 'land' : 'port');
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
   }, []);
+  return o;
+}
 
+const Pin = () => (
+  <svg className="sp-pin" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </svg>
+);
+
+function Postcard({ card, keyName, x, y, rot, w }: { card: Card; keyName: string; x: number; y: number; rot: number; w: number }) {
   return (
-    <svg className="skyline" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      <g fill="#c78f63" opacity={0.55}>{shapes.far}</g>
-      {/* power lines */}
-      <g stroke="#2a1d14" strokeWidth={2} fill="none" opacity={0.75}>
-        <path d="M0 150 Q 240 190 480 150 T 960 150 T 1440 150" />
-        <path d="M0 162 Q 240 202 480 162 T 960 162 T 1440 162" />
-      </g>
-      <g fill="#2a1d14">
-        {[480, 960].map((px) => (
-          <g key={px}>
-            <rect x={px - 4} y={140} width={8} height={260} />
-            <rect x={px - 30} y={146} width={60} height={6} />
-          </g>
-        ))}
-      </g>
-      <g fill="#4a3424">{shapes.near}</g>
-      {/* palm */}
-      <g fill="#2a1d14">
-        <path d="M1180 400 C 1185 330 1192 290 1200 250 L 1208 252 C 1200 300 1196 340 1194 400 Z" />
-        <path d="M1204 250 c -40 -6 -70 10 -90 30 c 30 -14 60 -18 90 -24 Z M1204 250 c 30 -24 66 -26 96 -14 c -34 2 -66 8 -96 18 Z M1204 250 c -10 -36 -40 -56 -70 -60 c 26 14 50 34 66 62 Z M1204 250 c 20 -30 52 -44 84 -42 c -30 8 -58 24 -80 46 Z" />
-      </g>
-      {/* danfo */}
-      <g transform="translate(250 330)">
-        <rect x={0} y={0} width={190} height={58} rx={10} fill="#f2b705" />
-        <rect x={12} y={8} width={150} height={20} rx={3} fill="#2a1d14" />
-        <rect x={0} y={34} width={190} height={4} fill="#15130f" />
-        <rect x={0} y={42} width={190} height={4} fill="#15130f" />
-        <circle cx={40} cy={60} r={14} fill="#15130f" />
-        <circle cx={150} cy={60} r={14} fill="#15130f" />
-      </g>
-      <rect x={0} y={388} width={1440} height={12} fill="#2a1d14" />
-    </svg>
+    <figure className={`sp-card k-${keyName}`} style={at(x, y, w, { transform: `rotate(${rot}deg)`, padding: `${u(w * 0.04)} ${u(w * 0.04)} 0` })}>
+      <img src={card.src} alt={card.alt} draggable={false} />
+      <figcaption style={{ height: u(w * 0.184), fontSize: u(w * 0.112) }}>
+        {card.pin && <Pin />}
+        {card.label}
+      </figcaption>
+    </figure>
+  );
+}
+
+const STEPS: { label: string; icon: ReactNode }[] = [
+  { label: 'Hustle', icon: <><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" /></> },
+  { label: 'Earn', icon: <><circle cx="12" cy="12" r="9" /><path d="M8.5 16V8l7 8V8M7 11h10M7 13h10" /></> },
+  { label: 'Live large', icon: <path d="M6 3h12l3 5-9 13L3 8zM3 8h18M9 3l3 18M15 3l-3 18" /> },
+  { label: 'See the world', icon: <path d="M2.5 13.5l19-8-6 15-3.5-6.5zM12 14l9.5-8.5" /> },
+];
+
+function Journey() {
+  return (
+    <div className="sp-journey" aria-label="Hustle, earn, live large, see the world">
+      {STEPS.map((s, i) => (
+        <span key={s.label} className="sp-step">
+          {i > 0 && <span className="sp-dash" aria-hidden="true" />}
+          <svg viewBox="0 0 24 24" aria-hidden="true">{s.icon}</svg>
+          {s.label}
+        </span>
+      ))}
+    </div>
   );
 }
 
 export function TitleScreen({ save, onContinue, onNew }: { save: SaveData | null; onContinue: () => void; onNew: () => void }) {
   const [confirm, setConfirm] = useState(false);
+  const o = useOrientation();
+  const L = LAYOUT[o];
+
   return (
-    <main className="screen-full">
-      <Skyline />
-      <div className="title-wrap">
-        <h1 className="wordmark">
-          Retr<em>e</em>va
-        </h1>
-        <p className="tagline">Build a virtual lifestyle and travel to places of your dreams.</p>
-        {save && (
-          <p className="continue-meta num">
-            {save.profile.name} · ₦{save.wallet.balance.toLocaleString('en-NG')} · played {formatDuration(save.stats.playTimeMs)}
-          </p>
+    <main className={`screen-full splash is-${o}`}>
+      <div className="sp-sky" aria-hidden="true" />
+      <img className="sp-horizon" src={horizon} alt="" aria-hidden="true" draggable={false} />
+      <div className="sp-shade" aria-hidden="true" />
+
+      <div className={`sp-stage ${o}`}>
+        <img className="sp-abs" src={globe} alt="" aria-hidden="true" style={at(L.globe[0], L.globe[1], L.globe[2])} draggable={false} />
+        {L.cards.map(([key, x, y, rot]) => (
+          <Postcard key={key} keyName={key} card={CARDS[key]} x={x} y={y} rot={rot} w={L.cardW} />
+        ))}
+        <img className="sp-abs" src={jet} alt="Private jet climbing into the sky" style={at(L.jet[0], L.jet[1], L.jet[2])} draggable={false} />
+        <img className="sp-abs" src={car} alt="Red luxury sports car" style={at(L.car[0], L.car[1], L.car[2])} draggable={false} />
+        <img
+          className="sp-abs"
+          src={heroes}
+          alt="A stylish woman in an emerald dress with a passport and phone, beside a man in a cream linen suit with a luxury suitcase"
+          style={at(L.heroes[0], L.heroes[1], L.heroes[2])}
+          draggable={false}
+        />
+        {L.chip && (
+          <div className="sp-chip" aria-hidden="true" style={at(L.chip[0], L.chip[1], L.chip[2])}>
+            <span className="sp-chip-ico">
+              <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            </span>
+            <span className="sp-chip-txt">
+              <b>+₦1,500</b>
+              <span>Jollof Run complete</span>
+            </span>
+          </div>
         )}
-        <div className="title-actions">
+
+        <div className="sp-copy">
+          <div className="sp-kicker">A lifestyle &amp; travel adventure</div>
+          <h1 className="wordmark">
+            Retr<em>e</em>va
+          </h1>
+          <p className="tagline">Build a virtual lifestyle and travel to places of your dreams.</p>
           {save && (
-            <button className="btn dark" onClick={onContinue} autoFocus>
-              Continue
-            </button>
+            <p className="continue-meta num">
+              {save.profile.name} · ₦{save.wallet.balance.toLocaleString('en-NG')} · played {formatDuration(save.stats.playTimeMs)}
+            </p>
           )}
-          {save && !confirm ? (
-            <button className="btn ghost" onClick={() => setConfirm(true)}>
-              New life
-            </button>
-          ) : (
-            <button className="btn dark" onClick={onNew} autoFocus={!save} style={save ? { background: '#b4321f' } : undefined}>
-              {save ? 'Replace my save' : 'Start a new life'}
-            </button>
-          )}
+          <div className="sp-bottom">
+          <div className="title-actions">
+            {save ? (
+              <button className="sp-btn primary cta-shine" onClick={onContinue} autoFocus>
+                Continue
+              </button>
+            ) : (
+              <button className="sp-btn primary cta-shine" onClick={onNew} autoFocus>
+                Start a new life
+              </button>
+            )}
+            {save &&
+              (confirm ? (
+                <button className="sp-btn danger" onClick={onNew}>
+                  Replace my save
+                </button>
+              ) : (
+                <button className="sp-btn ghost" onClick={() => setConfirm(true)}>
+                  New life
+                </button>
+              ))}
+          </div>
+          <Journey />
+          <div className="sp-story">Your story starts from your city.</div>
+          <div className="title-foot">Saves on this device · No account needed</div>
+          </div>
         </div>
-        <div className="title-foot">Saves on this device · No account needed</div>
       </div>
     </main>
   );
