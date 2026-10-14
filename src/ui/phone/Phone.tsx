@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { areaOfJob, findItem, findNpc, formatMoney, getDestination } from '../../game/content';
+import { ALL_PACKS, areaOfJob, findItem, findNpc, formatMoney, getDestination } from '../../game/content';
 import type { ItemCategory } from '../../game/content/types';
 import { completedCount, isAvailable } from '../../game/systems/jobs';
 import { totalItems } from '../../game/systems/inventory';
@@ -11,6 +11,7 @@ import { LagosMap } from '../travel/LagosMap';
 import { GOALS } from '../../game/systems/progress';
 import { LAGOS_AREAS, fareBetween } from '../../game/content/regions/lagosState';
 import { describeLook } from '../avatar/AvatarEditor';
+import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
 import { formatClock, formatDuration } from '../hooks';
 import {
   IconBack, IconBag, IconBed, IconBus, IconChat, IconGear, IconJobs, IconMap, IconPlane, IconTicket, IconUser, IconWallet, IconLock, ITEM_ICONS,
@@ -312,8 +313,8 @@ function BagApp() {
                   </div>
                   <div className="side">
                     {item?.consumable && (
-                      <button className="btn ghost" onClick={() => consume(e.key)}>
-                        {item.category === 'drink' ? 'Drink' : 'Eat'}
+                      <button className="btn ghost" onClick={() => consume(e.key)} aria-label={`${item.category === 'drink' ? 'Drink' : 'Eat'} ${item.name}, fullness +${item.nutrition ?? (item.category === 'drink' ? 8 : 20)}`}>
+                        {item.category === 'drink' ? 'Drink' : 'Eat'} +{item.nutrition ?? (item.category === 'drink' ? 8 : 20)}
                       </button>
                     )}
                   </div>
@@ -459,6 +460,33 @@ function Stat({ k, v }: { k: string; v: ReactNode }) {
   );
 }
 
+function LifeSection() {
+  const pack = usePack();
+  const life = useGame((s) => s.life);
+  const home = life.home ? pack.homes?.find((h) => h.id === life.home) ?? { name: 'Your room' } : null;
+  const people = Object.entries(life.regard).sort((a, b) => b[1] - a[1]);
+  return (
+    <>
+      <h3 className="phone-sub">Life</h3>
+      <Stat k="Energy" v={`${Math.round(life.needs.energy)} · ${needLabel('energy', life.needs.energy)}`} />
+      <Stat k="Fullness" v={`${Math.round(life.needs.fullness)} · ${needLabel('fullness', life.needs.fullness)}`} />
+      <Stat k="Home" v={home ? home.name : 'None yet'} />
+      <Stat k="Shifts worked" v={life.shiftsDone} />
+      <h3 className="phone-sub">Skills</h3>
+      <Stat k="Cooking" v={`Level ${skillLevel(life.skills.cooking)} · ${life.skills.cooking ?? 0} XP`} />
+      <h3 className="phone-sub">People</h3>
+      {people.length === 0 ? (
+        <p className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Work with people and they'll get to know you.</p>
+      ) : (
+        people.map(([id, v]) => {
+          const npc = ALL_PACKS.flatMap((p) => p.npcs).find((n) => n.id === id);
+          return <Stat key={id} k={npc?.name ?? id} v={`${regardTier(v)} · ${Math.round(v)}`} />;
+        })
+      )}
+    </>
+  );
+}
+
 function ProfileApp() {
   const pack = usePack();
   const s = useGame();
@@ -487,6 +515,7 @@ function ProfileApp() {
       <Stat k="Money earned" v={formatMoney(pack, earned)} />
       <Stat k="Items owned" v={totalItems(s.inventory)} />
       <Stat k="Cities visited" v="1 · Lagos" />
+      <LifeSection />
     </>
   );
 }

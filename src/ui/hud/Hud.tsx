@@ -1,3 +1,4 @@
+import { NeedsChips } from '../panels/LifePanels';
 import { useEffect, useRef, useState } from 'react';
 import { findJob, findNpc, formatMoney } from '../../game/content';
 import { runtime } from '../../game/core/runtime';
@@ -185,6 +186,7 @@ export function Hud({ touch }: { touch: boolean }) {
     <>
       <div className="hud-tl">
         <MoneyChip />
+        <NeedsChips />
         <Objective />
       </div>
       <div className="hud-tr">

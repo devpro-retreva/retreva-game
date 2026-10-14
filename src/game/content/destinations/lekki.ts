@@ -230,9 +230,9 @@ export const lekki: DestinationPack = {
   ],
 
   items: [
-    { id: 'coconut', name: 'Fresh coconut', category: 'drink', basePrice: 800, consumable: true, icon: 'cup', description: 'Sliced open on the spot, with a straw.' },
-    { id: 'roasted-corn', name: 'Roasted corn', category: 'food', basePrice: 500, consumable: true, icon: 'snack', description: 'Charred over coals, best with ube (pear).' },
-    { id: 'beach-suya', name: 'Suya wrap', category: 'food', basePrice: 1500, consumable: true, icon: 'plate', description: 'Spicy grilled beef with onions and yaji.' },
+    { id: 'coconut', name: 'Fresh coconut', category: 'drink', basePrice: 800, consumable: true, nutrition: 12, icon: 'cup', description: 'Sliced open on the spot, with a straw.' },
+    { id: 'roasted-corn', name: 'Roasted corn', category: 'food', basePrice: 500, consumable: true, nutrition: 25, icon: 'snack', description: 'Charred over coals, best with ube (pear).' },
+    { id: 'beach-suya', name: 'Suya wrap', category: 'food', basePrice: 1500, consumable: true, nutrition: 40, icon: 'plate', description: 'Spicy grilled beef with onions and yaji.' },
     { id: 'shell-necklace', name: 'Shell necklace', category: 'souvenir', basePrice: 2500, icon: 'key', description: 'Cowrie and sea shells strung by hand.' },
     { id: 'straw-hat', name: 'Straw beach hat', category: 'clothing', basePrice: 3000, icon: 'bag', description: 'Wide brim for the Lekki sun.' },
     { id: 'beach-towel', name: 'Beach towel', category: 'goods', basePrice: 4500, icon: 'bag', description: 'Bright stripes, very fluffy.' },

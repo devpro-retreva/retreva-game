@@ -3,6 +3,7 @@ import { findBusiness, findItem, findNpc, formatMoney } from '../../game/content
 import { round50 } from '../../game/systems/negotiation';
 import { countItem } from '../../game/systems/inventory';
 import { useGame } from '../../game/store/gameStore';
+import { resaleValue } from '../../game/systems/life';
 import { usePack } from '../../scene/worldContext';
 import { IconClose, ITEM_ICONS } from '../icons/Icons';
 
@@ -116,8 +117,15 @@ export function ShopPanel() {
   const buy = useGame((s) => s.buy);
   const startHaggle = useGame((s) => s.startHaggle);
   const close = useGame((s) => s.closePanel);
+  const sell = useGame((s) => s.sell);
+  const [tab, setTab] = useState<'buy' | 'sell'>('buy');
+  const [pending, setPending] = useState<string | null>(null);
   const biz = shopId ? findBusiness(pack, shopId) : undefined;
   if (!biz) return null;
+  const buysBack = biz.kind !== 'food';
+  const sellable = inventory.entries
+    .map((e) => ({ e, item: findItem(pack, e.itemId) }))
+    .filter((x) => x.item && resaleValue(x.e.purchasePrice, x.item.category) > 0);
   const owner = findNpc(pack, biz.ownerNpcId);
 
   return (
@@ -136,8 +144,63 @@ export function ShopPanel() {
       </header>
       <div className="stripes" style={{ margin: '0 16px 4px' }} />
       <div className="sheet-body">
+        {!haggle && buysBack && (
+          <div className="seg tabs" role="tablist" aria-label="Buy or sell" style={{ margin: '4px 0 8px' }}>
+            <button role="tab" aria-selected={tab === 'buy'} aria-pressed={tab === 'buy'} onClick={() => setTab('buy')}>
+              Buy
+            </button>
+            <button role="tab" aria-selected={tab === 'sell'} aria-pressed={tab === 'sell'} onClick={() => { setTab('sell'); setPending(null); }}>
+              Sell{sellable.length ? ` (${sellable.length})` : ''}
+            </button>
+          </div>
+        )}
         {haggle ? (
           <Haggle />
+        ) : tab === 'sell' && buysBack ? (
+          sellable.length === 0 ? (
+            <p className="muted" style={{ padding: '8px 4px' }}>
+              Nothing to sell. {biz.name} buys back bags, clothes, souvenirs and goods at half what you paid. Food and drink can't be resold.
+            </p>
+          ) : (
+            <ul className="rows">
+              {sellable.map(({ e, item }) => {
+                const Icon = ITEM_ICONS[item!.icon] ?? ITEM_ICONS.bag;
+                const value = resaleValue(e.purchasePrice, item!.category);
+                const confirming = pending === e.key;
+                return (
+                  <li key={e.key} className="row-item">
+                    <span className="glyph cut-sm">
+                      <Icon size={20} />
+                    </span>
+                    <div>
+                      <div className="name">
+                        {item!.name} <span className="muted">×{e.quantity}</span>
+                      </div>
+                      <div className="desc num">
+                        You paid {formatMoney(pack, e.purchasePrice)} · they offer {formatMoney(pack, value)}
+                      </div>
+                    </div>
+                    <div className="side">
+                      {confirming ? (
+                        <>
+                          <button className="btn" onClick={() => { sell(e.key); setPending(null); }} aria-label={`Confirm: sell ${item!.name} for ${formatMoney(pack, value)}`}>
+                            Confirm
+                          </button>
+                          <button className="btn ghost" onClick={() => setPending(null)}>
+                            Keep
+                          </button>
+                        </>
+                      ) : (
+                        <button className="btn ghost" onClick={() => setPending(e.key)} aria-label={`Sell ${item!.name} for ${formatMoney(pack, value)}`}>
+                          Sell {formatMoney(pack, value)}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )
         ) : (
           <ul className="rows">
             {biz.stock.map((s) => {

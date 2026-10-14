@@ -2,8 +2,9 @@ import type { Wallet } from '../systems/economy';
 import type { Inventory } from '../systems/inventory';
 import type { JobsState } from '../systems/jobs';
 import type { PhoneMessage } from '../systems/progress';
+import type { LifeState } from '../systems/life';
 
-export const SAVE_SCHEMA_VERSION = 3;
+export const SAVE_SCHEMA_VERSION = 4;
 
 export type Gender = 'male' | 'female';
 export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
@@ -80,6 +81,8 @@ export interface SaveData {
   inventory: Inventory;
   jobs: JobsState;
   world: WorldProgress;
+  /** Needs, skills, regard, home (v4). */
+  life: LifeState;
   settings: Settings;
   player: { position: [number, number]; yaw: number };
   stats: { playTimeMs: number };

@@ -16,6 +16,25 @@ import {
 import { resolveEntry, type DialogueContext } from '../systems/dialogue';
 import { acceptAsk, makeOffer, savings, startHaggle as startHaggleFn, walkAway, type HaggleState } from '../systems/negotiation';
 import { GOALS, TIPS, newlyCompleted, type PhoneMessage, type TipDef } from '../systems/progress';
+import {
+  addRegard,
+  canRun,
+  drainNeeds,
+  eat,
+  emptyLife,
+  LOW,
+  orderSeconds,
+  resaleValue,
+  rest,
+  scoreShift,
+  shiftOrders,
+  skillLevel,
+  spend,
+  type LifeState,
+  type OrderResult,
+  type ShiftDef,
+  type ShiftOutcome,
+} from '../systems/life';
 import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings, type WorldProgress } from '../persistence/types';
 import { sanitizeLook } from '../core/avatarPresets';
 import { fareBetween, findArea, LAGOS_AREAS } from '../content/regions/lagosState';
@@ -23,7 +42,7 @@ import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting';
 export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel';
 
 export interface Toast {
@@ -35,7 +54,7 @@ export interface Toast {
 
 export interface Nearby {
   id: string;
-  kind: 'npc';
+  kind: 'npc' | 'spot';
   label: string;
   verb: string;
 }
@@ -75,6 +94,12 @@ interface GameState {
   transit: { from: string; to: string; fare: number; firstVisit: boolean } | null;
   /** Set during travel; handled once the new area has rendered. */
   arrival: { firstVisit: boolean } | null;
+  life: LifeState;
+  shift: ShiftRun | null;
+  /** Resting overlay: where and until when (ms timestamp). */
+  resting: { at: 'bench' | 'home'; until: number; to: number } | null;
+  /** Home panel: which home door the player is at. */
+  homeId: string | null;
   dirty: number;
   critical: number;
 
@@ -125,10 +150,33 @@ interface GameState {
   acceptHaggle(): void;
   leaveHaggle(): void;
   consume(stackKey: string): void;
+  sell(stackKey: string): boolean;
+  startShift(shiftId: string): void;
+  serveDish(dishId: string | null): void;
+  closeShift(): void;
+  startRest(at: 'bench' | 'home'): void;
+  finishRest(): void;
+  rentHome(homeId: string): boolean;
   updateSettings(patch: Partial<Settings>): void;
 }
 
 const pack = (): DestinationPack => getDestination(useGame.getState().destinationId);
+
+export interface ShiftRun {
+  shiftId: string;
+  runId: string;
+  orders: string[];
+  index: number;
+  results: OrderResult[];
+  /** When the current order runs out (ms timestamp). */
+  deadline: number;
+  seconds: number;
+  level: number;
+  outcome: (ShiftOutcome & { levelUp: boolean; paid: boolean }) | null;
+}
+
+export const findShift = (p: DestinationPack, id: string): ShiftDef | undefined => p.shifts?.find((x) => x.id === id);
+export { canRun };
 
 function setUiMode(ui: UiMode) {
   input.enabled = ui === 'play';
@@ -179,6 +227,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
     haggle: null,
     transit: null,
     arrival: null,
+    life: emptyLife(),
+    shift: null,
+    resting: null,
+    homeId: null,
     dirty: 0,
     critical: 0,
 
@@ -213,6 +265,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
         inventory: emptyInventory(),
         jobs: emptyJobs(),
         world: emptyWorld(p.id),
+        life: emptyLife(),
+        shift: null,
+        resting: null,
+        homeId: null,
         playTimeMs: 0,
         ui: 'play',
         dialogue: null,
@@ -240,6 +296,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
         inventory: save.inventory,
         jobs: save.jobs,
         world: save.world ?? emptyWorld(p.id),
+        life: save.life ?? emptyLife(),
+        shift: null,
+        resting: null,
+        homeId: null,
         settings: { ...DEFAULT_SETTINGS, ...save.settings },
         playTimeMs: save.stats?.playTimeMs ?? 0,
         ui: 'play',
@@ -265,6 +325,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
         inventory: emptyInventory(),
         jobs: emptyJobs(),
         world: emptyWorld(DEFAULT_DESTINATION),
+        life: emptyLife(),
+        shift: null,
+        resting: null,
+        homeId: null,
         ui: 'play',
         dialogue: null,
         shopId: null,
@@ -284,6 +348,14 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const { ui, nearby } = get();
       if (ui !== 'play' || !nearby) return;
       if (nearby.kind === 'npc') get().openDialogue(nearby.id);
+      else {
+        const spot = pack().spots?.find((x) => x.id === nearby.id);
+        if (spot?.kind === 'bench') get().startRest('bench');
+        else if (spot?.kind === 'home' && spot.homeId) {
+          set({ ui: 'home', homeId: spot.homeId });
+          setUiMode('home');
+        }
+      }
     },
 
     openDialogue(npcId) {
@@ -334,6 +406,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
         case 'openTravel':
           get().openTravel();
           return;
+        case 'startShift':
+          get().startShift(a.shiftId);
+          return;
       }
     },
 
@@ -345,7 +420,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     openPhone(app = 'home') {
       const ui = get().ui;
-      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit') return;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home') return;
       set({ ui: 'phone', phoneApp: app });
       setUiMode('phone');
       if (app === 'messages') get().markMessagesRead();
@@ -358,7 +433,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     togglePause() {
       const ui = get().ui;
-      if (ui === 'transit') return;
+      if (ui === 'transit' || ui === 'shift' || ui === 'resting') return;
       if (ui === 'pause') {
         set({ ui: 'play' });
         setUiMode('play');
@@ -386,8 +461,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
     },
 
     closePanel() {
-      if (get().ui === 'transit') return;
-      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null });
+      const ui0 = get().ui;
+      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting') return;
+      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null });
       setUiMode('play');
     },
 
@@ -620,6 +696,19 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (s.phase !== 'playing') return;
       if (s.ui === 'pause' || s.ui === 'transit' || s.ui === 'wardrobe') return;
       const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
+      if (s.ui === 'play') {
+        const pl = runtime.player;
+        const activity = !pl.moving ? 'idle' : pl.speed > 4 ? 'run' : 'walk';
+        const before = s.life.needs;
+        const needs = drainNeeds(before, dtMs, activity);
+        patch.life = { ...s.life, needs };
+        patch.dirty = s.dirty + 1;
+        const crossed = (k: 'energy' | 'fullness', at: number) => before[k] >= at && needs[k] < at;
+        if (crossed('energy', 40)) get().showTip('tired');
+        if (crossed('energy', LOW)) get().pushToast({ kind: 'warn', title: 'Exhausted', detail: 'You can only walk now. Rest on a bench or at home.' });
+        if (crossed('fullness', 40)) get().showTip('hungry');
+        if (crossed('fullness', LOW)) get().pushToast({ kind: 'warn', title: 'Starving', detail: 'Eat something — an empty stomach tires you twice as fast.' });
+      }
       if (s.jobs.active) {
         const p = pack();
         const job = findJob(p, s.jobs.active.jobId);
@@ -678,8 +767,145 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (!entry || !item?.consumable) return;
       const r = removeFromStack(get().inventory, stackKey, 1);
       if (!r.ok) return;
-      set({ inventory: r.inventory, critical: get().critical + 1 });
-      get().pushToast({ kind: 'info', title: item.category === 'drink' ? `You drank the ${item.name.toLowerCase()}` : `You ate the ${item.name.toLowerCase()}`, detail: 'Refreshed.' });
+      const gain = item.nutrition ?? (item.category === 'drink' ? 8 : 20);
+      const life = get().life;
+      const needs = eat(life.needs, gain);
+      set({ inventory: r.inventory, life: { ...life, needs }, critical: get().critical + 1 });
+      get().pushToast({
+        kind: 'info',
+        title: item.category === 'drink' ? `You drank the ${item.name.toLowerCase()}` : `You ate the ${item.name.toLowerCase()}`,
+        detail: `Fullness +${Math.round(needs.fullness - life.needs.fullness)} (now ${Math.round(needs.fullness)})`,
+      });
+    },
+
+    sell(stackKey) {
+      const p = pack();
+      const s = get();
+      const entry = s.inventory.entries.find((e) => e.key === stackKey);
+      const item = entry && findItem(p, entry.itemId);
+      const biz = s.shopId ? findBusiness(p, s.shopId) : undefined;
+      if (!entry || !item || !biz) return false;
+      const value = resaleValue(entry.purchasePrice, item.category);
+      if (value <= 0) return false;
+      const r = removeFromStack(s.inventory, stackKey, 1);
+      if (!r.ok) return false;
+      const pay = credit(s.wallet, { id: makeId('sell'), amount: value, reason: `Sold ${item.name} · ${biz.name}`, at: Date.now(), destinationId: p.id });
+      set({ inventory: r.inventory, wallet: pay.wallet, critical: s.critical + 1 });
+      get().pushToast({ kind: 'money', title: `+${formatMoney(p, value)}`, detail: `Sold ${item.name} to ${biz.name}` });
+      return true;
+    },
+
+    startShift(shiftId) {
+      const p = pack();
+      const def = findShift(p, shiftId);
+      const s = get();
+      if (!def) return;
+      if (s.jobs.active) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: 'Finish your current job first' });
+        return;
+      }
+      if (s.life.needs.energy < def.minEnergy) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: 'Too tired to work', detail: 'Rest first — the bench at the okada park is free.' });
+        return;
+      }
+      const level = skillLevel(s.life.skills[def.skill]);
+      const seconds = orderSeconds(def, level);
+      const runId = makeId('shift');
+      const seed = Array.from(runId).reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+      set({
+        ui: 'shift',
+        dialogue: null,
+        shift: { shiftId, runId, orders: shiftOrders(def, seed), index: 0, results: [], deadline: Date.now() + seconds * 1000 + 1200, seconds, level, outcome: null },
+      });
+      setUiMode('shift');
+      get().showTip('shift');
+    },
+
+    serveDish(dishId) {
+      const s = get();
+      const run = s.shift;
+      if (!run || run.outcome) return;
+      const want = run.orders[run.index];
+      const late = Date.now() > run.deadline;
+      const result: OrderResult = dishId === null || late ? 'missed' : dishId === want ? 'served' : 'wrong';
+      const results = [...run.results, result];
+      const index = run.index + 1;
+      if (index < run.orders.length) {
+        set({ shift: { ...run, results, index, deadline: Date.now() + run.seconds * 1000 } });
+        return;
+      }
+      // shift over: pay, skill, regard, staff meal, energy
+      const p = pack();
+      const def = findShift(p, run.shiftId)!;
+      const o = scoreShift(def, results, run.level);
+      const total = o.pay + o.tip;
+      const pay = total > 0
+        ? credit(s.wallet, { id: `shift:${def.id}:${run.runId}`, amount: total, reason: `${def.title}${o.tip ? ' + perfect tip' : ''}`, at: Date.now(), destinationId: p.id })
+        : { ok: false, wallet: s.wallet };
+      const xp = (s.life.skills[def.skill] ?? 0) + o.xp;
+      const levelUp = skillLevel(xp) > run.level;
+      const needs = eat(spend(s.life.needs, def.energyCost), def.staffMeal);
+      const life: LifeState = {
+        ...s.life,
+        needs,
+        skills: { ...s.life.skills, [def.skill]: xp },
+        regard: addRegard(s.life.regard, def.npcId, o.regard),
+        shiftsDone: s.life.shiftsDone + 1,
+      };
+      set({ wallet: pay.wallet, life, shift: { ...run, results, index, outcome: { ...o, levelUp, paid: pay.ok } }, critical: s.critical + 1 });
+      get().checkGoals();
+    },
+
+    closeShift() {
+      const run = get().shift;
+      if (run && !run.outcome) return;
+      set({ shift: null, ui: 'play' });
+      setUiMode('play');
+      const o = run?.outcome;
+      if (o?.levelUp) {
+        const def = findShift(pack(), run!.shiftId);
+        get().pushToast({ kind: 'goal', title: `Cooking skill up: level ${skillLevel(get().life.skills[def?.skill ?? 'cooking'])}`, detail: 'More time per order and better pay per plate.' });
+      }
+    },
+
+    startRest(at) {
+      const s = get();
+      if (at === 'home' && !s.life.home) return;
+      const to = at === 'home' ? 100 : 70;
+      if (s.life.needs.energy >= to - 1) {
+        get().pushToast({ kind: 'info', title: 'You are already rested', detail: at === 'bench' ? 'A bench only gets you so far — a bed at home restores you fully.' : undefined });
+        return;
+      }
+      set({ ui: 'resting', homeId: null, resting: { at, to, until: Date.now() + (at === 'home' ? 3200 : 2600) } });
+      setUiMode('resting');
+    },
+
+    finishRest() {
+      const s = get();
+      const r = s.resting;
+      if (!r) return;
+      const needs = rest(s.life.needs, r.to);
+      set({ resting: null, ui: 'play', life: { ...s.life, needs }, critical: s.critical + 1 });
+      setUiMode('play');
+      get().pushToast({ kind: 'info', title: r.at === 'home' ? 'You slept well' : 'You caught your breath', detail: `Energy ${Math.round(needs.energy)}` });
+    },
+
+    rentHome(homeId) {
+      const p = pack();
+      const home = p.homes?.find((h) => h.id === homeId);
+      const s = get();
+      if (!home || s.life.home === homeId) return false;
+      const r = debit(s.wallet, { id: `home:${homeId}`, amount: home.moveInCost, reason: `Move-in · ${home.name}`, at: Date.now(), destinationId: p.id });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, home.moveInCost - s.wallet.balance)} more` });
+        return false;
+      }
+      set({ wallet: r.wallet, life: { ...s.life, home: homeId }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'goal', title: 'You have a home', detail: `${home.name} is yours to rest in.` });
+      get().checkGoals();
+      return true;
     },
 
     updateSettings(patch) {
@@ -718,6 +944,7 @@ export function snapshotForSave() {
     inventory: s.inventory,
     jobs: s.jobs,
     world: s.world,
+    life: s.life,
     settings: s.settings,
     player: { position: [runtime.player.x, runtime.player.z] as [number, number], yaw: runtime.player.yaw },
     stats: { playTimeMs: s.playTimeMs },

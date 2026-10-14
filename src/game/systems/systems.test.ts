@@ -6,13 +6,14 @@ import { resolveEntry } from './dialogue';
 import { lagos } from '../content/destinations/lagos';
 import { MemorySaveAdapter } from '../persistence/adapters';
 import { SaveManager, migrate } from '../persistence/saveManager';
-import { emptyWorld } from '../persistence/types';
+import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
 import { fareBetween, LAGOS_AREAS } from '../content/regions/lagosState';
 import { ALL_PACKS } from '../content';
 import { emptyInventory as emptyInv } from './inventory';
+import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { DEFAULT_AVATAR, OPTIONS, defaultLookFor, sanitizeLook, switchGender, upgradeAvatarV1 } from '../core/avatarPresets';
 
 const job = lagos.jobs[0];
@@ -142,6 +143,7 @@ describe('persistence', () => {
       inventory: { entries: [] },
       jobs: emptyJobs(),
       world: emptyWorld('lagos-adeniyi'),
+      life: emptyLife(),
       settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, showFps: false, tips: true },
       player: { position: [1, 2] as [number, number], yaw: 0 },
       stats: { playTimeMs: 0 },
@@ -249,7 +251,7 @@ describe('avatar options', () => {
       settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 0 },
     };
     const m = migrate(v1);
-    expect(m?.schemaVersion).toBe(3);
+    expect(m?.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(m?.world.visited).toEqual(['lagos-adeniyi']);
     expect(m?.profile.avatar.gender).toBe('male');
     expect(m?.profile.avatar.headwear).toBe('cap');
@@ -370,5 +372,87 @@ describe('goals', () => {
     const g = GOALS[0];
     for (let i = 0; i < 3; i++) w = credit(w, { id: `goal:${g.id}`, amount: g.reward, reason: '', at: 0 }).wallet;
     expect(w.balance).toBe(g.reward);
+  });
+});
+
+
+describe('daily life', () => {
+  const shift = lagos.shifts![0];
+  it('needs drain with effort, faster when starving, and never leave 0–100', () => {
+    const n = { energy: 50, fullness: 50 };
+    const idle = drainNeeds(n, 60000, 'idle');
+    const run = drainNeeds(n, 60000, 'run');
+    expect(run.energy).toBeLessThan(idle.energy);
+    expect(idle.fullness).toBeCloseTo(49, 5);
+    const starving = drainNeeds({ energy: 50, fullness: 0 }, 60000, 'walk');
+    expect(50 - starving.energy).toBeCloseTo(2 * (50 - drainNeeds(n, 60000, 'walk').energy), 5);
+    expect(drainNeeds({ energy: 0.1, fullness: 0 }, 600000, 'run')).toEqual({ energy: 0, fullness: 0 });
+    expect(eat({ energy: 10, fullness: 90 }, 55).fullness).toBe(100);
+  });
+  it('exhaustion stops running but never stops walking', () => {
+    expect(canRun({ energy: 14, fullness: 50 })).toBe(false);
+    expect(canRun({ energy: 15, fullness: 50 })).toBe(true);
+  });
+  it('skill levels follow the XP table', () => {
+    expect(skillLevel(0)).toBe(1);
+    expect(skillLevel(LEVELS[1])).toBe(2);
+    expect(skillLevel(99999)).toBe(LEVELS.length);
+    expect(levelProgress(LEVELS[1] / 2)).toBeCloseTo(0.5, 5);
+  });
+  it('shift orders are deterministic per seed and only use menu dishes', () => {
+    const a = shiftOrders(shift, 42);
+    expect(a).toEqual(shiftOrders(shift, 42));
+    expect(a).toHaveLength(shift.orders);
+    expect(a.every((d) => shift.dishes.some((x) => x.id === d))).toBe(true);
+    expect(orderSeconds(shift, 3)).toBeCloseTo(shift.seconds + 2 * shift.perLevel, 5);
+  });
+  it('shift pay rewards accuracy and skill; a perfect shift tips', () => {
+    const perfect = scoreShift(shift, Array(shift.orders).fill('served'), 1);
+    expect(perfect.pay).toBe(shift.orders * shift.payPerOrder);
+    expect(perfect.tip).toBe(shift.perfectTip);
+    const half = scoreShift(shift, [...Array(4).fill('served'), ...Array(4).fill('missed')], 1);
+    expect(half.pay).toBe(4 * shift.payPerOrder);
+    expect(half.tip).toBe(0);
+    expect(scoreShift(shift, Array(shift.orders).fill('served'), 3).pay).toBeGreaterThan(perfect.pay);
+    expect(scoreShift(shift, Array(shift.orders).fill('wrong'), 1).pay).toBe(0);
+  });
+  it('resale is half price rounded down to ₦50; food is not resold', () => {
+    expect(resaleValue(3500, 'bag')).toBe(1750);
+    expect(resaleValue(1199, 'souvenir')).toBe(550);
+    expect(resaleValue(2500, 'food')).toBe(0);
+  });
+  it('regard tiers and caps', () => {
+    expect(regardTier(0)).toBe('Stranger');
+    expect(regardTier(35)).toBe('Friend');
+    expect(addRegard({ x: 98 }, 'x', 10).x).toBe(100);
+  });
+  it('v3 saves upgrade to v4 with rested defaults and keep everything else', () => {
+    const v3 = {
+      schemaVersion: 3, revision: 5, updatedAt: 1, deviceId: 'd',
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-island', wallet: { balance: 4321, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: emptyWorld('lagos-adeniyi'), settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 9 },
+    };
+    const up = migrate(v3)!;
+    expect(up.schemaVersion).toBe(4);
+    expect(up.wallet.balance).toBe(4321);
+    expect(up.destinationId).toBe('lagos-island');
+    expect(up.life).toEqual(emptyLife());
+    const v4 = migrate({ ...up, life: { needs: { energy: 500, fullness: -3 }, skills: { cooking: 90 }, regard: { 'mama-titi': 12 }, home: 'yaba-room', shiftsDone: 2 } })!;
+    expect(v4.life.needs).toEqual({ energy: 100, fullness: 0 });
+    expect(v4.life.home).toBe('yaba-room');
+    expect(v4.life.skills.cooking).toBe(90);
+  });
+  it('every shift, spot and home in every pack is valid', () => {
+    for (const p of ALL_PACKS) {
+      const w = buildCollisionWorld(p);
+      for (const sh of p.shifts ?? []) expect(p.npcs.find((n) => n.id === sh.npcId), sh.id).toBeDefined();
+      for (const sp of p.spots ?? []) {
+        expect(isBlocked(w, sp.position[0], sp.position[1]), sp.id).toBe(false);
+        if (sp.kind === 'home') expect(p.homes?.find((h) => h.id === sp.homeId), sp.id).toBeDefined();
+      }
+      for (const n of p.npcs) for (const node of Object.values(n.dialogue.nodes)) for (const o of node.options)
+        if (o.action.kind === 'startShift') { const id = o.action.shiftId; expect(p.shifts?.find((x) => x.id === id), id).toBeDefined(); }
+    }
   });
 });

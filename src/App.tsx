@@ -12,6 +12,7 @@ import { PauseMenu } from './ui/panels/PauseMenu';
 import { Wardrobe } from './ui/panels/Wardrobe';
 import { AreaBanner, TipCard, TransitOverlay, TravelPanel } from './ui/travel/TravelPanels';
 import { Phone } from './ui/phone/Phone';
+import { HomePanel, RestOverlay, ShiftPanel } from './ui/panels/LifePanels';
 import { TouchControls } from './ui/controls/TouchControls';
 import { useKeyboard } from './ui/controls/useKeyboard';
 import { TitleScreen } from './ui/shell/TitleScreen';
@@ -47,6 +48,9 @@ function World({ touch }: { touch: boolean }) {
         {ui === 'wardrobe' && <Wardrobe />}
         {ui === 'travel' && <TravelPanel />}
         {ui === 'transit' && <TransitOverlay />}
+        {ui === 'shift' && <ShiftPanel />}
+        {ui === 'home' && <HomePanel />}
+        {ui === 'resting' && <RestOverlay />}
         <AreaBanner />
         <TipCard />
       </div>

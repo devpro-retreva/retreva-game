@@ -76,7 +76,10 @@ export const TIPS: Record<string, TipDef> = {
   collect: { id: 'collect', title: 'Clean-up', text: 'Walk over the glowing bottles to pick them up. Collect six, then report back to Tolu before the timer ends.' },
   message: { id: 'message', title: 'New text', text: 'People you meet send messages. Open the Messages app on your phone to read them.' },
   discover: { id: 'discover', title: 'Landmark found', text: 'Discoveries are saved in your Map app. Find five for the Sightseer goal.' },
-  'low-money': { id: 'low-money', title: 'Running low', text: 'Short on cash? Every area has a job — look for the yellow diamond.' },
+  'low-money': { id: 'low-money', title: 'Running low', text: 'Short on cash? Mama Titi always needs help in the kitchen — no waiting between shifts, and she feeds her staff. Every area has other work too.' },
+  tired: { id: 'tired', title: 'Getting tired', text: 'Energy falls as you move and work. Rest free on the bench at the okada park (to 70), or rent the room to let by the danfo stop and sleep to full.' },
+  hungry: { id: 'hungry', title: 'Getting hungry', text: 'Eat or drink from your bag (phone → Bag). On an empty stomach you tire twice as fast.' },
+  shift: { id: 'shift', title: 'Kitchen shift', text: 'Each ticket names a dish — tap it (or press 1–4) before the bar runs out. Better cooking skill means more time and better pay.' },
 };
 
 // ── messages ────────────────────────────────────────────────────────────

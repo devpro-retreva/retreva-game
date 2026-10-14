@@ -5,6 +5,7 @@
  * or Toronto means writing another pack, not changing the engine.
  */
 
+import type { ShiftDef } from '../systems/life';
 import type { Accessory, FacialHair, Gender, HairStyle, Headwear, OutfitStyle } from '../persistence/types';
 
 /** Ground-plane position: [x, z] in metres. */
@@ -31,6 +32,8 @@ export interface ItemDef {
   basePrice: number;
   /** Food and drink can be consumed from the bag. */
   consumable?: boolean;
+  /** Fullness restored when eaten or drunk (0–100). Defaults: food 20, drink 8. */
+  nutrition?: number;
   /** Short glyph key used by the UI icon set. */
   icon: string;
 }
@@ -119,7 +122,8 @@ export type DialogueAction =
   | { kind: 'acceptJob'; jobId: string }
   | { kind: 'deliverJob'; jobId: string }
   | { kind: 'openShop'; businessId: string }
-  | { kind: 'openTravel' };
+  | { kind: 'openTravel' }
+  | { kind: 'startShift'; shiftId: string };
 
 export interface DialogueOption {
   label: string;
@@ -201,6 +205,25 @@ export interface JobDef {
   cooldownMs: number;
 }
 
+/** Something in the world you can use: a bench to rest on, the door of a home to rent. */
+export interface SpotDef {
+  id: string;
+  kind: 'bench' | 'home';
+  position: Vec2;
+  label: string;
+  verb: string;
+  homeId?: string;
+}
+
+/** A home the player can rent in this area. */
+export interface HomeDef {
+  id: string;
+  name: string;
+  description: string;
+  /** One-off payment to move in (rent for your stay). */
+  moveInCost: number;
+}
+
 export interface DestinationPack {
   id: string;
   name: string;
@@ -240,5 +263,9 @@ export interface DestinationPack {
   businesses: BusinessDef[];
   items: ItemDef[];
   jobs: JobDef[];
+  /** Skill-based shift work (different mechanic from delivery jobs). */
+  shifts?: ShiftDef[];
+  spots?: SpotDef[];
+  homes?: HomeDef[];
   startingMoney: number;
 }

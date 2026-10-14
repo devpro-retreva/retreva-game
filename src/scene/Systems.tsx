@@ -26,7 +26,16 @@ export function InteractionSystem() {
       if (d < INTERACT_RANGE && (!best || d < best.d)) best = { id: n.id, d };
     }
     const npc = best && pack.npcs.find((n) => n.id === best!.id);
-    s.setNearby(npc ? { id: npc.id, kind: 'npc', label: npc.name, verb: npc.promptVerb } : null);
+    let spotHit: { id: string; d: number } | null = null;
+    for (const sp of pack.spots ?? []) {
+      const d = Math.hypot(sp.position[0] - p.x, sp.position[1] - p.z);
+      if (d < 1.8 && (!spotHit || d < spotHit.d)) spotHit = { id: sp.id, d };
+    }
+    if (spotHit && (!best || spotHit.d < best.d)) {
+      const sp = pack.spots!.find((x) => x.id === spotHit!.id)!;
+      const mine = sp.kind === 'home' && s.life.home === sp.homeId;
+      s.setNearby({ id: sp.id, kind: 'spot', label: mine ? 'your room' : sp.label, verb: mine ? 'Go into' : sp.verb });
+    } else s.setNearby(npc ? { id: npc.id, kind: 'npc', label: npc.name, verb: npc.promptVerb } : null);
     // landmarks discover themselves when you walk close
     for (const lm of pack.landmarks) {
       if (s.world.discovered.includes(lm.id)) continue;

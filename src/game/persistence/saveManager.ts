@@ -1,3 +1,4 @@
+import { emptyLife, type LifeState } from '../systems/life';
 import { SAVE_SCHEMA_VERSION, emptyWorld, type SaveAdapter, type SaveData } from './types';
 import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
@@ -28,7 +29,18 @@ export function migrate(raw: unknown): SaveData | null {
     bestBargain: typeof w.bestBargain === 'number' ? w.bestBargain : 0,
     rides: typeof w.rides === 'number' ? w.rides : 0,
   };
-  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar }, world };
+  // v3 → v4: daily life (needs, skills, regard, rented home). Older saves start rested and fed.
+  const l = (d.life ?? {}) as Partial<LifeState>;
+  const base4 = emptyLife();
+  const num = (v: unknown, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : dflt);
+  const life: LifeState = {
+    needs: { energy: num(l.needs?.energy, base4.needs.energy), fullness: num(l.needs?.fullness, base4.needs.fullness) },
+    skills: l.skills && typeof l.skills === 'object' ? { ...l.skills } : {},
+    regard: l.regard && typeof l.regard === 'object' ? { ...l.regard } : {},
+    home: typeof l.home === 'string' ? l.home : null,
+    shiftsDone: typeof l.shiftsDone === 'number' ? l.shiftsDone : 0,
+  };
+  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar }, world, life };
 }
 
 export function getDeviceId(): string {

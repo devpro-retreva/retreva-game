@@ -109,6 +109,21 @@ export const IconRun = (p: P) => (
     <path d="m8 20 2.8-4.6 2.7 2 1-5.4 2.5 2.5h3M6.5 10.5l3-2.5h4l-1 5.5" />
   </Base>
 );
+export const IconBolt = (p: P) => (
+  <Base {...p}>
+    <path d="M13 2.5 5 13.5h6l-1 8 8-11h-6z" />
+  </Base>
+);
+export const IconHome = (p: P) => (
+  <Base {...p}>
+    <path d="M3.5 11 12 4l8.5 7M6 9.5V20h12V9.5M10 20v-5.5h4V20" />
+  </Base>
+);
+export const IconStar = (p: P) => (
+  <Base {...p}>
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
+  </Base>
+);
 export const IconPlate = (p: P) => (
   <Base {...p}>
     <ellipse cx="12" cy="13" rx="8.5" ry="5" />

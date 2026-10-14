@@ -29,7 +29,7 @@ src/game/            pure game logic — no React, no Three.js
     destinations/    one file per area: lagos.ts (Yaba), lagosIsland.ts, lekki.ts, ikeja.ts
     regions/lagosState.ts   map coords, fareBetween(), minutesBetween()
     index.ts         pack registry + lookups (getDestination, findItem, areaOfJob, formatMoney…)
-  systems/           pure, unit-tested: economy, inventory, jobs, dialogue, negotiation, progress (goals/tips), collision
+  systems/           pure, unit-tested: economy, inventory, jobs, dialogue, negotiation, progress (goals/tips), life (needs, skills, regard, shift scoring, resale), collision
   persistence/       SaveAdapter interface; IndexedDB / localStorage / memory adapters; SaveManager + migrations
   store/gameStore.ts Zustand store — the ONLY place money, inventory, jobs, travel and world progress change
   core/              per-frame runtime + input objects (live outside React), avatar presets
@@ -43,7 +43,7 @@ src/assets/splash/   cover-art SVGs for the title screen (characters, postcards,
 
 - **Destinations are data.** New areas/cities = a new pack in `content/destinations/` + a registry line in `content/index.ts`. Don't hard-code area-specific behaviour in the engine, scene or UI.
 - **Money only moves through the store via the wallet ledger.** Every credit has a transaction id (`job:<jobId>:<runId>`, `goal:<goalId>`, ride/shop ids). The wallet rejects duplicate ids — this is what stops repeat payouts. Keep that pattern for any new reward.
-- **Saves.** `SAVE_SCHEMA_VERSION` is 3 (`persistence/types.ts`). Any change to `SaveData` needs a version bump plus a step in `migrate()` in `saveManager.ts`, and a unit test. The IndexedDB name and localStorage keys stay `'retriever'` (the project's old name) so existing players' saves keep loading — do not rename them.
+- **Saves.** `SAVE_SCHEMA_VERSION` is 4 (v4 added `life`: needs, skills, regard, home, shiftsDone) (`persistence/types.ts`). Any change to `SaveData` needs a version bump plus a step in `migrate()` in `saveManager.ts`, and a unit test. The IndexedDB name and localStorage keys stay `'retriever'` (the project's old name) so existing players' saves keep loading — do not rename them.
 - **Per-frame state stays out of React.** Positions, camera and input live in `core/runtime.ts` / `core/input.ts`; read them in `useFrame` or via refs. Don't put per-frame values in the Zustand store.
 - **Budget Android first.** Art is procedural (no downloaded models/textures). The static world is merged into one vertex-coloured mesh + one atlas mesh; keep draw calls low. Shadows default off on touch devices. Movement integrates in fixed 1/30 s sub-steps.
 - **Content checks.** `systems.test.ts` loops over `ALL_PACKS` and checks that each arrival point is clear, every NPC is reachable, collect spots aren't inside props, and job, shop, item and dialogue references resolve. A new pack is covered automatically once it's registered (and added to `LAGOS_AREAS` or a future region file).
@@ -66,6 +66,7 @@ PLAYTEST_URL=http://localhost:5173/ node playtests/run.mjs regression   # agains
 |---|---|
 | `regression` (40 checks) | title, character creation, movement, camera, Jollof Run (pay once, no duplicate reward), shop, phone apps, pause, save + continue after refresh, mobile touch layout |
 | `expansion` (31) | danfo travel to all four areas (fare charged once), beach clean-up collect job, landmarks, bargaining, goals paid once, tips, messages, persistence, mobile travel |
+| `life` (47) | needs drain, kitchen shift (pay, perfect tip, cooking XP/level-up, regard, staff meal), too-tired gate, no running when exhausted, bench rest, eating, sell-with-confirm, renting a room, sleeping, persistence of all of it — desktop and mobile |
 | `wardrobe` (14) | gender + look + name changes from the phone, saved across refresh, desktop and mobile |
 
 Options: `PLAYTEST_GPU=1` uses the real GPU instead of SwiftShader software GL, `PLAYTEST_HEADED=1` shows the browser, `PLAYTEST_OUT` sets the screenshot folder. With software GL the game runs at ~2–11 fps, so a full run takes 10+ minutes; checks wait on game state rather than fixed times where they can. The scripts drive the game through `window.__retreva = { store, runtime, saves }` (read state, teleport by setting `runtime.player.x/z`). When game text or flows change on purpose, update the matching check rather than the game. Real-device performance has not been measured yet.

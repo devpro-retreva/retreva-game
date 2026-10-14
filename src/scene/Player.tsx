@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { readMove } from '../game/core/input';
 import { runtime } from '../game/core/runtime';
 import { resolveMove } from '../game/systems/collision';
-import { useGame } from '../game/store/gameStore';
+import { canRun, useGame } from '../game/store/gameStore';
 import { Character, type CharacterAnim } from './Character';
 import { HEIGHT } from '../game/core/avatarPresets';
 import { groundHeight, lerpAngle, useCollisionWorld, usePack } from './worldContext';
@@ -36,7 +36,8 @@ export function Player() {
     const dx = Math.sin(cy) * m.y - Math.cos(cy) * m.x;
     const dz = Math.cos(cy) * m.y + Math.sin(cy) * m.x;
     const mag = Math.min(1, Math.hypot(dx, dz));
-    const speed = mag * (m.sprint ? RUN : WALK);
+    const sprint = m.sprint && canRun(useGame.getState().life.needs);
+    const speed = mag * (sprint ? RUN : WALK);
     const tx = mag > 0.01 ? (dx / Math.hypot(dx, dz)) * speed : 0;
     const tz = mag > 0.01 ? (dz / Math.hypot(dx, dz)) * speed : 0;
     const accel = mag > 0.01 ? 11 : 14;

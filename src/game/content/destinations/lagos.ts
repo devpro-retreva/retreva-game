@@ -181,6 +181,7 @@ export const lagos: DestinationPack = {
             options: [
               { label: "I'll take it", action: { kind: 'acceptJob', jobId: 'jollof-run' } },
               { label: "What's the pay?", action: { kind: 'goto', node: 'pay' } },
+              { label: 'Help in the kitchen (shift)', action: { kind: 'startShift', shiftId: 'buka-kitchen' } },
               { label: 'Show me the menu', action: { kind: 'openShop', businessId: 'mama-titi' } },
               { label: 'Not now', action: { kind: 'close' } },
             ],
@@ -197,8 +198,9 @@ export const lagos: DestinationPack = {
             options: [{ label: "I'm going", action: { kind: 'close' } }],
           },
           cooldown: {
-            text: 'Thank you o! The next pot is still on the fire. Come back in a little while — or buy something while you wait.',
+            text: 'Thank you o! The next pot is still on the fire. Come back in a little while — or help me serve customers while you wait. I pay per plate.',
             options: [
+              { label: 'Help in the kitchen (shift)', action: { kind: 'startShift', shiftId: 'buka-kitchen' } },
               { label: 'Show me the menu', action: { kind: 'openShop', businessId: 'mama-titi' } },
               { label: 'See you', action: { kind: 'close' } },
             ],
@@ -369,17 +371,17 @@ export const lagos: DestinationPack = {
   ],
 
   items: [
-    { id: 'jollof-plate', name: 'Jollof rice & chicken', category: 'food', basePrice: 2500, consumable: true, icon: 'plate',
+    { id: 'jollof-plate', name: 'Jollof rice & chicken', category: 'food', basePrice: 2500, consumable: true, nutrition: 55, icon: 'plate',
       description: "Smoky party jollof from Mama Titi's pot, with fried plantain." },
-    { id: 'puff-puff', name: 'Puff-puff (5)', category: 'food', basePrice: 300, consumable: true, icon: 'snack',
+    { id: 'puff-puff', name: 'Puff-puff (5)', category: 'food', basePrice: 300, consumable: true, nutrition: 20, icon: 'snack',
       description: 'Soft, sweet fried dough balls, still warm.' },
-    { id: 'zobo', name: 'Zobo', category: 'drink', basePrice: 500, consumable: true, icon: 'cup',
+    { id: 'zobo', name: 'Zobo', category: 'drink', basePrice: 500, consumable: true, nutrition: 10, icon: 'cup',
       description: 'Chilled hibiscus drink with ginger and pineapple.' },
-    { id: 'water', name: 'Bottled water', category: 'drink', basePrice: 200, consumable: true, icon: 'bottle',
+    { id: 'water', name: 'Bottled water', category: 'drink', basePrice: 200, consumable: true, nutrition: 8, icon: 'bottle',
       description: 'Cold from the freezer. Essential in this heat.' },
-    { id: 'chin-chin', name: 'Chin chin', category: 'food', basePrice: 700, consumable: true, icon: 'snack',
+    { id: 'chin-chin', name: 'Chin chin', category: 'food', basePrice: 700, consumable: true, nutrition: 15, icon: 'snack',
       description: 'Crunchy fried pastry bites in a sealed bag.' },
-    { id: 'plantain-chips', name: 'Plantain chips', category: 'food', basePrice: 400, consumable: true, icon: 'snack',
+    { id: 'plantain-chips', name: 'Plantain chips', category: 'food', basePrice: 400, consumable: true, nutrition: 15, icon: 'snack',
       description: 'Thin, salted and very hard to stop eating.' },
     { id: 'ankara-tote', name: 'Ankara tote bag', category: 'bag', basePrice: 3500, icon: 'bag',
       description: 'Bold wax-print tote, sewn by Faith Tailoring next door.' },
@@ -402,5 +404,34 @@ export const lagos: DestinationPack = {
     },
   ],
 
+  shifts: [
+    {
+      id: 'buka-kitchen',
+      title: 'Buka kitchen shift',
+      npcId: 'mama-titi',
+      skill: 'cooking',
+      dishes: [
+        { id: 'jollof', name: 'Jollof & chicken', icon: 'plate' },
+        { id: 'amala', name: 'Amala & ewedu', icon: 'plate' },
+        { id: 'moimoi', name: 'Moi moi', icon: 'snack' },
+        { id: 'zobo', name: 'Cold zobo', icon: 'cup' },
+      ],
+      orders: 8,
+      seconds: 5,
+      perLevel: 0.6,
+      payPerOrder: 150,
+      perfectTip: 300,
+      energyCost: 18,
+      minEnergy: 20,
+      staffMeal: 35,
+    },
+  ],
+  spots: [
+    { id: 'okada-bench', kind: 'bench', position: [-9.4, -4.3], label: 'Bench', verb: 'Rest on' },
+    { id: 'yaba-room-door', kind: 'home', position: [-5.7, 23.4], label: 'Room to let', verb: 'Check', homeId: 'yaba-room' },
+  ],
+  homes: [
+    { id: 'yaba-room', name: 'Room on Adeniyi Street', description: 'A self-contained room upstairs: bed, fan, a lock that works. Rest here for free whenever you like.', moveInCost: 6000 },
+  ],
   startingMoney: 2000,
 };
