@@ -92,6 +92,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#5a3420', top: '#2c5f9e', bottom: '#2a2a2a', outfit: 'shirt', hair: 'low', facialHair: 'goatee', accessory: 'glasses', height: 1.76 },
       promptVerb: 'Talk to',
+      hours: [9, 19],
       social: { lines: ["A phone tells you its story — the scratches, the battery, the drops.", "I trained in Computer Village for six years before I opened my shop.", "Never buy a 'UK-used' phone without testing the charging port."], likes: ["power-bank", "earbuds", "meat-pie"] },
       idle: 'busy',
       dialogue: {
@@ -106,6 +107,7 @@ export const ikeja: DestinationPack = {
             options: [
               { label: "I'll deliver it", action: { kind: 'acceptJob', jobId: 'phone-run' } },
               { label: "What's the pay?", action: { kind: 'goto', node: 'pay' } },
+              { label: 'Work the repair bench', action: { kind: 'startRepair', repairId: 'tobi-bench' } },
               { label: 'Not now', action: { kind: 'close' } },
             ],
           },
@@ -121,8 +123,11 @@ export const ikeja: DestinationPack = {
             options: [{ label: 'Going', action: { kind: 'close' } }],
           },
           rest: {
-            text: 'Next repair is on the bench. Give me small time.',
-            options: [{ label: 'Okay', action: { kind: 'close' } }],
+            text: 'Next delivery is on the bench. Give me small time — or come and help me fix phones. I pay per phone.',
+            options: [
+              { label: 'Work the repair bench', action: { kind: 'startRepair', repairId: 'tobi-bench' } },
+              { label: 'Okay', action: { kind: 'close' } },
+            ],
           },
         },
       },
@@ -136,6 +141,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#7a3b72', bottom: '#2b2b33', outfit: 'dress', hair: 'bun', accessory: 'earrings', height: 1.68 },
       promptVerb: 'Talk to',
+      hours: [9, 19],
       social: { lines: ["Three branches, two meetings, one phone. Life!", "Pharmacy, provisions, phones — diversify, my dear.", "You're dependable. I like that in people."], likes: ["lace-fabric", "shea-butter", "kente-stole"] },
       idle: 'sway',
       dialogue: {
@@ -167,6 +173,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#2a2a2a', bottom: '#4a5a72', outfit: 'shirt', hair: 'hightop', facialHair: 'none', headwear: 'cap', headColor: '#f2b705', height: 1.8 },
       promptVerb: 'Bargain with',
+      hours: [9, 20],
       social: { lines: ["Original or copy? Ask me — I'll tell you honestly. Mostly.", "Gadgets move fast. Last year's phone is this year's bargain.", "Customer is king — but bargain is queen."], likes: ["jollof-plate", "beach-suya", "roasted-corn"] },
       idle: 'wave',
       dialogue: {
@@ -252,6 +259,27 @@ export const ikeja: DestinationPack = {
     },
   ],
 
+  repairs: [
+    {
+      id: 'tobi-bench',
+      title: 'Repair bench at FixIt',
+      npcId: 'tobi',
+      skill: 'repair',
+      devices: [
+        { name: 'Cracked screen', fault: 'Dropped on the tiles', steps: ['Power off', 'Open the back', 'Disconnect battery', 'Swap the screen', 'Close & test'] },
+        { name: 'Dead battery', fault: 'Dies at 40%', steps: ['Power off', 'Open the back', 'Unplug old battery', 'Fit new battery', 'Close & test'] },
+        { name: 'Charging port', fault: 'Won’t charge', steps: ['Power off', 'Open the back', 'Clean the port', 'Replace the port', 'Close & test'] },
+      ],
+      perSession: 3,
+      seconds: 10,
+      perLevel: 1.2,
+      payPerDevice: 500,
+      perfectTip: 400,
+      energyCost: 14,
+      minEnergy: 20,
+      requires: { jobsDone: { jobId: 'phone-run', count: 1 } },
+    },
+  ],
   traffic: {
     lanes: [{ x: 2, dir: 1 }, { x: -2, dir: -1 }],
     vehicles: [{ kind: 'car', color: '#9aa3ad' }, { kind: 'danfo' }, { kind: 'car', color: '#1d1d1f' }, { kind: 'keke' }, { kind: 'car', color: '#2f7a52' }],

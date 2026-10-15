@@ -5,8 +5,40 @@ import { useGame } from '../game/store/gameStore';
 import { saves } from '../game/persistence/instance';
 import { usePack } from './worldContext';
 import { findVehicle } from '../game/content/vehicles';
+import { findFurniture, findInterior, type InteriorDef } from '../game/content/interiors';
+import { interiorPieces } from '../game/systems/collision';
+import type { Nearby } from '../game/store/gameStore';
 
 const INTERACT_RANGE = 2.5;
+
+const USE_VERB = { sleep: ['Sleep', 'in your bed'], storage: ['Open', 'the storage chest'], dine: ['Sit at', 'a table'] } as const;
+
+/** Inside a room: the door, the things you can use (bed, chest, tables) and — at home — the furniture spots. */
+export function nearestInRoom(def: InteriorDef, placed: Record<string, string>, x: number, z: number): Nearby | null {
+  const [, d] = def.size;
+  const cands: { n: Nearby; dist: number }[] = [];
+  const door = Math.hypot(x - def.entry.position[0], z - d / 2);
+  if (door < 1.5) cands.push({ n: { id: 'exit', kind: 'interior', label: def.kind === 'home' ? 'outside' : 'back to the street', verb: 'Go' }, dist: door - 0.4 });
+  for (const pc of interiorPieces(def, placed)) {
+    const fx = pc.fixedIndex !== undefined ? def.fixed[pc.fixedIndex] : undefined;
+    // a bed you placed is slept in like the mattress it replaced
+    const use = fx?.use ?? (pc.slotId === 'bed' ? 'sleep' : undefined);
+    if (!use) continue;
+    const f = findFurniture(pc.itemId);
+    const reach = Math.max(f?.half[0] ?? 0.5, f?.half[1] ?? 0.5) + 0.9;
+    const dist = Math.hypot(x - pc.position[0], z - pc.position[1]);
+    const idx = fx ? pc.fixedIndex! : def.fixed.findIndex((q) => q.use === 'sleep');
+    if (dist < reach) cands.push({ n: { id: `use:${idx}`, kind: 'interior', label: USE_VERB[use][1], verb: USE_VERB[use][0] }, dist: dist - reach + 1 });
+  }
+  if (def.kind === 'home') {
+    for (const sl of def.slots) {
+      const dist = Math.hypot(x - sl.position[0], z - sl.position[1]);
+      if (dist < 1.3) cands.push({ n: { id: `slot:${sl.id}`, kind: 'interior', label: sl.label.toLowerCase(), verb: placed[sl.id] ? 'Change' : 'Furnish' }, dist: dist + 0.3 });
+    }
+  }
+  cands.sort((a, b) => a.dist - b.dist);
+  return cands[0]?.n ?? null;
+}
 
 /** Finds the nearest interactable each ~120ms and publishes it only on change. */
 export function InteractionSystem() {
@@ -19,6 +51,11 @@ export function InteractionSystem() {
     const s = useGame.getState();
     if (s.ui !== 'play') return;
     const p = runtime.player;
+    if (s.world.inside) {
+      const def = findInterior(s.world.inside.interiorId);
+      if (def) s.setNearby(nearestInRoom(def, s.life.property[def.id]?.placed ?? {}, p.x, p.z));
+      return;
+    }
     let best: { id: string; d: number } | null = null;
     for (const n of pack.npcs) {
       const a = runtime.actors.get(n.id);
@@ -88,6 +125,8 @@ export function GameLoop() {
       runtime.perf.fps = Math.round(a.frames / a.perf);
       runtime.perf.drawCalls = gl.info.render.calls;
       runtime.perf.triangles = gl.info.render.triangles;
+      runtime.perf.frameMs = Math.round((a.perf / a.frames) * 10000) / 10;
+      runtime.perf.dpr = gl.getPixelRatio();
       a.perf = 0;
       a.frames = 0;
     }

@@ -1,5 +1,9 @@
-/* Retreva offline support: precaches the whole build on first visit, then serves it cache-first.
-   The page registers this file as sw.js?v=<build id>, so every build gets its own cache. */
+/* Retreva offline support: precaches the base game on first visit, then serves it cache-first.
+   The page registers this file as sw.js?v=<build id>, so every build gets its own cache.
+   City packs (listed in packs.json) are not precached: they're served from their own cache
+   (retreva-city-<id>, filled by Settings → Cities) or the network, and never copied into the main
+   cache — so removing a city really removes it. City caches survive game updates; the game marks
+   them "Update available" when the files changed. */
 const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = `retreva-${VERSION}`;
 
@@ -26,11 +30,24 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
       const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k.startsWith('retreva-') && k !== CACHE).map((k) => caches.delete(k)));
+      await Promise.all(keys.filter((k) => k.startsWith('retreva-') && !k.startsWith('retreva-city-') && k !== CACHE).map((k) => caches.delete(k)));
       await self.clients.claim();
     })(),
   );
 });
+
+let cityFiles = null;
+async function getCityFiles() {
+  if (cityFiles) return cityFiles;
+  try {
+    const res = (await caches.match(new URL('./packs.json', self.registration.scope).href)) || (await fetch('./packs.json'));
+    const m = await res.json();
+    cityFiles = new Set(Object.values(m.cities || {}).flatMap((c) => c.files.map((f) => new URL(f.path, self.registration.scope).href)));
+  } catch {
+    return new Set(); // try again on the next request
+  }
+  return cityFiles;
+}
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -48,9 +65,14 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  // hashed assets, fonts, icons: cache-first
+  // hashed assets, fonts, icons: cache-first; city pack files: their own cache or the network, not copied
   event.respondWith(
-    caches.match(req).then(
+    getCityFiles().then((cities) =>
+      cities.has(req.url.split('?')[0])
+        ? // installed copy first; otherwise the network, never the browser's HTTP cache — so a city is
+          // offline exactly when it's installed (and Remove really removes it)
+          (req.cache === 'reload' ? Promise.resolve(undefined) : caches.match(req, { ignoreSearch: true })).then((hit) => hit || fetch(req.url, { cache: 'no-store', credentials: 'same-origin' }))
+        : caches.match(req).then(
       (hit) =>
         hit ||
         fetch(req).then((res) => {
@@ -60,6 +82,7 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         }),
+      ),
     ),
   );
 });

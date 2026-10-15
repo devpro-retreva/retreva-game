@@ -6,6 +6,7 @@
  */
 
 import type { ShiftDef } from '../systems/life';
+import type { RepairDef } from '../systems/repair';
 import type { Accessory, FacialHair, Gender, HairStyle, Headwear, OutfitStyle } from '../persistence/types';
 
 /** Ground-plane position: [x, z] in metres. */
@@ -21,7 +22,8 @@ export type ItemCategory =
   | 'ticket'
   | 'document'
   | 'collectible'
-  | 'goods';
+  | 'goods'
+  | 'furniture';
 
 export interface ItemDef {
   id: string;
@@ -127,7 +129,9 @@ export type DialogueCondition =
   /** Where your flight ticket stands at this airport: none, booked, checked-in, cleared, or 'elsewhere' (it departs from another airport). */
   | { kind: 'trip'; stage: 'none' | 'booked' | 'checked-in' | 'cleared' | 'elsewhere' }
   /** Bottled drinks in your bag (security won't let them through). */
-  | { kind: 'carryingLiquids' };
+  | { kind: 'carryingLiquids' }
+  /** You meet the requirements of a job or repair bench (by id). */
+  | { kind: 'meets'; target: string; not?: boolean };
 
 export type DialogueAction =
   | { kind: 'goto'; node: string }
@@ -146,6 +150,8 @@ export type DialogueAction =
   /** Social: chat a while, or pick something from your bag to give. */
   | { kind: 'chat' }
   | { kind: 'gift' }
+  /** Starts a repair session at a repair bench. */
+  | { kind: 'startRepair'; repairId: string }
   /** Opens a vehicle dealer (buy / sell). */
   | { kind: 'dealer'; dealerId: string };
 
@@ -179,6 +185,8 @@ export interface NpcDef {
   dialogue: DialogueDef;
   /** Optional idle animation flavour. */
   idle?: 'sway' | 'wave' | 'busy';
+  /** Hours this person is around, e.g. [7, 22]; outside them they've gone home. Omit for always (staff, conductors). */
+  hours?: [number, number];
   /** People you can get to know: things they say when you chat, and what they'd love as a gift (item ids or categories). */
   social?: { lines: string[]; likes: string[] };
 }
@@ -217,10 +225,27 @@ export interface LandmarkDef {
   radius: number;
 }
 
+/** What you need before you can take a job, repair or other work. All listed conditions must hold. */
+export interface Requirement {
+  /** How well you know someone (regard 0–100). */
+  regard?: { npcId: string; min: number };
+  /** Times you've completed a job. */
+  jobsDone?: { jobId: string; count: number };
+  /** Landmarks you've discovered. */
+  discovered?: string[];
+  /** A skill level. */
+  skill?: { skill: string; level: number };
+}
+
 export interface JobDef {
   id: string;
-  /** delivery: carry cargo to the drop-off. collect: pick up items, then report to the drop-off. */
-  kind?: 'delivery' | 'collect';
+  /**
+   * delivery: carry cargo to the drop-off. collect: pick up items, then report to the drop-off.
+   * tour: the giver follows you to each landmark in `tour.stops`, in order, then you end the tour with them.
+   */
+  kind?: 'delivery' | 'collect' | 'tour';
+  tour?: { stops: string[] };
+  requires?: Requirement;
   collect?: { item: string; spots: Vec2[]; count: number };
   title: string;
   summary: string;
@@ -238,7 +263,12 @@ export interface JobDef {
 /** Something in the world you can use: a bench to rest on, the door of a home to rent. */
 export interface SpotDef {
   id: string;
-  kind: 'bench' | 'home';
+  /** bench: rest. home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). */
+  kind: 'bench' | 'home' | 'door' | 'event';
+  /** For an 'event': which show this is the gate of. */
+  eventId?: string;
+  /** For a 'door': the interior it leads into. */
+  interiorId?: string;
   position: Vec2;
   label: string;
   verb: string;
@@ -260,6 +290,37 @@ export interface HomeDef {
   description: string;
   /** One-off payment to move in (rent for your stay). */
   moveInCost: number;
+  /** Price to buy it outright, if it's for sale. Owned homes sell back at a valuation (see systems/home). */
+  buyPrice?: number;
+}
+
+/** A ticketed show at a venue in this area: on at set hours, every day or every few days. */
+export interface EventDef {
+  id: string;
+  name: string;
+  kind: 'concert' | 'comedy' | 'festival';
+  venue: string;
+  description: string;
+  /** [start, end] hour; end may pass midnight. */
+  hours: [number, number];
+  everyDays?: number;
+  offsetDays?: number;
+  /** Ticket price in the app (naira). */
+  price: number;
+  /** How much a night out lifts your mood, and what it costs in energy. */
+  joy: number;
+  energy: number;
+  /** A stage to draw (and walk around) at the venue, if it's outdoors. */
+  stage?: { position: Vec2; size: [number, number]; facing: number; color: string; accent: string };
+  /** Who is on stage (looks for the performers). */
+  performers?: CharacterLookLite[];
+}
+
+export interface CharacterLookLite {
+  gender: 'male' | 'female';
+  skin: string;
+  top: string;
+  bottom: string;
 }
 
 export interface DestinationPack {
@@ -291,6 +352,8 @@ export interface DestinationPack {
   road: { halfWidth: number; sidewalk: number; length: number; style?: 'asphalt' | 'paved' | 'sand' };
   /** The area's soundscape (synthesised, see src/audio/ambience.ts): traffic, crowd, horns/min, waves, chimes/min. */
   ambience?: { traffic: number; crowd: number; horns: number; waves?: number; chimes?: number };
+  /** How many walkers stay out after dark (default 2). */
+  nightWalkers?: number;
   /** What lies behind the street: city blocks (default), or an airfield with parked planes beyond the north end. */
   backdrop?: 'city' | 'airfield';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
@@ -312,6 +375,10 @@ export interface DestinationPack {
   spots?: SpotDef[];
   traffic?: TrafficDef;
   homes?: HomeDef[];
+  /** Ticketed shows here (Events app; the gate is a spot with kind 'event'). */
+  events?: EventDef[];
+  /** Repair benches: put the steps of each repair in the right order before time runs out. */
+  repairs?: RepairDef[];
   /** People who sell (and buy back) vehicles here. A new vehicle is parked at `parkAt`. */
   dealers?: { id: string; name: string; npcId: string; stock: { vehicleId: string; price: number }[]; parkAt: { position: Vec2; yaw: number } }[];
   startingMoney: number;

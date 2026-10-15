@@ -37,6 +37,7 @@ export const lagosIsland: DestinationPack = {
     { id: 'island-lane', name: 'Balogun market lane', blurb: 'Bolts of cloth stacked to the sky and a hundred prices.', position: [0, 8], radius: 4.5 },
     { id: 'island-asooke', name: "Aso-oke weavers' corner", blurb: 'Hand-woven cloth for owambe season.', position: [3.5, -12], radius: 3.5 },
     { id: 'island-stop', name: 'Marina keke stop', blurb: 'Kekes and danfos back to the mainland.', position: [3.4, 37], radius: 3 },
+    { id: 'island-brazilian', name: 'Brazilian Quarter houses', blurb: 'Townhouses with carved balconies, built by families who came home from Brazil in the 1800s.', position: [0, -30], radius: 4 },
   ],
   welcome: { from: 'Sade', text: 'Welcome to the Island! Alhaja Kudi sells the best wax prints — but never pay the first price o.' },
 
@@ -55,7 +56,8 @@ export const lagosIsland: DestinationPack = {
     { id: 'i-w1', position: [W, -33.6], size: [10.6, 9.4, D], facing: 'east', wall: '#e2cfae', trim: '#8d3b2a', roof: '#6a5a4b', storeys: 3, balcony: true },
     { id: 'i-w2', position: [W, -22.6], size: [10.6, 12.5, D], facing: 'east', wall: '#b9876a', trim: '#f4ead8', roof: '#5f5246', storeys: 4,
       awning: '#1f6f4a', sign: { text: 'OLOWO TEXTILES', sub: 'LACE · GEORGE · VOILE', bg: '#1f6f4a', fg: '#fff7e3' } },
-    { id: 'i-w3', position: [W, -11.4], size: [10.6, 9.4, D], facing: 'east', wall: '#c4d0b0', trim: '#5a3a2c', roof: '#61554a', storeys: 3, balcony: true },
+    { id: 'i-w3', position: [W, -11.4], size: [10.6, 9.4, D], facing: 'east', wall: '#c4d0b0', trim: '#5a3a2c', roof: '#61554a', storeys: 3, balcony: true,
+      awning: '#15130f', sign: { text: 'GLOVER LAUGHS', sub: 'COMEDY NIGHTS · TICKETS AT THE DOOR', bg: '#15130f', fg: '#f2b705' } },
     { id: 'i-w4', position: [W, -0.2], size: [10.6, 9.4, D], facing: 'east', wall: '#e8c26a', trim: '#4a3a2c', roof: '#6e5f50', storeys: 3,
       awning: '#f2b705', sign: { text: 'ISALE EKO SHOES', sub: 'LEATHER · SLIPPERS', bg: '#2a1d14', fg: '#f2b705' } },
     { id: 'i-w5', position: [W, 11], size: [10.6, 12.5, D], facing: 'east', wall: '#d79f8b', trim: '#f4ead8', roof: '#62564a', storeys: 4, balcony: true },
@@ -90,6 +92,64 @@ export const lagosIsland: DestinationPack = {
 
   npcs: [
     {
+      id: 'sophie',
+      name: 'Sophie',
+      role: 'Visitor',
+      personality: 'First time in Lagos, camera always out, wants to see everything.',
+      position: [-2.2, 31.5],
+      facing: Math.PI / 2,
+      look: { gender: 'female', skin: '#f2cfb0', top: '#2c5f9e', bottom: '#c9b28a', outfit: 'top-trousers', hair: 'long', hairColor: '#c49a5a', accessory: 'glasses', height: 1.7 },
+      promptVerb: 'Talk to',
+      hours: [9, 18],
+      social: { lines: ['Everyone here talks so fast — and so kindly!', 'I want to learn to bargain like Alhaja Kudi.', 'Next I want to see the beach in Lekki.'], likes: ['adire-scarf', 'aso-oke-cap', 'plantain-chips', 'zobo'] },
+      idle: 'wave',
+      dialogue: {
+        entries: [
+          { when: { kind: 'isDropoff', jobId: 'island-tour' }, node: 'end' },
+          { when: { kind: 'jobActive', jobId: 'island-tour' }, node: 'touring' },
+          { when: { kind: 'meets', target: 'island-tour', not: true }, node: 'locked' },
+          { when: { kind: 'jobAvailable', jobId: 'island-tour' }, node: 'offer' },
+          { node: 'thanks' },
+        ],
+        nodes: {
+          offer: {
+            text: "Hi! I'm Sophie — my first time in Lagos. Would you show me around? The market lane, the aso-oke weavers and those old Brazilian houses. I'll pay a guide's fee.",
+            options: [
+              { label: 'Lead the tour', action: { kind: 'acceptJob', jobId: 'island-tour' } },
+              { label: "What's the pay?", action: { kind: 'goto', node: 'pay' } },
+              { label: 'Not now', action: { kind: 'close' } },
+            ],
+          },
+          pay: {
+            text: '₦2,500 — and ₦1,000 more if we see all three within two and a half minutes. I have a dinner later! Walk, though; I can’t run in these sandals.',
+            options: [
+              { label: "Let's go", action: { kind: 'acceptJob', jobId: 'island-tour' } },
+              { label: 'Maybe later', action: { kind: 'close' } },
+            ],
+          },
+          locked: {
+            text: "I'm looking for a guide who really knows the Island — the market lane, the aso-oke weavers' corner and the Brazilian Quarter houses. Explore a bit, then come back for me!",
+            options: [{ label: 'I will', action: { kind: 'close' } }],
+          },
+          touring: {
+            text: 'Lead on — I’m right behind you! Don’t go too far ahead.',
+            options: [{ label: 'Follow me', action: { kind: 'close' } }],
+          },
+          end: {
+            text: 'That was wonderful! I’ll never forget those balconies. Thank you for showing me your city.',
+            options: [
+              { label: 'Finish the tour', action: { kind: 'deliverJob', jobId: 'island-tour' } },
+              { label: 'One moment', action: { kind: 'close' } },
+            ],
+          },
+          thanks: {
+            text: 'Thank you again! I’m telling all my friends about my Lagos guide. Come back later — I might want another walk.',
+            options: [{ label: 'Anytime', action: { kind: 'close' } }],
+          },
+        },
+      },
+    },
+    {
       id: 'alhaja-kudi',
       name: 'Alhaja Kudi',
       role: 'Fabric seller',
@@ -98,6 +158,7 @@ export const lagosIsland: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#c9583b', bottom: '#f2b705', outfit: 'dress', hair: 'short', headwear: 'gele', headColor: '#f2b705', accessory: 'earrings', height: 1.64 },
       promptVerb: 'Bargain with',
+      hours: [8, 19],
       social: { lines: ["My mother sold fabric at this same spot. Her mother too.", "Real Ankara feels heavier. The cheap ones fade after two washes.", "Bring your friends — friends of mine get a better price."], likes: ["coconut", "shea-butter", "kente-stole"] },
       idle: 'busy',
       dialogue: {
@@ -130,6 +191,7 @@ export const lagosIsland: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#e4572e', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'none', height: 1.8 },
       promptVerb: 'Talk to',
+      hours: [6, 19],
       social: { lines: ["I can carry a hundred kilos up those stairs. Ask anybody.", "Market starts before sunrise. I've been up since four.", "Save small every day — that's how I bought my phone."], likes: ["jollof-plate", "puff-puff", "meat-pie", "water"] },
       idle: 'sway',
       dialogue: {
@@ -174,6 +236,7 @@ export const lagosIsland: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#f4ead8', bottom: '#2c5f9e', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#2c5f9e', accessory: 'glasses', height: 1.74 },
       promptVerb: 'Talk to',
+      hours: [9, 19],
       social: { lines: ["Give me fabric in the morning, you'll wear it by evening.", "Aso-oke for weddings, Ankara for Fridays, lace for big men.", "My hands are fast, but my thread is faster."], likes: ["ankara-6yd", "lace-fabric", "aso-oke-cap"] },
       idle: 'sway',
       dialogue: {
@@ -230,6 +293,24 @@ export const lagosIsland: DestinationPack = {
     { id: 'iw-3', look: { gender: 'female', skin: '#6b4026', top: '#7a3b72', bottom: '#2b2b33', outfit: 'dress', hair: 'long', headwear: 'wrap', headColor: '#7a3b72' }, path: [[0.2, 20], [0.2, -20]], speed: 1.0 },
   ],
 
+  events: [
+    {
+      id: 'glover-laughs',
+      name: 'Glover Laughs',
+      kind: 'comedy',
+      venue: 'Glover Laughs hall, Lagos Island',
+      description: 'Stand-up every other night: traffic, landlords, in-laws and NEPA — nothing is safe.',
+      hours: [20, 22],
+      everyDays: 2,
+      price: 3500,
+      joy: 25,
+      energy: 5,
+    },
+  ],
+  spots: [
+    { id: 'glover-laughs-gate', kind: 'event', position: [-4.6, -12.5], label: 'Glover Laughs', verb: 'Go to', eventId: 'glover-laughs' },
+  ],
+
   businesses: [
     {
       id: 'alhaja-kudi',
@@ -255,6 +336,21 @@ export const lagosIsland: DestinationPack = {
   ],
 
   jobs: [
+    {
+      id: 'island-tour',
+      kind: 'tour',
+      tour: { stops: ['island-lane', 'island-asooke', 'island-brazilian'] },
+      requires: { discovered: ['island-lane', 'island-asooke', 'island-brazilian'] },
+      title: 'Island Tour',
+      summary: 'Guide Sophie to the market lane, the aso-oke weavers and the Brazilian Quarter houses, in that order. She walks — don’t lose her.',
+      giverNpcId: 'sophie',
+      dropoffNpcId: 'sophie',
+      cargo: 'Guiding Sophie',
+      timeLimitMs: 210_000,
+      reward: 2500,
+      bonus: { underMs: 150_000, amount: 1000 },
+      cooldownMs: 120_000,
+    },
     {
       id: 'bale-run',
       title: 'Bale Run',

@@ -11,6 +11,7 @@
  * Browsers only allow audio after a tap/click, so `unlock()` is called from the first user gesture.
  */
 import type { DestinationPack } from '../game/content/types';
+import { Music } from './music';
 export type AmbienceDef = NonNullable<DestinationPack['ambience']>;
 
 type Layer = { gain: GainNode; stop: () => void };
@@ -25,10 +26,13 @@ class AudioEngine {
   private timers: number[] = [];
   private noise: AudioBuffer | null = null;
   current: string | null = null;
-  settings = { ambience: 0.7, effects: 0.8, muted: false };
+  settings = { ambience: 0.7, effects: 0.8, muted: false, music: 0.4 };
+  music: Music | null = null;
+  private musicWanted = false;
+  private musicIntensity = 0.25;
   /** For tests and the settings screen. */
   get status() {
-    return { state: this.ctx?.state ?? 'none', area: this.current, layers: this.layers.length };
+    return { state: this.ctx?.state ?? 'none', area: this.current, layers: this.layers.length, music: { playing: !!this.music?.playing, bars: this.music?.bars ?? 0, intensity: this.music?.intensity ?? 0 } };
   }
 
   unlock() {
@@ -56,6 +60,10 @@ class AudioEngine {
       this.noise = c.createBuffer(1, len, c.sampleRate);
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.music = new Music(c, this.master, this.noise);
+      this.music.setVolume(this.settings.music);
+      this.music.setIntensity(this.musicIntensity);
+      if (this.musicWanted && this.settings.music > 0) this.music.start();
       document.addEventListener('visibilitychange', () => {
         if (!this.ctx) return;
         if (document.visibilityState === 'hidden') void this.ctx.suspend();
@@ -65,13 +73,26 @@ class AudioEngine {
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
 
-  apply(s: { ambience: number; effects: number; muted: boolean }) {
-    this.settings = s;
+  apply(s: { ambience: number; effects: number; muted: boolean; music?: number }) {
+    this.settings = { ...s, music: s.music ?? this.settings.music };
+    this.music?.setVolume(this.settings.music);
+    if (this.music && this.settings.music <= 0) this.music.stop();
+    else if (this.music && this.musicWanted && this.ctx?.state === 'running') this.music.start();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.master.gain.setTargetAtTime(s.muted ? 0 : 1, t, 0.05);
     this.amb.gain.setTargetAtTime(s.ambience * 0.55, t, 0.1);
     this.fx.gain.setTargetAtTime(s.effects * 0.6, t, 0.05);
+  }
+
+  /** Music on or off (it starts once audio is unlocked), and how present it is (see Music.setIntensity). */
+  setMusic(on: boolean, intensity = this.musicIntensity) {
+    this.musicWanted = on;
+    this.musicIntensity = intensity;
+    if (!this.music) return;
+    this.music.setIntensity(intensity);
+    if (on && this.settings.music > 0) this.music.start();
+    else if (!on) this.music.stop();
   }
 
   /** Quieter ambience behind menus, conversations and the phone. */

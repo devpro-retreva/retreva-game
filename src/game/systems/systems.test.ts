@@ -15,8 +15,26 @@ import { FLIGHTS, findFlight } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
 import { VEHICLES, findVehicle } from '../content/vehicles';
+import { advance, afterSleep, dayOf, daylight, formatClock, isOpen, phaseOf, START_TIME } from './clock';
+import { npcPresent } from '../store/gameStore';
+import { repairQueue, scoreRepair, shuffledSteps, tapStep } from './repair';
+import { meets as meetsReq } from './requirements';
+import { courierRank, rankBonus } from './careers';
+import { findFurniture, findInterior, INTERIORS, WELL_RESTED_COMFORT } from '../content/interiors';
+import { belongings, comfort, emptyProperty, fits, homeValuation, place, store, take, unplace } from './home';
+import { buildInteriorWorld, interiorPieces } from './collision';
+import { cheer } from './life';
+import { benchText, summarize } from '../core/benchmark';
+import { gatePrice, nextShowing, onNow, showsOn, ticketState, ticketTxId } from './events';
+import { visitStop } from './jobs';
+import { lagosIsland } from '../content/destinations/lagosIsland';
+import { ikeja } from '../content/destinations/ikeja';
 import { bookFlight, canBoard, checkIn, clearSecurity, completeFlight, emptyTravel, liquidsIn, tripBudget } from './travel';
-import { ALL_PACKS } from '../content';
+import { ALL_PACKS, registerPacks } from '../content';
+import { ACCRA_PACKS } from '../content/destinations/accraPack';
+import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
+// content checks cover every city pack, so register the ones that normally load on demand
+registerPacks(ACCRA_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -583,19 +601,19 @@ describe('goals', () => {
 describe('daily life', () => {
   const shift = lagos.shifts![0];
   it('needs drain with effort, faster when starving, and never leave 0–100', () => {
-    const n = { energy: 50, fullness: 50 };
+    const n = { energy: 50, fullness: 50, joy: 70 };
     const idle = drainNeeds(n, 60000, 'idle');
     const run = drainNeeds(n, 60000, 'run');
     expect(run.energy).toBeLessThan(idle.energy);
     expect(idle.fullness).toBeCloseTo(49, 5);
-    const starving = drainNeeds({ energy: 50, fullness: 0 }, 60000, 'walk');
+    const starving = drainNeeds({ energy: 50, fullness: 0, joy: 70 }, 60000, 'walk');
     expect(50 - starving.energy).toBeCloseTo(2 * (50 - drainNeeds(n, 60000, 'walk').energy), 5);
-    expect(drainNeeds({ energy: 0.1, fullness: 0 }, 600000, 'run')).toEqual({ energy: 0, fullness: 0 });
-    expect(eat({ energy: 10, fullness: 90 }, 55).fullness).toBe(100);
+    expect(drainNeeds({ energy: 0.1, fullness: 0, joy: 3 }, 600000, 'run')).toEqual({ energy: 0, fullness: 0, joy: 0 });
+    expect(eat({ energy: 10, fullness: 90, joy: 50 }, 55).fullness).toBe(100);
   });
   it('exhaustion stops running but never stops walking', () => {
-    expect(canRun({ energy: 14, fullness: 50 })).toBe(false);
-    expect(canRun({ energy: 15, fullness: 50 })).toBe(true);
+    expect(canRun({ energy: 14, fullness: 50, joy: 50 })).toBe(false);
+    expect(canRun({ energy: 15, fullness: 50, joy: 50 })).toBe(true);
   });
   it('skill levels follow the XP table', () => {
     expect(skillLevel(0)).toBe(1);
@@ -643,7 +661,7 @@ describe('daily life', () => {
     expect(up.destinationId).toBe('lagos-island');
     expect(up.life).toEqual(emptyLife());
     const v4 = migrate({ ...up, life: { needs: { energy: 500, fullness: -3 }, skills: { cooking: 90 }, regard: { 'mama-titi': 12 }, home: 'yaba-room', shiftsDone: 2 } })!;
-    expect(v4.life.needs).toEqual({ energy: 100, fullness: 0 });
+    expect(v4.life.needs).toEqual({ energy: 100, fullness: 0, joy: 70 });
     expect(v4.life.homes).toEqual(['yaba-room']);
     expect(v4.life.skills.cooking).toBe(90);
   });
@@ -794,5 +812,302 @@ describe('vehicles', () => {
     expect(odd.life.riding).toBeNull();
     const riding = migrate({ ...up, life: { ...up.life, vehicles: [{ uid: 'a', vehicleId: 'bicycle', paid: 8000, parked: null }], riding: 'a' } })!;
     expect(riding.life.riding).toBe('a');
+  });
+});
+
+
+describe('time of day', () => {
+  it('a game hour passes in two real minutes; days roll over', () => {
+    expect(advance(START_TIME, 120_000) - START_TIME).toBeCloseTo(60, 5);
+    expect(formatClock(START_TIME)).toBe('08:00');
+    expect(dayOf(1440 + 5)).toBe(2);
+    expect(formatClock(1440 + 7 * 60 + 5)).toBe('07:05');
+  });
+  it('daylight: full by day, none at night, easing through dawn and dusk', () => {
+    expect(daylight(12 * 60)).toBe(1);
+    expect(daylight(23 * 60)).toBe(0);
+    expect(daylight(19 * 60)).toBeGreaterThan(0);
+    expect(daylight(19 * 60)).toBeLessThan(1);
+    expect(phaseOf(21 * 60)).toBe('night');
+    expect(phaseOf(6 * 60)).toBe('dawn');
+  });
+  it('opening hours, including hours that pass midnight', () => {
+    expect(isOpen([7, 22], 21 * 60)).toBe(true);
+    expect(isOpen([7, 22], 22 * 60 + 5)).toBe(false);
+    expect(isOpen([20, 3], 1 * 60)).toBe(true);
+    expect(isOpen(undefined, 3 * 60)).toBe(true);
+  });
+  it('sleeping at night wakes you at 07:00 the next day; by day it is a nap', () => {
+    expect(formatClock(afterSleep(22 * 60))).toBe('07:00');
+    expect(dayOf(afterSleep(22 * 60))).toBe(2);
+    expect(dayOf(afterSleep(1440 + 2 * 60))).toBe(2);
+    expect(formatClock(afterSleep(1440 + 2 * 60))).toBe('07:00');
+    expect(afterSleep(13 * 60)).toBe(15 * 60);
+  });
+  it('people go home outside their hours, but never mid-job', () => {
+    const titi = lagos.npcs.find((n) => n.id === 'mama-titi')!;
+    const kunle = lagos.npcs.find((n) => n.id === 'kunle')!;
+    const night = { world: { ...emptyWorld('lagos-adeniyi'), time: 23 * 60 }, jobs: emptyJobs(), shift: null };
+    expect(npcPresent(titi, night, lagos)).toBe(false);
+    expect(npcPresent(kunle, night, lagos)).toBe(true);
+    const mid = { ...night, jobs: acceptJob(emptyJobs(), lagos.jobs[0], 0, 'r').state };
+    expect(npcPresent(titi, mid, lagos)).toBe(true);
+    expect(npcPresent(titi, { ...night, world: { ...night.world, time: 12 * 60 } }, lagos)).toBe(true);
+  });
+  it('v6 saves upgrade to v7 at 08:00 on day 1; a bad clock value falls back', () => {
+    const v6 = {
+      schemaVersion: 6, revision: 1, updatedAt: 1, deviceId: 'd',
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-adeniyi', wallet: { balance: 1, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: { visited: ['lagos-adeniyi'], discovered: [], goalsDone: [], seenTips: [], messages: [], bestBargain: 0, rides: 0 },
+      settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 1 }, life: emptyLife(), travel: emptyTravel(),
+    };
+    expect(migrate(v6)!.world.time).toBe(START_TIME);
+    expect(migrate({ ...v6, world: { ...v6.world, time: 5000 } })!.world.time).toBe(5000);
+    expect(migrate({ ...v6, world: { ...v6.world, time: -3 } })!.world.time).toBe(START_TIME);
+  });
+});
+
+
+describe('more kinds of work', () => {
+  const bench = ikeja.repairs![0];
+  it('repair: steps must go in order; shuffled buttons never give the order away', () => {
+    const steps = bench.devices[0].steps;
+    expect(shuffledSteps(steps, 3)).not.toEqual(steps);
+    expect([...shuffledSteps(steps, 3)].sort()).toEqual([...steps].sort());
+    expect(tapStep(steps, 0, steps[1])).toEqual({ progress: 0, correct: false });
+    expect(tapStep(steps, 0, steps[0])).toEqual({ progress: 1, correct: true });
+    expect(repairQueue(bench, 9)).toEqual(repairQueue(bench, 9));
+    expect(repairQueue(bench, 9)).toHaveLength(bench.perSession);
+  });
+  it('repair scoring: one slip still counts, two do not; a clean session tips; skill pays more', () => {
+    const clean = scoreRepair(bench, [{ mistakes: 0, done: true }, { mistakes: 0, done: true }, { mistakes: 0, done: true }], 1);
+    expect(clean.fixed).toBe(3);
+    expect(clean.pay).toBe(3 * bench.payPerDevice);
+    expect(clean.tip).toBe(bench.perfectTip);
+    const messy = scoreRepair(bench, [{ mistakes: 1, done: true }, { mistakes: 2, done: true }, { mistakes: 0, done: false }], 1);
+    expect(messy.fixed).toBe(1);
+    expect(messy.tip).toBe(0);
+    expect(scoreRepair(bench, [{ mistakes: 0, done: true }], 3).pay).toBeGreaterThan(bench.payPerDevice);
+  });
+  it('requirements say plainly what is missing', () => {
+    const ctx = { regard: {}, jobs: emptyJobs(), discovered: ['island-lane'], skills: {}, name: (id: string) => id.toUpperCase() };
+    const tour = lagosIsland.jobs.find((j) => j.id === 'island-tour')!;
+    const r = meetsReq(tour.requires, ctx);
+    expect(r.ok).toBe(false);
+    expect(r.missing[0]).toContain('ISLAND-ASOOKE');
+    expect(meetsReq(tour.requires, { ...ctx, discovered: ['island-lane', 'island-asooke', 'island-brazilian'] }).ok).toBe(true);
+    expect(meetsReq(bench.requires, ctx).missing[0]).toContain('PHONE-RUN');
+    expect(meetsReq({ regard: { npcId: 'tobi', min: 30 } }, ctx).missing[0]).toContain('Friend');
+  });
+  it('a tour visits its stops in order, and only then can be finished', () => {
+    const tour = lagosIsland.jobs.find((j) => j.id === 'island-tour')!;
+    let st = acceptJob(emptyJobs(), tour, 0, 't1').state;
+    expect(visitStop(st, tour, 1)).toBeNull(); // out of order
+    st = visitStop(st, tour, 0)!;
+    expect(deliverJob(st, tour, { now: 0, distanceToDropoff: 1 }).ok).toBe(false);
+    st = visitStop(visitStop(st, tour, 1)!, tour, 2)!;
+    expect(visitStop(st, tour, 2)).toBeNull();
+    expect(deliverJob(st, tour, { now: 0, distanceToDropoff: 1 }).ok).toBe(true);
+    for (const id of tour.tour!.stops) expect(lagosIsland.landmarks.find((l) => l.id === id), id).toBeDefined();
+  });
+  it('courier ranks: Rookie → Regular at 5 errands → Pro at 15, with bigger pay', () => {
+    expect(courierRank(0).name).toBe('Rookie runner');
+    expect(courierRank(5).name).toBe('Regular');
+    expect(courierRank(15).next).toBeNull();
+    expect(rankBonus(1500, 0)).toBe(0);
+    expect(rankBonus(1500, 5)).toBe(150);
+    expect(rankBonus(1500, 20)).toBe(300);
+  });
+});
+
+describe('homes, furniture and storage', () => {
+  const room = findInterior('yaba-room')!;
+  it('every home in a pack with an interior has a matching room, and every door leads somewhere real', () => {
+    for (const p of ALL_PACKS) {
+      for (const sp of p.spots ?? []) if (sp.kind === 'door') expect(findInterior(sp.interiorId!), sp.id).toBeTruthy();
+      for (const h of p.homes ?? []) if (h.buyPrice) expect(findInterior(h.id), h.id).toBeTruthy();
+    }
+    // all furniture sold in shops has a definition (so it can be placed and drawn)
+    const sold = ALL_PACKS.flatMap((p) => p.items.filter((i) => i.category === 'furniture').map((i) => i.id));
+    expect(sold.length).toBeGreaterThan(5);
+    for (const id of sold) expect(findFurniture(id), id).toBeTruthy();
+  });
+  it('furniture only fits slots that accept its kind; placing returns what was there', () => {
+    expect(fits(room, 'bed', 'wooden-bed')).toBe(true);
+    expect(fits(room, 'bed', 'small-tv')).toBe(false);
+    expect(fits(room, 'wall', 'wall-art')).toBe(true);
+    let p = emptyProperty('rent', 6000);
+    const a = place(p, 'corner', 'potted-plant');
+    expect(a.replaced).toBeNull();
+    const b = place(a.property, 'corner', 'standing-fan');
+    expect(b.replaced).toBe('potted-plant');
+    p = b.property;
+    expect(comfort(p)).toBe(2);
+    const u = unplace(p, 'corner');
+    expect(u.removed).toBe('standing-fan');
+    expect(comfort(u.property)).toBe(0);
+  });
+  it('comfort reaches the well-rested threshold with a bed and a couple of pieces', () => {
+    let p = emptyProperty('own', 45000);
+    p = place(p, 'bed', 'wooden-bed').property;
+    expect(comfort(p)).toBe(3);
+    p = place(p, 'side', 'rechargeable-lamp').property;
+    expect(comfort(p)).toBeGreaterThanOrEqual(WELL_RESTED_COMFORT);
+  });
+  it('the chest keeps provenance and stacks; taking out more than is there fails', () => {
+    let p = emptyProperty('rent', 0);
+    const e = { itemId: 'zobo', category: 'drink' as const, destinationId: 'yaba', purchasePrice: 500 };
+    p = store(store(p, e), e);
+    expect(p.storage).toHaveLength(1);
+    expect(p.storage[0].quantity).toBe(2);
+    p = store(p, { ...e, purchasePrice: 400 });
+    expect(p.storage).toHaveLength(2);
+    const t = take(p, 0)!;
+    expect(t.item.purchasePrice).toBe(500);
+    expect(t.property.storage[0].quantity).toBe(1);
+    expect(take(p, 5)).toBeNull();
+  });
+  it('owned homes are valued at 85% (rounded down to ₦500); rentals are worth nothing', () => {
+    expect(homeValuation({ ...emptyProperty('own', 45000) })).toBe(38000);
+    expect(homeValuation({ ...emptyProperty('own', 38000) })).toBe(32000);
+    expect(homeValuation(emptyProperty('rent', 6000))).toBe(0);
+    const p = place(store(emptyProperty('own', 1), { itemId: 'zobo', category: 'drink', destinationId: 'y', purchasePrice: 5 }), 'bed', 'wooden-bed').property;
+    expect(belongings(p).furniture).toEqual(['wooden-bed']);
+    expect(belongings(p).stored[0].itemId).toBe('zobo');
+  });
+  it('room collision: walls stop you, furniture blocks you, the entry point is clear, a placed bed replaces the mattress', () => {
+    for (const def of INTERIORS) {
+      const w = buildInteriorWorld(def, {});
+      expect(isBlocked(w, def.entry.position[0], def.entry.position[1]), def.id).toBe(false);
+      expect(isBlocked(w, def.size[0] / 2 + 0.1, 0)).toBe(true);
+    }
+    const w0 = buildInteriorWorld(room, {});
+    const w1 = buildInteriorWorld(room, { bed: 'wooden-bed', corner: 'armchair' });
+    expect(isBlocked(w0, -1.6, -1.1)).toBe(true);
+    expect(w1.boxes.length).toBe(w0.boxes.length + 1); // bed swapped for mattress, plus the armchair
+    expect(interiorPieces(room, { bed: 'wooden-bed' }).some((x) => x.itemId === 'foam-mattress')).toBe(false);
+  });
+  it('restaurants keep opening hours; meals lift joy', () => {
+    const eatery = findInterior('yaba-eatery')!;
+    expect(isOpen(eatery.hours, 12 * 60)).toBe(true);
+    expect(isOpen(eatery.hours, 23 * 60 + 30)).toBe(false);
+    expect(cheer({ energy: 50, fullness: 50, joy: 95 }, 20).joy).toBe(100);
+  });
+  it('v7 saves gain a property record per rented home (rent paid read from the ledger)', () => {
+    const v7 = {
+      schemaVersion: 7, revision: 1, updatedAt: 1, deviceId: 'd',
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-adeniyi',
+      wallet: { balance: 4000, ledger: [{ id: 'home:yaba-room', amount: -6000, reason: 'Move-in', at: 1, destinationId: 'lagos-adeniyi' }] },
+      inventory: { entries: [] }, jobs: emptyJobs(),
+      world: { visited: ['lagos-adeniyi'], discovered: [], goalsDone: [], seenTips: [], messages: [], bestBargain: 0, rides: 0, time: 600 },
+      settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 1 },
+      life: { needs: { energy: 50, fullness: 50 }, skills: {}, regard: {}, homes: ['yaba-room'] }, travel: emptyTravel(),
+    };
+    const old = v7;
+    const m = migrate(old)!;
+    expect(m.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    expect(m.life.property['yaba-room']).toMatchObject({ tenure: 'rent', paid: 6000, placed: {}, storage: [] });
+    expect(m.world.inside).toBeNull();
+    expect(m.life.needs.joy).toBeGreaterThan(0);
+  });
+});
+
+describe('ticketed events', () => {
+  const concert = ALL_PACKS.flatMap((p) => p.events ?? []).find((e) => e.id === 'beach-highlife')!;
+  const comedy = ALL_PACKS.flatMap((p) => p.events ?? []).find((e) => e.id === 'glover-laughs')!;
+  it('every event has a gate spot in its area that is clear to stand at, and stages do not block people', () => {
+    for (const p of ALL_PACKS) {
+      const w = buildCollisionWorld(p);
+      for (const ev of p.events ?? []) {
+        const gate = (p.spots ?? []).find((s) => s.kind === 'event' && s.eventId === ev.id);
+        expect(gate, ev.id).toBeTruthy();
+        expect(isBlocked(w, gate!.position[0], gate!.position[1]), `${ev.id} gate`).toBe(false);
+      }
+      for (const sp of p.spots ?? []) if (sp.kind === 'event') expect((p.events ?? []).some((e) => e.id === sp.eventId), sp.id).toBe(true);
+    }
+  });
+  it('showings follow the clock: nightly vs every other day, on-now, next showing', () => {
+    expect(showsOn(concert, 1)).toBe(true);
+    expect(showsOn(concert, 7)).toBe(true);
+    expect(showsOn(comedy, 1)).toBe(true);
+    expect(showsOn(comedy, 2)).toBe(false);
+    expect(showsOn(comedy, 3)).toBe(true);
+    // day 1, 08:00: the next concert is tonight 19:00–22:00
+    const n = nextShowing(concert, 480)!;
+    expect([n.day, n.start, n.end]).toEqual([1, 19 * 60, 22 * 60]);
+    expect(onNow(concert, 480)).toBeNull();
+    expect(onNow(concert, 20 * 60)).toBe(1);
+    // day 2 at 21:00: comedy isn't on (odd days only) — next is day 3
+    expect(onNow(comedy, 1440 + 21 * 60)).toBeNull();
+    expect(nextShowing(comedy, 1440 + 21 * 60)!.day).toBe(3);
+  });
+  it('tickets: upcoming → on now → used or missed; one ledger id per showing; the gate costs more', () => {
+    const t = { id: ticketTxId(concert.id, 1), eventId: concert.id, day: 1, paid: concert.price, status: 'booked' as const };
+    expect(t.id).toBe('ticket:beach-highlife:d1');
+    expect(ticketState(t, concert, 600)).toBe('upcoming');
+    expect(ticketState(t, concert, 20 * 60)).toBe('on-now');
+    expect(ticketState(t, concert, 23 * 60)).toBe('missed');
+    expect(ticketState({ ...t, status: 'used' }, concert, 23 * 60)).toBe('used');
+    expect(gatePrice(concert)).toBeGreaterThan(concert.price);
+    const w = createWallet(20000);
+    const a = debit(w, { id: t.id, amount: 5000, reason: 'x', at: 1, destinationId: 'lekki' });
+    expect(a.ok).toBe(true);
+    if (a.ok) expect(debit(a.wallet, { id: t.id, amount: 5000, reason: 'x', at: 2, destinationId: 'lekki' }).ok).toBe(false);
+  });
+  it('the Night out goal counts shows attended', () => {
+    const g = GOALS.find((x) => x.id === 'night-out')!;
+    expect(g.progress({ shows: 0 } as never)).toEqual([0, 1]);
+    expect(g.progress({ shows: 2 } as never)).toEqual([1, 1]);
+  });
+});
+
+describe('performance benchmark', () => {
+  const extra = { at: 0, drawCalls: 40, triangles: 90000, tier: 'medium', dpr: 1, device: { cores: 4, memoryGb: 4, screen: '', ua: '' } };
+  it('a steady 60 fps run is smooth', () => {
+    const r = summarize(Array(600).fill(1000 / 60), extra);
+    expect(r.avgFps).toBeCloseTo(60, 0);
+    expect(r.low1Fps).toBeCloseTo(60, 0);
+    expect(r.suggest).toBe('high');
+    expect(r.frames).toBe(600);
+  });
+  it('spikes drag down the 1% low and the verdict even when the average looks fine', () => {
+    const frames = [...Array(594).fill(1000 / 60), ...Array(6).fill(120)];
+    const r = summarize(frames, extra);
+    expect(r.avgFps).toBeGreaterThan(50);
+    expect(r.low1Fps).toBeLessThan(10);
+    expect(r.maxMs).toBe(120);
+    expect(r.suggest).toBe('low');
+  });
+  it('slow devices are told to use Low; bad samples are ignored', () => {
+    const r = summarize([...Array(100).fill(80), NaN, -5, 0], extra);
+    expect(r.frames).toBe(100);
+    expect(r.avgFps).toBeCloseTo(12.5, 1);
+    expect(r.suggest).toBe('low');
+    expect(r.verdict).toMatch(/Struggling/);
+    expect(benchText(r)).toMatch(/Average 12.5 fps/);
+  });
+});
+
+describe('city packs', () => {
+  it('each city pack index matches its packs (areas, events, homes)', () => {
+    for (const c of CITY_PACKS) {
+      const packs = ALL_PACKS.filter((p) => cityAreas(c.id).includes(p.id));
+      expect(packs.map((p) => p.id).sort(), c.id).toEqual([...cityAreas(c.id)].sort());
+      expect(packs.flatMap((p) => (p.events ?? []).map((e) => e.id)).sort()).toEqual([...c.eventIds].sort());
+      expect(packs.flatMap((p) => (p.homes ?? []).map((h) => h.id)).sort()).toEqual([...c.homeIds].sort());
+      if (!c.builtIn) expect(c.load, c.id).toBeTruthy();
+    }
+  });
+  it('a save names the cities it needs: where you are, visited, items, homes, tickets, flights', () => {
+    const base = { destinationId: 'lagos-adeniyi', world: emptyWorld('lagos-adeniyi'), travel: emptyTravel(), life: emptyLife(), inventory: emptyInv() };
+    expect(citiesInSave(base)).toEqual(['lagos']);
+    expect(citiesInSave({ ...base, destinationId: 'accra-osu' })).toContain('accra');
+    expect(citiesInSave({ ...base, world: { ...base.world, tickets: [{ id: 'x', eventId: 'osu-night-jam', day: 1, paid: 1, status: 'booked' }] } })).toContain('accra');
+    expect(citiesInSave({ ...base, life: { ...base.life, homes: ['osu-guesthouse'] } })).toContain('accra');
+    expect(citiesInSave({ ...base, travel: { ticket: { id: 't', routeId: FLIGHTS[0].id, stage: 'booked', paid: 1, roundTrip: false, bookedAt: 0 }, history: [] } })).toContain('accra');
+    const inv = addItem(emptyInv(), { itemId: 'kente-strip', category: 'souvenir', quantity: 1, purchasePrice: 1, destinationId: 'accra-osu', at: 0 });
+    expect(citiesInSave({ ...base, inventory: inv })).toContain('accra');
   });
 });

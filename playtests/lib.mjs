@@ -9,7 +9,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 
-export const BASE_URL = process.env.PLAYTEST_URL ?? 'http://localhost:4173/';
+const ROOT_URL = process.env.PLAYTEST_URL ?? 'http://localhost:4173/';
+/** The game with its clock held (`?clock=paused`): suites stay at the time they set, however slow the machine. */
+export const BASE_URL = `${ROOT_URL}${ROOT_URL.includes('?') ? '&' : '?'}clock=paused`;
+/** The game with a live clock, for the day/night suite. */
+export const LIVE_URL = ROOT_URL;
 
 const SOFTWARE_GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 

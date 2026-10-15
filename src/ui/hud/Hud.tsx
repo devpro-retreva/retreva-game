@@ -1,3 +1,4 @@
+import { dayOf, formatClock as gameClock, hourOf, phaseOf } from '../../game/systems/clock';
 import { NeedsChips } from '../panels/LifePanels';
 import { useEffect, useRef, useState } from 'react';
 import { findJob, findNpc, formatMoney } from '../../game/content';
@@ -7,6 +8,17 @@ import { usePack } from '../../scene/worldContext';
 import { formatClock, useRaf } from '../hooks';
 import { IconChat, IconCoin, IconFlag, IconPause, IconPhone, IconPin } from '../icons/Icons';
 import { MapView } from './MapView';
+
+/** Day and time, updated each game minute; the label says morning/afternoon/evening/night for screen readers. */
+function GameClock() {
+  const t = useGame((s) => Math.floor(s.world.time ?? 480));
+  const ph = phaseOf(t);
+  return (
+    <span className={`clock num phase-${ph}`} data-time={t} aria-label={`Day ${dayOf(t)}, ${gameClock(t)}, ${ph === 'day' ? (hourOf(t) < 12 ? 'morning' : 'afternoon') : ph === 'dusk' ? 'evening' : ph === 'dawn' ? 'dawn' : 'night'}`}>
+      Day {dayOf(t)} · {gameClock(t)}
+    </span>
+  );
+}
 
 function MoneyChip() {
   const pack = usePack();
@@ -28,6 +40,7 @@ function MoneyChip() {
       <span className="where">
         {pack.area} · {pack.name}
       </span>
+      <GameClock />
       {delta && (
         <span className={`delta num ${delta.v < 0 ? 'neg' : ''}`} aria-hidden="true">
           {delta.v > 0 ? '+' : ''}
@@ -57,7 +70,15 @@ function Objective() {
         <span className={`timer num ${low ? 'low' : ''}`}>{formatClock(active.remainingMs)}</span>
       </div>
       <div className="goal">
-        {job.kind === 'collect' && job.collect ? (
+        {job.kind === 'tour' && job.tour ? (
+          (active.collected?.length ?? 0) >= job.tour.stops.length ? (
+            <>Talk to <b>{npc?.name}</b> to finish the tour</>
+          ) : (
+            <>
+              Stop <b className="num">{(active.collected?.length ?? 0) + 1}/{job.tour.stops.length}</b>: <b>{pack.landmarks.find((l) => l.id === job.tour!.stops[active.collected?.length ?? 0])?.name}</b>
+            </>
+          )
+        ) : job.kind === 'collect' && job.collect ? (
           (active.collected?.length ?? 0) >= job.collect.count ? (
             <>Report back to <b>{npc?.name}</b></>
           ) : (

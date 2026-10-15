@@ -7,11 +7,16 @@ export const runtime = {
   camera: { yaw: Math.PI, pitch: 0.32, distance: 5.6 },
   /** Live positions of NPCs and walkers, keyed by id. */
   actors: new Map<string, { x: number; z: number }>(),
-  perf: { fps: 0, drawCalls: 0, triangles: 0 },
+  perf: { fps: 0, drawCalls: 0, triangles: 0, frameMs: 0, dpr: 1 },
   /** Moving vehicles this frame (read-only outside Traffic). */
   /** What each walker is doing right now (null while walking). */
   activity: new Map<string, string | null>(),
   traffic: [] as { x: number; z: number; speed: number; lane: number }[],
+  /**
+   * Test hook: `?clock=paused` in the URL holds the game clock, so automated playtests (which run at 2–10 fps
+   * under software GL and can take half an hour) don't drift into the night. Players never see this.
+   */
+  clockPaused: typeof location !== 'undefined' && new URLSearchParams(location.search).get('clock') === 'paused',
 };
 
 export function resetRuntime(x: number, z: number, yaw: number) {

@@ -1,24 +1,35 @@
-import type { DestinationPack, ItemDef, NpcDef, JobDef, BusinessDef } from './types';
+import type { DestinationPack, ItemDef, NpcDef, JobDef, BusinessDef, EventDef } from './types';
 import { lagos } from './destinations/lagos';
 import { lagosIsland } from './destinations/lagosIsland';
 import { lekki } from './destinations/lekki';
 import { ikeja } from './destinations/ikeja';
 import { lagosAirport } from './destinations/lagosAirport';
-import { accra } from './destinations/accra';
-import { accraAirport } from './destinations/accraAirport';
 
-/** Registry of destination packs. Future packs (Accra, Dubai…) register here. */
+/**
+ * Registry of destination packs. Lagos (the home city) is built in; other cities are city packs that
+ * load on demand (see `cities.ts`) and register themselves here. Lookups only see registered packs,
+ * so anything that needs a city's content makes sure the city is loaded first (`ensureAreas`).
+ */
 const PACKS: Record<string, DestinationPack> = {
   [lagos.id]: lagos,
   [lagosIsland.id]: lagosIsland,
   [lekki.id]: lekki,
   [ikeja.id]: ikeja,
   [lagosAirport.id]: lagosAirport,
-  [accra.id]: accra,
-  [accraAirport.id]: accraAirport,
 };
 
+/** Every registered pack. A live array: city packs are appended when they load. */
 export const ALL_PACKS: DestinationPack[] = Object.values(PACKS);
+
+export function registerPacks(packs: DestinationPack[]) {
+  for (const p of packs) {
+    if (PACKS[p.id]) continue;
+    PACKS[p.id] = p;
+    ALL_PACKS.push(p);
+  }
+}
+
+export const isAreaLoaded = (id: string) => !!PACKS[id];
 
 export const DEFAULT_DESTINATION = lagos.id;
 
@@ -35,6 +46,14 @@ export function findItem(pack: DestinationPack, id: string): ItemDef | undefined
 export function areaOfJob(jobId: string): DestinationPack | undefined {
   return ALL_PACKS.find((p) => p.jobs.some((j) => j.id === jobId));
 }
+/** A ticketed show anywhere, and the area it's in. */
+export function findEvent(id: string): EventDef | undefined {
+  return ALL_PACKS.flatMap((p) => p.events ?? []).find((e) => e.id === id);
+}
+export function areaOfEvent(id: string): DestinationPack | undefined {
+  return ALL_PACKS.find((p) => (p.events ?? []).some((e) => e.id === id));
+}
+
 export function findNpc(pack: DestinationPack, id: string): NpcDef | undefined {
   return pack.npcs.find((n) => n.id === id);
 }

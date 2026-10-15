@@ -4,30 +4,32 @@ import { saves } from '../game/persistence/instance';
 import * as THREE from 'three';
 import { input } from '../game/core/input';
 import { useGame } from '../game/store/gameStore';
-import { makeSkyTexture } from './builders/painters';
 import { Beacons } from './Beacons';
 import { Collectibles } from './Collectibles';
 import { Traffic } from './Traffic';
 import { ParkedVehicles } from './Vehicles';
+import { NightLights, SkyDome } from './Sky';
 import { CameraRig } from './CameraRig';
 import { Lighting } from './Lighting';
 import { Npcs } from './Npcs';
 import { Player } from './Player';
 import { StaticWorld } from './StaticWorld';
 import { GameLoop, InteractionSystem, ReadySignal } from './Systems';
-import { usePack } from './worldContext';
+import { useInterior, usePack } from './worldContext';
+import { InteriorWorld } from './Interior';
+import { Venues } from './Venues';
 import { useTier } from './useTier';
 
 export const isCoarsePointer = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
 export function GameCanvas() {
   const pack = usePack();
+  const room = useInterior();
   const shadowSetting = useGame((s) => s.settings.shadows);
   const paused = useGame((s) => s.ui === 'wardrobe' || s.ui === 'transit');
   const coarse = useMemo(isCoarsePointer, []);
   const t = useTier();
   const shadows = t.shadows && (shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse));
-  const sky = useMemo(makeSkyTexture, []);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
   const [lost, setLost] = useState(false);
 
@@ -58,15 +60,15 @@ export function GameCanvas() {
       onPointerCancel={onPointerUp}
     >
       <Canvas
-        key={`${pack.id}-${shadows ? 'sh' : 'nosh'}-${t.tier}`}
+        key={`${pack.id}-${room?.id ?? 'out'}-${shadows ? 'sh' : 'nosh'}-${t.tier}`}
         frameloop={paused ? 'never' : 'always'}
         shadows={shadows ? { type: THREE.PCFSoftShadowMap } : false}
         dpr={t.dpr}
         gl={{ antialias: t.antialias, powerPreference: 'high-performance', stencil: false }}
         camera={{ fov: 55, near: 0.15, far: t.viewDistance + 30, position: [pack.spawn.position[0], 3, pack.spawn.position[1] + 5] }}
         onCreated={({ scene, gl }) => {
-          scene.background = sky;
-          scene.fog = new THREE.Fog(pack.palette.fog, Math.min(28, t.viewDistance * 0.35), t.viewDistance);
+          scene.background = room ? new THREE.Color('#14100c') : null; // outdoors the SkyDome draws the sky and follows the clock
+          scene.fog = room ? null : new THREE.Fog(pack.palette.fog, Math.min(28, t.viewDistance * 0.35), t.viewDistance);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
           // the GPU can take its memory back (backgrounded tab, low-memory phone): save, tell the player, recover
@@ -83,14 +85,23 @@ export function GameCanvas() {
           canvas.addEventListener('webglcontextrestored', () => setLost(false));
         }}
       >
-        <Lighting shadows={shadows} sun={pack.palette.sun} />
-        <StaticWorld pack={pack} shadows={shadows} />
-        <Npcs />
-        <Traffic />
-        <ParkedVehicles />
+        {room ? (
+          <InteriorWorld def={room} />
+        ) : (
+          <>
+            <SkyDome far={t.viewDistance + 30} />
+            <Lighting shadows={shadows} sun={pack.palette.sun} />
+            <NightLights />
+            <StaticWorld pack={pack} shadows={shadows} />
+            <Npcs />
+            <Traffic />
+            <ParkedVehicles />
+            <Venues />
+            <Beacons />
+            <Collectibles />
+          </>
+        )}
         <Player />
-        <Beacons />
-        <Collectibles />
         <CameraRig />
         <InteractionSystem />
         <GameLoop />

@@ -1,6 +1,7 @@
 // Device-readiness playtest (Architecture V6, milestone 3): offline launch + play with saves,
 // graphics tiers (low/medium/high) and their budgets, large text on a small phone.
 import { launch, BASE_URL, outDir } from './lib.mjs';
+import { serveDist } from './static-server.mjs';
 const OUT = outDir('device');
 const results = [];
 const log = (n, ok, d = '') => { results.push(ok); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${d ? ' — ' + d : ''}`); };
@@ -14,7 +15,10 @@ const b = await launch();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
   const S = (fn, a) => p.evaluate(fn, a);
-  await p.goto(BASE_URL);
+  // the offline part uses its own server and stops it: Playwright's setOffline() doesn't cut off the
+  // service worker's own requests, so only a stopped server proves the game needs no network
+  const srv = await serveDist();
+  await p.goto(`${srv.url}?clock=paused`);
   await p.waitForSelector('.wordmark');
   const swOk = await S(() => navigator.serviceWorker.ready.then((r) => !!r.active)).catch(() => false);
   // wait for the precache to fill
@@ -23,7 +27,7 @@ const b = await launch();
   for (let i = 0; i < 40; i++) {
     const r = await S(async () => {
       const list = await (await fetch('./precache.json', { cache: 'no-store' })).json();
-      const keys = (await caches.keys()).filter((k) => k.startsWith('retreva-'));
+      const keys = (await caches.keys()).filter((k) => k.startsWith('retreva-') && !k.startsWith('retreva-city-'));
       if (!keys.length) return [0, list.files.length];
       const c = await caches.open(keys[0]);
       let n = 0;
@@ -48,7 +52,7 @@ const b = await launch();
   await S(() => window.__retreva.saves.saveNow());
   const pre = await S(() => ({ bal: window.__retreva.store.getState().wallet.balance, inv: window.__retreva.store.getState().inventory.entries.length }));
 
-  await ctx.setOffline(true);
+  await srv.stop();
   await p.reload();
   await p.waitForSelector('.wordmark', { timeout: 20000 });
   log('offline: the game opens with no network', true);
@@ -70,9 +74,10 @@ const b = await launch();
   await sleep(500);
   log('settings shows offline play as ready', (await p.getAttribute('[data-offline]', 'data-offline')) === 'ready');
   await p.screenshot({ path: `${OUT}/offline-settings.png` });
-  await ctx.setOffline(false);
+  await srv.start();
   log('offline: no page errors', errs.length === 0, errs.slice(0, 2).join(' | '));
   await ctx.close();
+  await srv.stop();
 }
 
 // ── graphics tiers ─────────────────────────────────────────────────────

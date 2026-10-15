@@ -1,3 +1,4 @@
+import { input } from './game/core/input';
 import { useEffect, useMemo, useState } from 'react';
 import { useGame } from './game/store/gameStore';
 import { saves } from './game/persistence/instance';
@@ -15,6 +16,11 @@ import { FlightOverlay } from './ui/travel/FlightOverlay';
 import { useGameAudio } from './audio/useGameAudio';
 import { audio } from './audio/ambience';
 import { DealerPanel, GiftPanel } from './ui/panels/SocialPanels';
+import { FurnishPanel, MenuPanel, StoragePanel } from './ui/panels/HomePanels';
+import { EventGatePanel } from './ui/panels/EventPanels';
+import { cityMissing, ensureForSave, isCityLoaded, loadCity } from './game/content/cities';
+import { BenchmarkOverlay } from './ui/panels/PerfPanels';
+import { RepairPanel } from './ui/panels/WorkPanels';
 import { getDestination } from './game/content';
 import { GraphicsBoundary, GraphicsUnavailable } from './ui/shell/GraphicsFallback';
 import { webglSupport } from './game/core/webgl';
@@ -63,6 +69,12 @@ function World({ touch }: { touch: boolean }) {
         {ui === 'resting' && <RestOverlay />}
         {ui === 'gift' && <GiftPanel />}
         {ui === 'dealer' && <DealerPanel />}
+        {ui === 'repair' && <RepairPanel />}
+        {ui === 'furnish' && <FurnishPanel />}
+        {ui === 'storage' && <StoragePanel />}
+        {ui === 'menu' && <MenuPanel />}
+        {ui === 'event' && <EventGatePanel />}
+        {ui === 'benchmark' && <BenchmarkOverlay />}
         <AreaBanner />
         <TipCard />
       </div>
@@ -121,18 +133,22 @@ export default function App() {
 
   // expose a small debug/playtest handle (read-only state + store actions)
   useEffect(() => {
-    window.__retreva = { store: useGame, runtime, saves, audio };
+    window.__retreva = { store: useGame, runtime, saves, audio, input, cities: { loadCity, isCityLoaded } };
   }, []);
 
   const onContinue = async () => {
     const latest = (await saves.load()) ?? save;
     if (!latest) return;
+    const ready = await ensureForSave(latest);
+    if (!ready.ok) return setNotice(cityMissing(ready.city));
     useGame.getState().hydrate(latest);
     useGame.getState().setPhase('loading');
   };
   const onImport = async (file: File) => {
     try {
       const data = await saves.importJson(await file.text());
+      const ready = await ensureForSave(data);
+      if (!ready.ok) return setNotice(cityMissing(ready.city));
       useGame.getState().hydrate(data);
       useGame.getState().setPhase('loading');
     } catch (e) {

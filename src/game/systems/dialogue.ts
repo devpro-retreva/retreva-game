@@ -8,6 +8,8 @@ export interface DialogueContext {
   /** Ticket stage relative to the airport you're at. */
   tripStage(): 'none' | 'booked' | 'checked-in' | 'cleared' | 'elsewhere';
   carryingLiquids(): boolean;
+  /** Requirements of a job or repair bench (by id) are met. */
+  meets?(target: string): boolean;
 }
 
 export function checkCondition(c: DialogueCondition, ctx: DialogueContext): boolean {
@@ -18,6 +20,7 @@ export function checkCondition(c: DialogueCondition, ctx: DialogueContext): bool
     case 'jobCompletedBefore': return ctx.jobCompletedBefore(c.jobId);
     case 'trip': return ctx.tripStage() === c.stage;
     case 'carryingLiquids': return ctx.carryingLiquids();
+    case 'meets': return (ctx.meets?.(c.target) ?? true) !== !!c.not;
   }
 }
 

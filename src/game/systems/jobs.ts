@@ -56,7 +56,7 @@ export function acceptJob(state: JobsState, job: JobDef, now: number, runId: str
   if ((state.cooldownUntil[job.id] ?? 0) > now) return { ok: false, state, reason: 'cooldown' };
   return {
     ok: true,
-    state: { ...state, active: { jobId: job.id, runId, remainingMs: job.timeLimitMs, acceptedAt: now, collected: job.kind === 'collect' ? [] : undefined } },
+    state: { ...state, active: { jobId: job.id, runId, remainingMs: job.timeLimitMs, acceptedAt: now, collected: job.kind === 'collect' || job.kind === 'tour' ? [] : undefined } },
   };
 }
 
@@ -71,6 +71,15 @@ export function collectSpot(state: JobsState, job: JobDef, spotIndex: number): J
   const got = a.collected ?? [];
   if (got.includes(spotIndex) || got.length >= job.collect.count) return null;
   return { ...state, active: { ...a, collected: [...got, spotIndex] } };
+}
+
+/** A tour reaches its next stop (stops must be visited in order). Returns null when nothing changed. */
+export function visitStop(state: JobsState, job: JobDef, stopIndex: number): JobsState | null {
+  const a = state.active;
+  if (!a || a.jobId !== job.id || job.kind !== 'tour' || !job.tour) return null;
+  const got = a.collected ?? [];
+  if (stopIndex !== got.length || stopIndex >= job.tour.stops.length) return null;
+  return { ...state, active: { ...a, collected: [...got, stopIndex] } };
 }
 
 export function collectedCount(state: JobsState): number {
@@ -112,6 +121,7 @@ export function deliverJob(
   if (ctx.distanceToDropoff > DELIVERY_RANGE) return { ok: false, state, reason: 'too-far' };
   if (state.history.some((h) => h.runId === a.runId)) return { ok: false, state, reason: 'already-paid' };
   if (job.kind === 'collect' && (a.collected?.length ?? 0) < (job.collect?.count ?? 0)) return { ok: false, state, reason: 'incomplete' };
+  if (job.kind === 'tour' && (a.collected?.length ?? 0) < (job.tour?.stops.length ?? 0)) return { ok: false, state, reason: 'incomplete' };
 
   const elapsedMs = job.timeLimitMs - a.remainingMs;
   const bonus = elapsedMs <= job.bonus.underMs ? job.bonus.amount : 0;

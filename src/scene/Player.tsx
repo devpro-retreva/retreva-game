@@ -74,7 +74,7 @@ export function Player() {
     g.rotation.y = p.yaw;
     anim.current.speed = p.speed;
     anim.current.talking = s.ui === 'dialogue' && !ride;
-    anim.current.pose = ride ? 'ride' : s.resting?.at === 'bench' ? 'sit' : undefined;
+    anim.current.pose = ride ? 'ride' : s.resting?.at === 'bench' || s.resting?.at === 'meal' ? 'sit' : undefined;
     anim.current.eatUntil = p.eatUntil;
     if (bike.current) bike.current.visible = !!ride;
   });

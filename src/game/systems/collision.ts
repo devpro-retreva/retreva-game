@@ -1,4 +1,5 @@
 import type { DestinationPack, PropKind } from '../content/types';
+import { findFurniture, type InteriorDef } from '../content/interiors';
 
 export interface Box {
   minX: number;
@@ -73,6 +74,12 @@ export function buildCollisionWorld(pack: DestinationPack): CollisionWorld {
     boxes.push({ minX: Math.min(x0, x1) - 0.15, maxX: Math.max(x0, x1) + 0.15, minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1), height: 1.4 });
   }
 
+  for (const ev of pack.events ?? []) {
+    if (!ev.stage) continue;
+    const [x, z] = ev.stage.position;
+    const [sx, sz] = ev.stage.size;
+    boxes.push({ minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2, height: 4 });
+  }
   return { boxes, circles, walkable: pack.walkable };
 }
 
@@ -189,4 +196,37 @@ export function segmentHit(w: CollisionWorld, ax: number, ay: number, az: number
     if (yAt <= b.height) best = t0;
   }
   return best;
+}
+
+/**
+ * A room's collision: the floor is the walkable area (walls stop you at its edge — the camera is allowed
+ * through them so the room reads as a cut-away), and each piece of furniture is a box.
+ */
+export function buildInteriorWorld(def: InteriorDef, placed: Record<string, string>): CollisionWorld {
+  const [w, d] = def.size;
+  const boxes: Box[] = [];
+  const pieces = interiorPieces(def, placed);
+  for (const pc of pieces) {
+    const f = findFurniture(pc.itemId);
+    if (!f || (!f.half[0] && !f.half[1])) continue;
+    const swap = Math.abs(Math.sin(pc.yaw)) > 0.7;
+    const hx = swap ? f.half[1] : f.half[0];
+    const hz = swap ? f.half[0] : f.half[1];
+    boxes.push({ minX: pc.position[0] - hx, maxX: pc.position[0] + hx, minZ: pc.position[1] - hz, maxZ: pc.position[1] + hz, height: 1 });
+  }
+  return { boxes, circles: [], walkable: [[-w / 2, -d / 2, w / 2, d / 2]] };
+}
+
+/** Everything standing in a room: fixtures (a placed bed replaces the mattress in its slot) plus what you've placed. */
+export function interiorPieces(def: InteriorDef, placed: Record<string, string>) {
+  const out: { itemId: string; position: [number, number]; yaw: number; slotId?: string; fixedIndex?: number; wall?: boolean }[] = [];
+  def.fixed.forEach((fx, i) => {
+    const covered = def.slots.some((sl) => placed[sl.id] && sl.position[0] === fx.position[0] && sl.position[1] === fx.position[1]);
+    if (!covered) out.push({ itemId: fx.itemId, position: [fx.position[0], fx.position[1]], yaw: fx.yaw, fixedIndex: i });
+  });
+  for (const sl of def.slots) {
+    const itemId = placed[sl.id];
+    if (itemId) out.push({ itemId, position: [sl.position[0], sl.position[1]], yaw: sl.yaw, slotId: sl.id, wall: sl.wall });
+  }
+  return out;
 }

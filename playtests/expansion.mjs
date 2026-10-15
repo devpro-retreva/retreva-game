@@ -43,6 +43,8 @@ let s = await st();
 log('area title card shows on arrival', s.banner === 'Yaba', `banner=${s.banner}`);
 const tipHiddenUnderBanner = !(await p.isVisible('.tip-card'));
 await S(() => window.__retreva.store.getState().updateSettings({ shadows: 'off' }));
+// mid-morning: every stall is open (Ada opens at 09:00, and ?clock=paused holds the time; rides still add their minutes)
+await S(() => { const st = window.__retreva.store; st.setState({ world: { ...st.getState().world, time: 10 * 60 } }); });
 await sleep(4500);
 s = await st();
 log('welcome tip waits for the title card, then appears', tipHiddenUnderBanner && s.tip === 'welcome' && (await p.isVisible('.tip-card')));

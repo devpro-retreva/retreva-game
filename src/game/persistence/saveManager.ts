@@ -2,6 +2,7 @@ import { emptyLife, type LifeState } from '../systems/life';
 import { emptyTravel, type Ticket, type TravelState } from '../systems/travel';
 import { findFlight } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
+import { findInterior } from '../content/interiors';
 import { SAVE_SCHEMA_VERSION, emptyWorld, type SaveAdapter, type SaveData } from './types';
 import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
@@ -42,13 +43,19 @@ export function migrate(raw: unknown): SaveData | null {
     messages: Array.isArray(w.messages) ? w.messages.slice(-60) : [],
     bestBargain: typeof w.bestBargain === 'number' ? w.bestBargain : 0,
     rides: typeof w.rides === 'number' ? w.rides : 0,
+    // v6 → v7: the game clock. Older saves resume at 08:00 on day 1.
+    time: typeof w.time === 'number' && Number.isFinite(w.time) && w.time >= 0 ? w.time : base.time,
+    // v7 → v8: inside an interior (your room, a restaurant) — only kept if the interior still exists
+    inside: w.inside && typeof w.inside.interiorId === 'string' && findInterior(w.inside.interiorId) && w.inside.from && typeof w.inside.from.x === 'number' ? w.inside : null,
+    meals: typeof w.meals === 'number' ? w.meals : 0,
+    tickets: Array.isArray(w.tickets) ? w.tickets.filter((t) => t && typeof t.eventId === 'string' && typeof t.day === 'number' && (t.status === 'booked' || t.status === 'used')) : [],
   };
   // v3 → v4: daily life (needs, skills, regard, rented home). Older saves start rested and fed.
   const l = (d.life ?? {}) as Partial<LifeState>;
   const base4 = emptyLife();
   const num = (v: unknown, dflt: number) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : dflt);
   const life: LifeState = {
-    needs: { energy: num(l.needs?.energy, base4.needs.energy), fullness: num(l.needs?.fullness, base4.needs.fullness) },
+    needs: { energy: num(l.needs?.energy, base4.needs.energy), fullness: num(l.needs?.fullness, base4.needs.fullness), joy: num(l.needs?.joy, base4.needs.joy) },
     skills: l.skills && typeof l.skills === 'object' ? { ...l.skills } : {},
     regard: l.regard && typeof l.regard === 'object' ? { ...l.regard } : {},
     // v4 → v5: one rented home became a list (a room in Lagos and a guesthouse in Accra can both be yours)
@@ -62,7 +69,18 @@ export function migrate(raw: unknown): SaveData | null {
       ? l.vehicles.filter((v) => v && typeof v.uid === 'string' && typeof v.paid === 'number' && !!findVehicle(v.vehicleId))
       : [],
     riding: null,
+    // v7 → v8: property details (tenure, furniture, storage) and the well-rested buff. Homes you already
+    // had become rentals with nothing placed; the price paid is read back from the ledger where possible.
+    property: {},
+    wellRestedUntil: typeof l.wellRestedUntil === 'number' ? l.wellRestedUntil : 0,
   };
+  const oldProps = (l.property ?? {}) as LifeState['property'];
+  for (const id of life.homes) {
+    const op = oldProps[id];
+    life.property[id] = op && (op.tenure === 'rent' || op.tenure === 'own')
+      ? { tenure: op.tenure, paid: typeof op.paid === 'number' ? op.paid : 0, placed: op.placed && typeof op.placed === 'object' ? { ...op.placed } : {}, storage: Array.isArray(op.storage) ? op.storage.filter((e) => e && typeof e.itemId === 'string' && e.quantity > 0) : [] }
+      : { tenure: 'rent', paid: Math.abs(d.wallet.ledger.find((t) => t.id === `home:${id}`)?.amount ?? 0), placed: {}, storage: [] };
+  }
   // riding is only kept if that vehicle still exists
   if (typeof l.riding === 'string' && life.vehicles.some((v) => v.uid === l.riding)) life.riding = l.riding;
   // v4 → v5: flights. Drop a ticket that names an unknown route rather than crash on it.

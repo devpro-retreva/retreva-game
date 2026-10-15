@@ -10,6 +10,19 @@ export interface Needs {
   energy: number;
   /** 0 starving … 100 full */
   fullness: number;
+  /** 0 low … 100 happy (v8). Leisure, friends, good food and a comfortable home lift it. */
+  joy: number;
+}
+
+/** A home you rent or own: what's placed in it and what's stored there (v8). */
+export interface Property {
+  tenure: 'rent' | 'own';
+  /** What was paid (move-in for rent, the price for owning) — owning sells back at a valuation. */
+  paid: number;
+  /** slot id → furniture item id */
+  placed: Record<string, string>;
+  /** Items kept in the storage chest. */
+  storage: { itemId: string; category: string; quantity: number; purchasePrice: number; destinationId: string }[];
 }
 
 export interface LifeState {
@@ -27,10 +40,14 @@ export interface LifeState {
   vehicles: OwnedVehicle[];
   /** The vehicle you're riding right now, by uid (v6). */
   riding: string | null;
+  /** Your homes in detail, by home id (v8; `homes` lists the ids). */
+  property: Record<string, Property>;
+  /** Woke up in a comfortable home: energy drains more slowly until this game time (v8). */
+  wellRestedUntil: number;
 }
 
 export const emptyLife = (): LifeState => ({
-  needs: { energy: 85, fullness: 75 },
+  needs: { energy: 85, fullness: 75, joy: 70 },
   skills: {},
   regard: {},
   homes: [],
@@ -38,6 +55,8 @@ export const emptyLife = (): LifeState => ({
   social: {},
   vehicles: [],
   riding: null,
+  property: {},
+  wellRestedUntil: 0,
 });
 
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
@@ -45,19 +64,28 @@ const clamp = (v: number) => Math.max(0, Math.min(100, v));
 export type Activity = 'idle' | 'walk' | 'run' | 'ride';
 
 /** Per real minute of play. Gentle: a full tank lasts roughly an hour of mixed play. */
-export const DRAIN = { energy: { idle: 0.6, walk: 1.1, run: 2.2, ride: 0.7 }, fullness: 1.0 } as const;
+export const DRAIN = { energy: { idle: 0.6, walk: 1.1, run: 2.2, ride: 0.7 }, fullness: 1.0, joy: 0.5 } as const;
+/** Joy below this ("feeling low") makes you tire 25% faster. */
+export const LOW_JOY = 25;
 
 export const LOW = 15;
 
 /** Needs fall with time and effort; an empty stomach makes you tire twice as fast. */
-export function drainNeeds(n: Needs, dtMs: number, activity: Activity): Needs {
+export function drainNeeds(n: Needs, dtMs: number, activity: Activity, opts: { wellRested?: boolean } = {}): Needs {
   const min = dtMs / 60000;
   const hungry = n.fullness <= 0;
+  const low = (n.joy ?? 70) < LOW_JOY;
+  const rate = (hungry ? 2 : 1) * (low ? 1.25 : 1) * (opts.wellRested ? 0.75 : 1);
+  // riding a bike is a little fun
+  const joyDelta = activity === 'ride' ? 0.4 * min : -DRAIN.joy * min;
   return {
-    energy: clamp(n.energy - DRAIN.energy[activity] * min * (hungry ? 2 : 1)),
+    energy: clamp(n.energy - DRAIN.energy[activity] * min * rate),
     fullness: clamp(n.fullness - DRAIN.fullness * min),
+    joy: clamp((n.joy ?? 70) + joyDelta),
   };
 }
+
+export const cheer = (n: Needs, amount: number): Needs => ({ ...n, joy: clamp((n.joy ?? 70) + amount) });
 
 export const eat = (n: Needs, nutrition: number): Needs => ({ ...n, fullness: clamp(n.fullness + nutrition) });
 export const rest = (n: Needs, to: number): Needs => ({ ...n, energy: Math.max(n.energy, clamp(to)) });
@@ -68,6 +96,7 @@ export const canRun = (n: Needs) => n.energy >= LOW;
 
 export function needLabel(kind: keyof Needs, v: number): string {
   if (kind === 'energy') return v < LOW ? 'Exhausted' : v < 40 ? 'Tired' : v < 75 ? 'OK' : 'Rested';
+  if (kind === 'joy') return v < LOW_JOY ? 'Feeling low' : v < 50 ? 'Bored' : v < 80 ? 'Good' : 'Happy';
   return v < LOW ? 'Starving' : v < 40 ? 'Hungry' : v < 75 ? 'Fine' : 'Full';
 }
 

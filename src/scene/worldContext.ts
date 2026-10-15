@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { getDestination, type DestinationPack } from '../game/content';
-import { buildCollisionWorld, type CollisionWorld } from '../game/systems/collision';
+import { buildCollisionWorld, buildInteriorWorld, type CollisionWorld } from '../game/systems/collision';
+import { findInterior } from '../game/content/interiors';
 import { useGame } from '../game/store/gameStore';
 
 const worlds = new Map<string, CollisionWorld>();
@@ -19,9 +20,22 @@ export function usePack() {
   return useMemo(() => getDestination(id), [id]);
 }
 
+/** The street's collision, or — when you are inside a room — that room's (rebuilt when furniture moves). */
 export function useCollisionWorld() {
   const id = useGame((s) => s.destinationId);
-  return useMemo(() => getCollisionWorld(id), [id]);
+  const roomKey = useGame((s) => (s.world.inside ? `${s.world.inside.interiorId}|${JSON.stringify(s.life.property[s.world.inside.interiorId]?.placed ?? {})}` : ''));
+  return useMemo(() => {
+    if (!roomKey) return getCollisionWorld(id);
+    const [roomId, placed] = roomKey.split('|');
+    const def = findInterior(roomId);
+    return def ? buildInteriorWorld(def, JSON.parse(placed)) : getCollisionWorld(id);
+  }, [id, roomKey]);
+}
+
+/** The room you're in, if any. */
+export function useInterior() {
+  const roomId = useGame((s) => s.world.inside?.interiorId ?? null);
+  return useMemo(() => (roomId ? findInterior(roomId) ?? null : null), [roomId]);
 }
 
 /** Sidewalks are raised slightly; the player steps up onto them. Beaches are flat. */

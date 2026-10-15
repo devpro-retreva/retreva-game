@@ -250,9 +250,9 @@ await page.click('button[aria-label="Back to home"]');
 await page.click('button[aria-label="Map"]'); await sleep(300);
 await page.screenshot({ path: `${OUT}/13-phone-map-desktop.png` });
 await page.click('button[aria-label="Back to home"]');
-await page.click('button[aria-label="Events (coming later)"]'); await sleep(200);
-const lockedOk = await page.isVisible('text=Not on this street yet');
-log('locked phone apps show honest placeholder', lockedOk);
+await page.click('button[aria-label="Events"]'); await sleep(300);
+// (Events used to be a locked placeholder; it went live with ticketed shows)
+log('the Events app lists shows with their next showing', (await page.locator('.event-card').count()) >= 3);
 await page.keyboard.press('KeyP');
 await sleep(200);
 

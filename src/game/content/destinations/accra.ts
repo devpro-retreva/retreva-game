@@ -97,6 +97,7 @@ export const accra: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#4a2c1c', top: '#8d1f2b', bottom: '#e8b21c', outfit: 'kaftan', hair: 'short', headwear: 'wrap', headColor: '#e8b21c', accessory: 'earrings', height: 1.64 },
       promptVerb: 'Talk to',
+      hours: [7, 21],
       social: { lines: ["My waakye leaves come from my sister's farm in Kumasi.", "Lagos people say their jollof is better. We'll see!", "Come by on Sunday — I make light soup for regulars."], likes: ["kente-keyring", "shea-butter", "adire-scarf"] },
       idle: 'busy',
       dialogue: {
@@ -122,6 +123,7 @@ export const accra: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#1f6f4a', bottom: '#e8b21c', outfit: 'dress', hair: 'braids', accessory: 'earrings', height: 1.7 },
       promptVerb: 'Talk to',
+      hours: [9, 19],
       social: { lines: ["Each kente pattern has a name and a meaning. This one means 'unity'.", "My weavers are in Bonwire — the kente village.", "Sankofa: go back and fetch what you left behind. I like that."], likes: ["ankara-6yd", "lace-fabric", "sobolo"] },
       idle: 'wave',
       dialogue: {
@@ -162,6 +164,7 @@ export const accra: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#3f2516', top: '#f4f0e6', bottom: '#2b2f3a', outfit: 'shirt', hair: 'low', facialHair: 'moustache', accessory: 'glasses', height: 1.72 },
       promptVerb: 'Talk to',
+      hours: [9, 19],
       social: { lines: ["A good suit takes three fittings. Patience, my friend.", "I made the president's nephew's wedding suit. True story.", "Kaba and slit, kaftan, suit — I do it all."], likes: ["kente-stole", "adinkra-shirt", "aso-oke-cap"] },
       idle: 'busy',
       dialogue: {
@@ -294,12 +297,26 @@ export const accra: DestinationPack = {
       staffMeal: 40,
     },
   ],
+  events: [
+    {
+      id: 'osu-night-jam',
+      name: 'Oxford Street Night Jam',
+      kind: 'festival',
+      venue: 'Sunset Spot, Osu',
+      description: 'Highlife and azonto till late at the Sunset Spot — grills going, the whole street dancing.',
+      hours: [18, 23],
+      price: 4000,
+      joy: 28,
+      energy: 10,
+    },
+  ],
   spots: [
+    { id: 'osu-night-jam-gate', kind: 'event', position: [-6.0, -33.5], label: 'Oxford Street Night Jam', verb: 'Go to', eventId: 'osu-night-jam' },
     { id: 'osu-bench', kind: 'bench', position: [-5.4, 14.4], label: 'Bench', verb: 'Rest on' },
     { id: 'osu-guesthouse-door', kind: 'home', position: [6.5, 29], label: 'Osu Guesthouse', verb: 'Check', homeId: 'osu-guesthouse' },
   ],
   homes: [
-    { id: 'osu-guesthouse', name: 'Osu Guesthouse room', description: 'A clean room with a ceiling fan and a balcony over Oxford Street. Yours for your stay — rest free whenever you like.', moveInCost: 3500 },
+    { id: 'osu-guesthouse', name: 'Osu Guesthouse room', description: 'A clean room with a ceiling fan and a balcony over Oxford Street. Yours for your stay — rest free whenever you like.', moveInCost: 3500, buyPrice: 38000 },
   ],
   traffic: {
     lanes: [{ x: 2, dir: 1 }, { x: -2, dir: -1 }],

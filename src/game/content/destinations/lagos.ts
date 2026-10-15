@@ -58,6 +58,8 @@ export const lagos: DestinationPack = {
     {
       id: 'e2', position: [EAST_X, -26.5], size: [10, 9.4, BLD_DEPTH], facing: 'west',
       wall: '#e7d6b5', trim: '#9b5b3a', roof: '#6c5c4d', storeys: 3, balcony: true,
+      awning: '#1f6f4a',
+      sign: { text: 'ADENIYI EATERY', sub: 'SIT-DOWN · LUNCH · DINNER', bg: '#f3e2bd', fg: '#1f6f4a' },
     },
     {
       id: 'e3', position: [EAST_X, -16.5], size: [9.4, 6.4, BLD_DEPTH], facing: 'west',
@@ -74,6 +76,8 @@ export const lagos: DestinationPack = {
     {
       id: 'e5', position: [EAST_X, 4.6], size: [10.4, 6.4, BLD_DEPTH], facing: 'west',
       wall: '#d9cbb3', trim: '#2f6e5b', roof: '#5f5246', storeys: 2, balcony: true,
+      awning: '#2f6e5b', businessId: 'okon-home',
+      sign: { text: 'OKON HOME', sub: 'FURNITURE · FANS · DECOR', bg: '#2f6e5b', fg: '#f4ead8' },
     },
     {
       id: 'e6', position: [EAST_X, 15.2], size: [9.8, 6.4, BLD_DEPTH], facing: 'west',
@@ -161,6 +165,31 @@ export const lagos: DestinationPack = {
 
   npcs: [
     {
+      id: 'okon',
+      name: 'Mr. Okon',
+      role: 'Furniture seller',
+      personality: 'Carpenter turned shopkeeper; tests every chair himself.',
+      position: [5.2, 4.6],
+      facing: -Math.PI / 2,
+      look: { gender: 'male', skin: '#4a2c1c', top: '#2f6e5b', bottom: '#4b4033', outfit: 'shirt', hair: 'low', facialHair: 'beard', accessory: 'glasses', height: 1.78 },
+      promptVerb: 'Talk to',
+      hours: [8, 20],
+      social: { lines: ['A good chair outlives its owner, if you oil it.', 'People buy TVs first. Buy a bed first — sleep is everything.', 'My father made furniture in Calabar. I learned from his hands.'], likes: ['jollof-plate', 'zobo', 'adire-scarf'] },
+      idle: 'busy',
+      dialogue: {
+        entries: [{ node: 'hello' }],
+        nodes: {
+          hello: {
+            text: 'Welcome to Okon Home! Beds, fans, chairs, lamps — make your room a place you want to come back to. A comfortable home means you wake up truly rested.',
+            options: [
+              { label: 'Show me the furniture', action: { kind: 'openShop', businessId: 'okon-home' } },
+              { label: 'Later', action: { kind: 'close' } },
+            ],
+          },
+        },
+      },
+    },
+    {
       id: 'mama-titi',
       name: 'Mama Titi',
       role: 'Buka owner',
@@ -169,6 +198,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#e2a400', bottom: '#2f7a52', outfit: 'top-skirt', hair: 'short', headwear: 'gele', headColor: '#d8452b', accessory: 'earrings', height: 1.62 },
       promptVerb: 'Talk to',
+      hours: [7, 22],
       social: { lines: ["You know, I started this buka with one pot and a stool. Twenty years now!", "Tunde owes me for three plates. Don't tell him I said so.", "Eat before you go — you're too thin for Lagos hustle."], likes: ["chin-chin", "puff-puff", "ankara-6yd", "adire-scarf"] },
       idle: 'busy',
       dialogue: {
@@ -219,6 +249,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#f4f0e6', bottom: '#1b2a3a', outfit: 'shirt', hair: 'hightop', facialHair: 'goatee', height: 1.8 },
       promptVerb: 'Talk to',
+      hours: [9, 21],
       social: { lines: ["Saturday is the busiest — every man wants a fresh cut for the owambe.", "One day I'll open a second salon in Lekki. Watch.", "You want a lineup? Next time, I'll fit you in."], likes: ["jollof-plate", "zobo", "earbuds"] },
       idle: 'sway',
       dialogue: {
@@ -255,6 +286,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#2c5f9e', bottom: '#f0c75e', outfit: 'dress', hair: 'bun', headwear: 'wrap', headColor: '#f2b705', accessory: 'glasses', height: 1.6 },
       promptVerb: 'Shop with',
+      hours: [7, 21],
       social: { lines: ["I can tell how the day will go by the first customer's change.", "My daughter is studying accounting at UNILAG — she checks my books now.", "Prices are going up, my dear. Buy your chin chin while it's cheap."], likes: ["adire-scarf", "lace-fabric", "shea-butter"] },
       idle: 'sway',
       dialogue: {
@@ -311,6 +343,7 @@ export const lagos: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#3f2516', top: '#1f6f4a', bottom: '#4b4033', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#f4f0e6', height: 1.76 },
       promptVerb: 'Talk to',
+      hours: [8, 20],
       social: { lines: ["Okada is banned on this road, so I fix bicycles now. Honest money.", "A bicycle in Yaba? Fastest thing on the street when traffic stands still.", "Oil the chain, check the brakes, ring the bell. That's the whole religion."], likes: ["roasted-corn", "beach-suya", "water"] },
       idle: 'sway',
       dialogue: {
@@ -371,6 +404,26 @@ export const lagos: DestinationPack = {
 
   businesses: [
     {
+      id: 'okon-home',
+      name: 'Okon Home',
+      kind: 'market',
+      ownerNpcId: 'okon',
+      greeting: 'Make your house a home.',
+      haggle: { floor: 0.85, patience: 2 },
+      stock: [
+        { itemId: 'plastic-chair', price: 1500 },
+        { itemId: 'potted-plant', price: 1500 },
+        { itemId: 'rechargeable-lamp', price: 1800 },
+        { itemId: 'wall-art', price: 2000 },
+        { itemId: 'side-table', price: 2500 },
+        { itemId: 'ankara-rug', price: 3000 },
+        { itemId: 'standing-fan', price: 4500 },
+        { itemId: 'armchair', price: 7000 },
+        { itemId: 'wooden-bed', price: 9500 },
+        { itemId: 'small-tv', price: 12000 },
+      ],
+    },
+    {
       id: 'mama-titi',
       name: "Mama Titi's Kitchen",
       kind: 'food',
@@ -399,6 +452,19 @@ export const lagos: DestinationPack = {
   ],
 
   items: [
+    { id: 'chapman', name: 'Chapman', category: 'drink', basePrice: 1200, nutrition: 10, consumable: true, icon: 'cup', description: 'Fizzy, fruity, cucumber slice on top — the Nigerian classic.' },
+    { id: 'pounded-yam-egusi', name: 'Pounded yam & egusi', category: 'food', basePrice: 3500, nutrition: 70, consumable: true, icon: 'plate', description: 'Smooth pounded yam with melon-seed soup and assorted meat.' },
+    { id: 'grilled-fish', name: 'Grilled croaker fish', category: 'food', basePrice: 4500, nutrition: 60, consumable: true, icon: 'plate', description: 'Whole fish, peppered and grilled, with plantain.' },
+    { id: 'wooden-bed', name: 'Wooden bed frame', category: 'furniture', basePrice: 9500, icon: 'bag', description: 'A proper bed with a red throw. Comfort +3.' },
+    { id: 'armchair', name: 'Armchair', category: 'furniture', basePrice: 7000, icon: 'bag', description: 'Rust-red, deep cushions. Comfort +2.' },
+    { id: 'plastic-chair', name: 'Plastic chair', category: 'furniture', basePrice: 1500, icon: 'bag', description: 'The blue chair every Lagos home has. Comfort +1.' },
+    { id: 'side-table', name: 'Side table', category: 'furniture', basePrice: 2500, icon: 'bag', description: 'For your phone and a cold drink. Comfort +1.' },
+    { id: 'standing-fan', name: 'Standing fan', category: 'furniture', basePrice: 4500, icon: 'bag', description: 'Because Lagos heat is no joke. Comfort +2.' },
+    { id: 'small-tv', name: 'Small TV', category: 'furniture', basePrice: 12000, icon: 'bag', description: 'Football and Nollywood on demand. Comfort +2.' },
+    { id: 'rechargeable-lamp', name: 'Rechargeable lamp', category: 'furniture', basePrice: 1800, icon: 'bag', description: 'Light when NEPA takes light. Comfort +1.' },
+    { id: 'potted-plant', name: 'Potted plant', category: 'furniture', basePrice: 1500, icon: 'bag', description: 'A snake plant that forgives everything. Comfort +1.' },
+    { id: 'ankara-rug', name: 'Ankara rug', category: 'furniture', basePrice: 3000, icon: 'bag', description: 'Bright wax-print pattern underfoot. Comfort +1.' },
+    { id: 'wall-art', name: 'Wall print', category: 'furniture', basePrice: 2000, icon: 'bag', description: 'A green-and-gold abstract by a Yaba artist. Comfort +1.' },
     { id: 'jollof-plate', name: 'Jollof rice & chicken', category: 'food', basePrice: 2500, consumable: true, nutrition: 55, icon: 'plate',
       description: "Smoky party jollof from Mama Titi's pot, with fried plantain." },
     { id: 'puff-puff', name: 'Puff-puff (5)', category: 'food', basePrice: 300, consumable: true, nutrition: 20, icon: 'snack',
@@ -457,12 +523,13 @@ export const lagos: DestinationPack = {
   spots: [
     { id: 'okada-bench', kind: 'bench', position: [-9.4, -4.3], label: 'Bench', verb: 'Rest on' },
     { id: 'yaba-room-door', kind: 'home', position: [-5.7, 23.4], label: 'Room to let', verb: 'Check', homeId: 'yaba-room' },
+    { id: 'yaba-eatery-door', kind: 'door', position: [6.5, -26.5], label: 'Adeniyi Eatery', verb: 'Go into', interiorId: 'yaba-eatery' },
   ],
   dealers: [
     { id: 'chidi-bikes', name: "Chidi's Bicycles", npcId: 'chidi', stock: [{ vehicleId: 'bicycle', price: 8000 }], parkAt: { position: [-8.2, -8.4], yaw: Math.PI / 2 } },
   ],
   homes: [
-    { id: 'yaba-room', name: 'Room on Adeniyi Street', description: 'A self-contained room upstairs: bed, fan, a lock that works. Rest here for free whenever you like.', moveInCost: 6000 },
+    { id: 'yaba-room', name: 'Room on Adeniyi Street', description: 'A self-contained room upstairs: a mattress, a chest, a window over the street. Rest here for free whenever you like — and make it yours with furniture.', moveInCost: 6000, buyPrice: 45000 },
   ],
   traffic: {
     lanes: [{ x: 2, dir: 1 }, { x: -2, dir: -1 }],

@@ -3,7 +3,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { DestinationPack, NpcDef } from '../game/content/types';
 import { isAvailable } from '../game/systems/jobs';
-import { useGame } from '../game/store/gameStore';
+import { npcPresent, requirementContext, useGame } from '../game/store/gameStore';
+import { meets } from '../game/systems/requirements';
+import { runtime } from '../game/core/runtime';
 import { beaconMaterial, ringMaterial, travelBeaconMaterial } from './materials';
 import { usePack } from './worldContext';
 
@@ -48,24 +50,34 @@ export function Beacons() {
       let npcId: string | null = null;
       const a = s.jobs.active;
       if (a?.jobId === job.id) {
-        const ready = job.kind !== 'collect' || (a.collected?.length ?? 0) >= (job.collect?.count ?? 0);
-        if (ready) npcId = job.dropoffNpcId;
-      } else if (!a && isAvailable(s.jobs, job, now)) {
+        if (job.kind === 'tour' && job.tour) {
+          const i = a.collected?.length ?? 0;
+          const lm = i < job.tour.stops.length ? pack.landmarks.find((l) => l.id === job.tour!.stops[i]) : undefined;
+          if (lm) ringAt = lm.position; // the ring marks the next stop
+          else npcId = job.dropoffNpcId;
+        } else {
+          const ready = job.kind !== 'collect' || (a.collected?.length ?? 0) >= (job.collect?.count ?? 0);
+          if (ready) npcId = job.dropoffNpcId;
+        }
+      } else if (!a && isAvailable(s.jobs, job, now) && meets(job.requires, requirementContext(s)).ok) {
         npcId = job.giverNpcId;
       }
-      const npc = npcId ? pack.npcs.find((n) => n.id === npcId) : undefined;
+      const found = npcId ? pack.npcs.find((n) => n.id === npcId) : undefined;
+      const npc = found && npcPresent(found, s, pack) ? found : undefined;
       m.visible = !!npc && !hidden;
       if (npc) {
-        m.position.set(npc.position[0], 2.35 + bob, npc.position[1]);
+        // people can move (a tour guest follows you), so use their live position
+        const live = runtime.actors.get(npc.id) ?? { x: npc.position[0], z: npc.position[1] };
+        m.position.set(live.x, 2.35 + bob, live.z);
         m.rotation.y = spin;
-        if (a?.jobId === job.id) ringAt = npc.position;
+        if (a?.jobId === job.id) ringAt = [live.x, live.z];
       }
     });
 
     travel.forEach((npc, i) => {
       const m = travelMarks.current[i];
       if (!m) return;
-      m.visible = !hidden && !s.jobs.active;
+      m.visible = !hidden && !s.jobs.active && npcPresent(npc, s, pack);
       m.position.set(npc.position[0], 2.3 + bob * 0.6, npc.position[1]);
       m.rotation.y = -spin * 0.7;
     });

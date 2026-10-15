@@ -19,6 +19,8 @@ export interface ProgressSnapshot {
   totalAreas: number;
   /** Flights taken (landed). */
   flights?: number;
+  /** Ticketed shows attended. */
+  shows?: number;
 }
 
 export interface GoalDef {
@@ -49,6 +51,8 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, new Set(completed(p).map((h) => p.jobArea(h.jobId)).filter(Boolean)).size), 3] },
   { id: 'explorer', title: 'Lagos explorer', description: 'Visit every area of Lagos.', reward: 1500,
     progress: (p) => [Math.min(p.totalAreas, p.visited.length), p.totalAreas] },
+  { id: 'night-out', title: 'Night out', description: 'See a show with a ticket — a concert, comedy or a street jam.', reward: 800,
+    progress: (p) => [Math.min(1, p.shows ?? 0), 1] },
   { id: 'first-flight', title: 'Wheels up', description: 'Take your first flight abroad.', reward: 1500,
     progress: (p) => [Math.min(1, p.flights ?? 0), 1] },
 ];
@@ -83,6 +87,10 @@ export const TIPS: Record<string, TipDef> = {
   'low-money': { id: 'low-money', title: 'Running low', text: 'Short on cash? Mama Titi always needs help in the kitchen — no waiting between shifts, and she feeds her staff. Every area has other work too.' },
   tired: { id: 'tired', title: 'Getting tired', text: 'Energy falls as you move and work. Rest free on the bench at the okada park (to 70), or rent the room to let by the danfo stop and sleep to full.' },
   hungry: { id: 'hungry', title: 'Getting hungry', text: 'Eat or drink from your bag (phone → Bag). On an empty stomach you tire twice as fast.' },
+  tour: { id: 'tour', title: 'Guiding', text: 'Your guest follows you on foot — walk, don’t run, or they’ll fall behind and wait. Reach each stop together; the next one is on your Jobs app and the HUD.' },
+  'low-joy': { id: 'low-joy', title: 'Feeling low', text: 'All work and no play wears you out faster. Lift your mood: see a show (Events app), eat out at a restaurant, chat with people you know, ride your bike or make your home comfy.' },
+  'home-inside': { id: 'home-inside', title: 'Your place', text: 'Walk to a spot and press E to furnish it with furniture from your bag (Okon sells it in Yaba). Comfort 4+ and you wake up well rested. The chest keeps things safe; the bed is for sleeping. Leave by the door.' },
+  repair: { id: 'repair', title: 'Repair bench', text: 'Tap the repair steps in the right order before the bar runs out. One slip is fine; a clean session earns a tip and a better skill level.' },
   riding: { id: 'riding', title: 'On your bike', text: 'Riding is twice as fast as walking and less tiring. Get off anywhere (E or the action button) and the bike stays parked there — even after a reload. Danfos, taxis and planes don’t take bikes, so it waits where you left it.' },
   flight: { id: 'flight', title: 'Your trip', text: 'Your boarding pass is in the Travel app. Take a taxi to the airport, check in at the desk, go through security (no bottled drinks!) and board at the gate.' },
   shift: { id: 'shift', title: 'Kitchen shift', text: 'Each ticket names a dish — tap it (or press 1–4) before the bar runs out. Better cooking skill means more time and better pay.' },

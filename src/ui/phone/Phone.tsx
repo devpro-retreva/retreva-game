@@ -3,7 +3,9 @@ import { ALL_PACKS, findItem, findNpc, formatMoney, getDestination } from '../..
 import type { ItemCategory } from '../../game/content/types';
 import { completedCount, isAvailable } from '../../game/systems/jobs';
 import { totalItems } from '../../game/systems/inventory';
-import { progressSnapshot, useGame, type PhoneApp } from '../../game/store/gameStore';
+import { progressSnapshot, requirementContext, useGame, type PhoneApp } from '../../game/store/gameStore';
+import { meets } from '../../game/systems/requirements';
+import { courierRank } from '../../game/systems/careers';
 import { saves } from '../../game/persistence/instance';
 import { usePack } from '../../scene/worldContext';
 import { MapView } from '../hud/MapView';
@@ -12,16 +14,22 @@ import { GOALS } from '../../game/systems/progress';
 import { fareBetween, modeBetween, regionOf } from '../../game/content/regions';
 import { findFlight, flightsFrom } from '../../game/content/flights';
 import { tripBudget } from '../../game/systems/travel';
+import { dayOf as gameDay, formatClock as formatGameClock, isOpen, opensAt } from '../../game/systems/clock';
 import { findVehicle } from '../../game/content/vehicles';
 import { describeLook } from '../avatar/AvatarEditor';
 import { deviceEnv, resolveTier } from '../../game/core/quality';
 import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
 import { formatClock, formatDuration } from '../hooks';
+import { BookingsApp, EventsApp } from '../panels/EventPanels';
+import { PerformanceSection } from '../panels/PerfPanels';
+import { cityMissing, cityOfArea, ensureForSave } from '../../game/content/cities';
+import { CitiesSection, useCityReady } from '../panels/CityPanels';
+import { keepOffline } from '../../game/content/cityStore';
 import {
   IconBack, IconBag, IconBed, IconBus, IconChat, IconGear, IconJobs, IconMap, IconPlane, IconTicket, IconUser, IconWallet, IconLock, ITEM_ICONS,
 } from '../icons/Icons';
 
-type AppId = PhoneApp | 'messages' | 'travel' | 'events' | 'bookings';
+type AppId = PhoneApp;
 
 const APPS: { id: AppId; name: string; Icon: (p: { size?: number }) => JSX.Element; live: boolean }[] = [
   { id: 'map', name: 'Map', Icon: IconMap, live: true },
@@ -30,8 +38,8 @@ const APPS: { id: AppId; name: string; Icon: (p: { size?: number }) => JSX.Eleme
   { id: 'wallet', name: 'Wallet', Icon: IconWallet, live: true },
   { id: 'messages', name: 'Messages', Icon: IconChat, live: true },
   { id: 'travel', name: 'Travel', Icon: IconPlane, live: true },
-  { id: 'events', name: 'Events', Icon: IconTicket, live: false },
-  { id: 'bookings', name: 'Bookings', Icon: IconBed, live: false },
+  { id: 'events', name: 'Events', Icon: IconTicket, live: true },
+  { id: 'bookings', name: 'Bookings', Icon: IconBed, live: true },
   { id: 'profile', name: 'Profile', Icon: IconUser, live: true },
   { id: 'settings', name: 'Settings', Icon: IconGear, live: true },
 ];
@@ -56,8 +64,8 @@ export function Phone() {
   const setApp = useGame((s) => s.setPhoneApp);
   const close = useGame((s) => s.closePanel);
   const [locked, setLocked] = useState<string | null>(null);
+  const time = useGame((s) => formatGameClock(s.world.time ?? 480));
   const now = useNow(15000);
-  const time = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   const open = (id: AppId) => {
     const def = APPS.find((a) => a.id === id)!;
@@ -110,6 +118,10 @@ export function Phone() {
                 <MessagesApp />
               ) : app === 'travel' ? (
                 <TravelApp />
+              ) : app === 'events' ? (
+                <EventsApp />
+              ) : app === 'bookings' ? (
+                <BookingsApp />
               ) : null}
             </div>
           </>
@@ -128,12 +140,12 @@ function Home({ open, now }: { open: (id: AppId) => void; now: number }) {
   const close = useGame((s) => s.closePanel);
   const avail = pack.jobs.filter((j) => isAvailable(jobs, j, now)).length + (jobs.active ? 1 : 0);
   const unread = useGame((s) => s.world.messages.filter((m) => !m.read).length);
-  const d = new Date(now);
+  const gameTime = useGame((s) => s.world.time ?? 480);
   return (
     <div className="phone-home">
-      <div className="clock num">{d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div className="clock num">{formatGameClock(gameTime)}</div>
       <div className="date">
-        {d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · {pack.name}
+        Day {gameDay(gameTime)} · {pack.name}
       </div>
       <div className="apps">
         {APPS.map((a) => (
@@ -214,23 +226,86 @@ function GoalsList() {
   );
 }
 
+/** Courier rank and work skills, with progress to the next step. */
+function Careers() {
+  const jobs = useGame((s) => s.jobs);
+  const skills = useGame((s) => s.life.skills);
+  const runs = jobs.history.filter((h) => h.outcome === 'completed' && ALL_PACKS.flatMap((p) => p.jobs).find((j) => j.id === h.jobId)?.kind !== 'tour').length;
+  const rank = courierRank(runs);
+  const tours = jobs.history.filter((h) => h.outcome === 'completed' && ALL_PACKS.flatMap((p) => p.jobs).find((j) => j.id === h.jobId)?.kind === 'tour').length;
+  return (
+    <div className="careers" aria-label="Careers">
+      <div className="card-line">
+        <div>
+          <div>Courier · {rank.name}</div>
+          <div className="sub num">
+            {runs} errands{rank.bonus ? ` · +${Math.round(rank.bonus * 100)}% pay` : ''}{rank.next ? ` · ${rank.next.at - runs} more for ${rank.next.name}` : ' · top rank'}
+          </div>
+        </div>
+      </div>
+      <div className="card-line">
+        <div>
+          <div>Cooking · level {skillLevel(skills.cooking)}</div>
+          <div className="sub num">{skills.cooking ?? 0} XP · kitchen shifts</div>
+        </div>
+      </div>
+      <div className="card-line">
+        <div>
+          <div>Repair · level {skillLevel(skills.repair)}</div>
+          <div className="sub num">{skills.repair ?? 0} XP · repair bench in Ikeja</div>
+        </div>
+      </div>
+      <div className="card-line">
+        <div>
+          <div>Guiding</div>
+          <div className="sub num">{tours} tours given</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WorkList() {
   const pack = usePack();
   const jobs = useGame((s) => s.jobs);
+  const reqCtx = useGame((s) => requirementContext(s));
   const now = useNow(500);
   return (
     <>
+      <div className="eyelabel section-title">Careers</div>
+      <Careers />
+      <div className="eyelabel section-title">Work in {pack.area}</div>
+      {(pack.repairs ?? []).map((r) => {
+        const req = meets(r.requires, reqCtx);
+        return (
+          <article className="job-card" key={r.id} data-locked={req.ok ? 'no' : 'yes'}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <h3>{r.title}</h3>
+              {req.ok ? <span className="chip">Open</span> : <span className="chip">Locked</span>}
+            </div>
+            <p>Fix {r.perSession} phones per session: do each repair’s steps in the right order. Pay per phone fixed, more with skill.</p>
+            <div className="meta num">
+              <span>{formatMoney(pack, r.payPerDevice)} per phone</span>
+              <span>+{formatMoney(pack, r.perfectTip)} for clean work</span>
+            </div>
+            <div className="meta" style={{ marginTop: 8 }}>
+              {req.ok ? <span>Ask {findNpc(pack, r.npcId)?.name}</span> : <span className="req">Needs: {req.missing.join(' · ')}</span>}
+            </div>
+          </article>
+        );
+      })}
       {pack.jobs.map((j) => {
         const giver = findNpc(pack, j.giverNpcId);
         const to = findNpc(pack, j.dropoffNpcId);
         const active = jobs.active?.jobId === j.id;
         const cool = (jobs.cooldownUntil[j.id] ?? 0) - now;
         const done = completedCount(jobs, j.id);
+        const req = meets(j.requires, reqCtx);
         return (
-          <article className="job-card" key={j.id}>
+          <article className="job-card" key={j.id} data-locked={req.ok ? 'no' : 'yes'}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <h3>{j.title}</h3>
-              {active ? <span className="chip live">Live</span> : cool > 0 ? <span className="chip num">Back in {formatClock(cool)}</span> : <span className="chip">Open</span>}
+              {active ? <span className="chip live">Live</span> : !req.ok ? <span className="chip">Locked</span> : cool > 0 ? <span className="chip num">Back in {formatClock(cool)}</span> : <span className="chip">Open</span>}
             </div>
             <p>{j.summary}</p>
             <div className="meta num">
@@ -243,6 +318,8 @@ function WorkList() {
                 <span style={{ color: 'var(--danfo)' }} className="num">
                   Deliver to {to?.name} · {formatClock(jobs.active.remainingMs)} left
                 </span>
+              ) : !req.ok ? (
+                <span className="req">Needs: {req.missing.join(' · ')}</span>
               ) : (
                 <span>Ask {giver?.name} · {done ? `done ${done}×` : 'not tried yet'}</span>
               )}
@@ -269,7 +346,7 @@ function WorkList() {
 
 const CATEGORY_LABEL: Record<ItemCategory, string> = {
   food: 'Food', drink: 'Drinks', clothing: 'Clothing', shoes: 'Shoes', bag: 'Bags', souvenir: 'Souvenirs',
-  ticket: 'Tickets', document: 'Documents', collectible: 'Collectibles', goods: 'Goods',
+  ticket: 'Tickets', document: 'Documents', collectible: 'Collectibles', goods: 'Goods', furniture: 'Furniture',
 };
 
 function BagApp() {
@@ -355,6 +432,8 @@ function WalletApp() {
 function MapApp() {
   const pack = usePack();
   const discovered = useGame((s) => s.world.discovered);
+  const now = useGame((s) => Math.floor((s.world.time ?? 480) / 10) * 10);
+  const people = pack.npcs.filter((n) => n.hours);
   return (
     <>
       <div className="cut" style={{ height: 380, background: '#2a231b', border: '1px solid var(--line)' }}>
@@ -363,6 +442,25 @@ function MapApp() {
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', lineHeight: 1.5 }}>
         {pack.area}, {pack.name}. Yellow marks work, teal marks the danfo stop.
       </p>
+      {people.length > 0 && (
+        <>
+          <div className="eyelabel section-title">Around here · {formatGameClock(now)}</div>
+          {people.map((n) => {
+            const open = isOpen(n.hours, now);
+            return (
+              <div className="card-line" key={n.id} data-open={open ? 'yes' : 'no'}>
+                <div>
+                  <div>{n.name}</div>
+                  <div className="sub">
+                    {n.role} · {opensAt(n.hours!)}–{String(n.hours![1]).padStart(2, '0')}:00
+                  </div>
+                </div>
+                {open ? <span className="chip live">Open</span> : <span className="chip">Opens {opensAt(n.hours!)}</span>}
+              </div>
+            );
+          })}
+        </>
+      )}
       <div className="eyelabel section-title">Landmarks here</div>
       {pack.landmarks.map((l) => {
         const found = discovered.includes(l.id);
@@ -535,7 +633,8 @@ function FlightCard({ routeId }: { routeId: string }) {
   const book = useGame((s) => s.bookFlight);
   const [roundTrip, setRoundTrip] = useState(true);
   const [confirm, setConfirm] = useState(false);
-  const cityHomes = (regionOf(route.arriveAt)?.areas ?? []).flatMap((a) => getDestination(a.id).homes ?? []).map((h) => h.id);
+  const cityHomes = cityOfArea(route.arriveAt)?.homeIds ?? [];
+  const city = useCityReady(route.arriveAt);
   const budget = tripBudget(route, {
     taxiToAirport: fareBetween(current, route.from),
     roundTrip,
@@ -580,19 +679,23 @@ function FlightCard({ routeId }: { routeId: string }) {
         <p className="muted">
           The ticket is {formatMoney(pack, budget.dueNow)} — you need <b className="num">{formatMoney(pack, short)}</b> more. Shifts and jobs pay; every area has work.
         </p>
+      ) : city !== 'ready' ? (
+        <p className="muted" data-city={city}>
+          {city === 'loading' ? `Getting ${route.cityName} ready…` : `${route.cityName} isn't on this device and can't download right now. Connect to the internet to book.`}
+        </p>
       ) : !confirm ? (
         <button className="btn block" onClick={() => setConfirm(true)} aria-label={`Book ${kind} ticket to ${route.cityName} for ${formatMoney(pack, budget.dueNow)}`}>
           Book {kind} · {formatMoney(pack, budget.dueNow)}
         </button>
       ) : (
         <div className="confirm-row">
-          <button className="btn block" onClick={() => { if (book(route.id, roundTrip)) setConfirm(false); }}>
+          <button className="btn block" onClick={() => { if (book(route.id, roundTrip)) { setConfirm(false); const c = cityOfArea(route.arriveAt); if (c && !c.builtIn) void keepOffline(c.id).catch(() => undefined); } }}>
             Confirm · pay {formatMoney(pack, budget.dueNow)}
           </button>
           <button className="btn ghost" onClick={() => setConfirm(false)}>Cancel</button>
         </div>
       )}
-      {!ticket && short <= 0 && <p className="fine">Only the ticket is charged now. Stay and getting around are estimates you pay as you go.</p>}
+      {!ticket && short <= 0 && <p className="fine">Only the ticket is charged now. Stay and getting around are estimates you pay as you go. Booking also keeps {route.cityName} on this device for offline play (Settings → Cities).</p>}
     </div>
   );
 }
@@ -756,6 +859,12 @@ function SaveBackup() {
     if (!pending) return;
     try {
       const data = await saves.importJson(await pending.text());
+      const ready = await ensureForSave(data);
+      if (!ready.ok) {
+        setMsg(cityMissing(ready.city));
+        setPending(null);
+        return;
+      }
       hydrate(data);
       setPhase('loading');
     } catch (e) {
@@ -859,6 +968,13 @@ function SettingsApp() {
         </div>
         <input type="range" min={0} max={1} step={0.05} value={settings.effectsVolume ?? 0.8} onChange={(e) => update({ effectsVolume: Number(e.target.value) })} aria-label="Effects volume" disabled={settings.muted ?? false} />
       </div>
+      <div className="setting">
+        <div>
+          Music
+          <div className="sub num">{(settings.musicVolume ?? 0.4) > 0 ? `${Math.round((settings.musicVolume ?? 0.4) * 100)}% · original, generated live` : 'Off'}</div>
+        </div>
+        <input type="range" min={0} max={1} step={0.05} value={settings.musicVolume ?? 0.4} onChange={(e) => update({ musicVolume: Number(e.target.value) })} aria-label="Music volume" disabled={settings.muted ?? false} />
+      </div>
       <div className="eyelabel section-title">Display</div>
       <GraphicsSetting />
       <div className="setting">
@@ -886,6 +1002,10 @@ function SettingsApp() {
         <input type="checkbox" className="toggle" checked={settings.showFps} onChange={(e) => update({ showFps: e.target.checked })} />
       </label>
       <OfflineStatus />
+      <div className="eyelabel section-title">Cities on this device</div>
+      <CitiesSection />
+      <div className="eyelabel section-title">Performance</div>
+      <PerformanceSection />
       <div className="eyelabel section-title">Progress</div>
       <div className="card-line">
         <div>

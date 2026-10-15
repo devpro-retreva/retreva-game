@@ -70,6 +70,11 @@ export function CameraRig() {
       dist = 4.2;
       pitch = 0.18;
     }
+    if (g.world.inside) {
+      // indoors: look down into the room from above the walls (they're see-through from outside)
+      dist = 4.6;
+      pitch = Math.max(pitch, 0.78);
+    }
 
     const cp = Math.cos(pitch);
     const desired = new THREE.Vector3(

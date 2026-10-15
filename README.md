@@ -40,7 +40,13 @@ No account, server, API key or paid service is needed. Progress saves to Indexed
 - **Shop:** fixed-price shops and market stalls with bargaining; sell eligible items back for half; Accra shops show the cedi equivalent beside the naira price.
 - **Travel:** danfos between Lagos areas, a taxi to the airport, then flights to Accra with a full trip budget (taxi, ticket, stay, getting around), check-in, security (no bottled drinks), boarding and a short flight. A return ticket brings you home.
 - **Goals and messages:** 9 goals paid once each, tip cards, discovery toasts and texts from people you meet.
-- **Sound:** each area has its own synthesised soundscape (traffic, crowds, horns, waves, airport chimes) plus small effects; separate ambience/effects volume and mute in Settings.
+- **Sound and music:** each area has its own synthesised soundscape (traffic, crowds, horns, waves, airport chimes) plus small effects, and original generated highlife-style music — a quiet radio in the street, warmer in the restaurant, the full band at a live stage. Separate ambience / effects / music volume and mute in Settings.
+- **Time of day:** a game clock (30 game minutes per real minute) drives the sky, light and street lamps; shops and people keep opening hours and go home at night; sleeping takes you to the next morning.
+- **More work:** Tobi's repair bench in Ikeja (put repair steps in order, unlocked by doing his Phone Run), guiding Sophie's tour of Lagos Island (she follows you on foot; unlocked by discovering the Island's sights), and courier ranks (Regular after 5 errands, Pro after 15) that pay more.
+- **Homes:** walk into your room; furnish it with furniture from Okon Home in Yaba (comfort 4+ wakes you well rested); a storage chest; buy the room outright (₦45,000 in Yaba, ₦38,000 in Osu) and sell it later for 85%. Moving out or selling returns your furniture and stored things.
+- **Leisure:** a sit-down restaurant (Adeniyi Eatery, Yaba) with opening hours; ticketed shows — Highlife on the Beach (Lekki, nightly), Glover Laughs (Lagos Island, every other night), Oxford Street Night Jam (Osu) — booked in the Events app or paid at the gate; Bookings lists tickets, your flight and your homes. A **joy** need: low joy tires you faster; shows, meals, chats, gifts, riding and a comfy home lift it.
+- **Cities:** Lagos is built in; Accra is a separate city pack that loads when you need it and can be kept on the device for offline play (Settings → Cities: download, check files, remove).
+- **Performance:** Settings → Performance shows live fps, draw calls and device facts, and runs a 20-second benchmark (average fps, 1% low, frame-time spikes) with a suggested graphics tier; results can be copied to share.
 
 ## Areas
 
@@ -94,15 +100,14 @@ src/
 
 ## Saves and offline
 
-- **Offline:** after one online visit a service worker has every built file cached; the game opens, continues and saves with no connection (tested in the `device` suite).
-- **Saves** go to IndexedDB (localStorage fallback) with a schema version and migrations (now v6). A **backup copy** is kept; if the main save can't be read, the backup is restored and the unreadable copy is kept aside — a new game never silently erases it. **Settings → Export save file / Import save file** gives a manual backup (and works from the title screen too). If saving starts failing (e.g. storage full) the game says so.
+- **Offline:** after one online visit a service worker has the base game (Lagos) cached; the game opens, continues and saves with no connection. Other cities are offline once downloaded in Settings → Cities (booking a flight downloads the destination too). Both are tested with the server actually stopped (`device`, `cities` suites).
+- **Saves** go to IndexedDB (localStorage fallback) with a schema version and migrations (now v8). A **backup copy** is kept; if the main save can't be read, the backup is restored and the unreadable copy is kept aside — a new game never silently erases it. **Settings → Export save file / Import save file** gives a manual backup (and works from the title screen too). If saving starts failing (e.g. storage full) the game says so.
 - **No WebGL?** A clear explanation screen instead of a blank page; if the GPU drops the context mid-game, "Graphics paused" appears and progress is saved.
 - Clearing the browser's site data erases local progress unless you exported a save file. Saves don't sync between devices.
 
 ## Next milestones (from the V6 architecture, `docs/architecture-v6.md`)
 
-1. Time of day with NPC schedules; more job types (with requirements and progression)
-2. Home personalisation and storage; buying (not just renting) property
-3. Leisure: a restaurant interior, cinema/beach events with tickets
-4. City-pack manifests (install/verify/remove per city) and a third destination
-5. Real-device performance measurement on a budget Android phone and an iPhone
+1. Run the in-game benchmark on a real budget Android phone and an iPhone and record the numbers
+2. A third destination as a city pack (e.g. Dubai) — the pack system is ready for it
+3. Airport interiors; more restaurants and venues; weekly event schedules
+4. Optional GLB characters/props through the asset pipeline (Meshy/Blender need the owner's setup and approval)

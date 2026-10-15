@@ -84,6 +84,7 @@ export const lekki: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#4a2c1c', top: '#e4572e', bottom: '#1f3a5f', outfit: 'top-trousers', hair: 'puff', accessory: 'none', height: 1.72 },
       promptVerb: 'Talk to',
+      hours: [7, 19],
       social: { lines: ["The tide changes fast here. Always swim near the flags.", "Best time on this beach? Six in the morning, before anyone.", "I've pulled eleven people out of the water this year."], likes: ["coconut", "water", "beach-towel"] },
       idle: 'sway',
       dialogue: {
@@ -136,6 +137,7 @@ export const lekki: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#f4f0e6', bottom: '#4b4033', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#1f6f4a', height: 1.76 },
       promptVerb: 'Buy from',
+      hours: [8, 22],
       social: { lines: ["Coconut water is better than any soft drink. Trust me.", "I came from Kano with nothing. Now I have two stalls.", "Corn roasted on coals — the smoke is the secret."], likes: ["plantain-chips", "chin-chin", "sobolo"] },
       idle: 'busy',
       dialogue: {
@@ -160,6 +162,7 @@ export const lekki: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#f2b705', bottom: '#1d7f86', outfit: 'top-skirt', hair: 'long', accessory: 'earrings', height: 1.65 },
       promptVerb: 'Bargain with',
+      hours: [9, 19],
       social: { lines: ["Every shell on my necklaces I picked myself.", "Tourists from Abuja buy the most. They love the sea.", "I'm learning to make earrings next. Watch this space."], likes: ["ankara-tote", "adire-scarf", "beaded-bracelet"] },
       idle: 'wave',
       dialogue: {
@@ -206,6 +209,29 @@ export const lekki: DestinationPack = {
     { id: 'lw-4', look: { gender: 'male', skin: '#3f2516', top: '#f2b705', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'hightop' }, path: [[3.2, 30], [3.2, -10], [3.2, 30]], speed: 1.2, stops: [{ at: 1, activity: 'wait', seconds: 9, face: Math.PI / 2 }] },
     { id: 'lw-1', look: { gender: 'male', skin: '#4a2c1c', top: '#1d7f86', bottom: '#f4f0e6', outfit: 'tee-shorts', hair: 'locs' }, path: [[6.5, 36], [6.5, -36]], speed: 1.1 },
     { id: 'lw-2', look: { gender: 'female', skin: '#5a3420', top: '#ff9f80', bottom: '#f4f0e6', outfit: 'dress', hair: 'braids', accessory: 'glasses' }, path: [[0.5, -30], [0.5, 30]], speed: 0.9 },
+  ],
+
+  events: [
+    {
+      id: 'beach-highlife',
+      name: 'Highlife on the Beach',
+      kind: 'concert',
+      venue: 'Lekki beach stage',
+      description: 'A live band on the sand every evening: horns, talking drum, guitars, and the sea for a backdrop.',
+      hours: [19, 22],
+      price: 5000,
+      joy: 30,
+      energy: 8,
+      stage: { position: [-4.5, -24], size: [4, 3.4], facing: Math.PI / 2, color: '#2b2b33', accent: '#f2b705' },
+      performers: [
+        { gender: 'male', skin: '#5a3420', top: '#f2b705', bottom: '#1d1d1f' },
+        { gender: 'female', skin: '#7a4a2c', top: '#c94f4f', bottom: '#2c5f9e' },
+        { gender: 'male', skin: '#3e2416', top: '#1f6f4a', bottom: '#e8dcc6' },
+      ],
+    },
+  ],
+  spots: [
+    { id: 'beach-highlife-gate', kind: 'event', position: [-1.0, -24], label: 'Highlife on the Beach', verb: 'Go to', eventId: 'beach-highlife' },
   ],
 
   businesses: [

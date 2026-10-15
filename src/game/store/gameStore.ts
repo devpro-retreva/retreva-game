@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { getDestination, findItem, findJob, findNpc, findBusiness, formatMoney, DEFAULT_DESTINATION, areaOfJob, ALL_PACKS } from '../content';
-import type { DestinationPack, DialogueOption } from '../content/types';
+import { getDestination, findItem, findJob, findNpc, findBusiness, formatMoney, DEFAULT_DESTINATION, areaOfJob, ALL_PACKS, findEvent } from '../content';
+import type { DestinationPack, DialogueOption, ItemCategory, NpcDef, Requirement } from '../content/types';
 import { createWallet, credit, debit, makeId, type Wallet } from '../systems/economy';
 import { addItem, emptyInventory, removeFromStack, type Inventory } from '../systems/inventory';
 import {
@@ -31,16 +31,27 @@ import {
   shiftOrders,
   skillLevel,
   spend,
+  cheer,
   type LifeState,
   type OrderResult,
+  type Property,
   type ShiftDef,
   type ShiftOutcome,
 } from '../systems/life';
 import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings, type WorldProgress } from '../persistence/types';
 import { sanitizeLook } from '../core/avatarPresets';
-import { districts, fareBetween, findArea, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { districts, fareBetween, findArea, minutesBetween, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { advance, afterSleep, dayOf, formatClock, hourOf, isOpen, opensAt, START_TIME } from '../systems/clock';
 import { findFlight } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
+import { meets, type RequirementContext } from '../systems/requirements';
+import { repairQueue, repairSeconds, scoreRepair, shuffledSteps, tapStep, type DeviceResult, type RepairDef } from '../systems/repair';
+import { courierRank, courierRuns, rankBonus } from '../systems/careers';
+import { visitStop } from '../systems/jobs';
+import { cityName, cityOfArea, isCityLoaded, loadCity } from '../content/cities';
+import { gatePrice, nextShowing, onNow, showtime, ticketTxId, type EventTicket } from '../systems/events';
+import { findInterior, WELL_RESTED_COMFORT } from '../content/interiors';
+import { belongings, comfort, emptyProperty, fits, homeValuation, place, store as storeFn, take as takeFn, unplace } from '../systems/home';
 import { chat as chatFn, chatReady, friendPrice, giveGift as giveGiftFn, tierUp } from '../systems/social';
 import { addVehicle, canMount, mount as mountFn, park as parkFn, removeVehicle, vehicleResale } from '../systems/vehicles';
 import {
@@ -57,8 +68,8 @@ import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight' | 'gift' | 'dealer';
-export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight' | 'gift' | 'dealer' | 'repair' | 'storage' | 'furnish' | 'menu' | 'event' | 'benchmark';
+export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel' | 'events' | 'bookings';
 
 export interface Toast {
   id: string;
@@ -69,7 +80,7 @@ export interface Toast {
 
 export interface Nearby {
   id: string;
-  kind: 'npc' | 'spot' | 'vehicle' | 'dismount';
+  kind: 'npc' | 'spot' | 'vehicle' | 'dismount' | 'interior';
   label: string;
   verb: string;
 }
@@ -105,6 +116,12 @@ interface GameState {
   dialogue: { npcId: string; nodeId: string; opening?: string; line?: string } | null;
   /** Vehicle dealer panel. */
   dealerId: string | null;
+  /** A repair-bench session in progress (not saved — like a kitchen shift). */
+  repair: RepairRun | null;
+  /** The furniture slot being edited (inside your home). */
+  slotId: string | null;
+  /** The show whose gate you're at. */
+  eventId: string | null;
   shopId: string | null;
   phoneApp: PhoneApp;
   nearby: Nearby | null;
@@ -119,7 +136,7 @@ interface GameState {
   life: LifeState;
   shift: ShiftRun | null;
   /** Resting overlay: where and until when (ms timestamp). */
-  resting: { at: 'bench' | 'home'; until: number; to: number; from?: { x: number; z: number } } | null;
+  resting: { at: 'bench' | 'home' | 'meal' | 'event'; eventId?: string; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
   /** Flight ticket + history (saved). */
@@ -185,13 +202,35 @@ interface GameState {
   startShift(shiftId: string): void;
   serveDish(dishId: string | null): void;
   closeShift(): void;
-  startRest(at: 'bench' | 'home'): void;
+  startRest(at: 'bench' | 'home' | 'meal' | 'event'): void;
   finishRest(): void;
   rentHome(homeId: string): boolean;
   // social
   chat(): void;
   openGift(): void;
   giveGift(stackKey: string): void;
+  // interiors and homes
+  enterInterior(interiorId: string): void;
+  exitInterior(): void;
+  buyHome(homeId: string): boolean;
+  sellHome(homeId: string): boolean;
+  moveOut(homeId: string): void;
+  placeFurniture(slotId: string, stackKey: string): void;
+  removeFurniture(slotId: string): void;
+  storeItem(stackKey: string): void;
+  takeItem(index: number): void;
+  orderMeal(itemId: string): boolean;
+  // ticketed events
+  buyTicket(eventId: string, atGate?: boolean): boolean;
+  // performance benchmark (Settings → Performance)
+  startBenchmark(): void;
+  finishBenchmark(): void;
+  attendEvent(eventId: string): void;
+  // repair bench
+  startRepair(repairId: string): void;
+  tapRepair(step: string): void;
+  repairTimeout(): void;
+  closeRepair(): void;
   // vehicles
   openDealer(dealerId: string): void;
   buyVehicle(dealerId: string, vehicleId: string): boolean;
@@ -207,6 +246,27 @@ interface GameState {
 
 const pack = (): DestinationPack => getDestination(useGame.getState().destinationId);
 const lagosDistricts = districts(REGIONS[0]).map((a) => a.id);
+let lastTick = 0;
+/** Errands count toward the courier rank: deliveries and collections (not tours). */
+const isCourierJob = (jobId: string) => {
+  const j = ALL_PACKS.flatMap((p) => p.jobs).find((x) => x.id === jobId);
+  return !!j && j.kind !== 'tour';
+};
+
+/**
+ * Is this person around right now? People with opening hours go home outside them — unless you're in the
+ * middle of a job or shift with them (nobody vanishes mid-delivery).
+ */
+export function npcPresent(npc: NpcDef, s: Pick<GameState, 'world' | 'jobs' | 'shift'>, pack: DestinationPack): boolean {
+  if (!npc.hours) return true;
+  const a = s.jobs.active;
+  if (a) {
+    const job = pack.jobs.find((j) => j.id === a.jobId);
+    if (job && (job.giverNpcId === npc.id || job.dropoffNpcId === npc.id)) return true;
+  }
+  if (s.shift && pack.shifts?.find((x) => x.id === s.shift!.shiftId)?.npcId === npc.id) return true;
+  return isOpen(npc.hours, s.world.time ?? START_TIME);
+}
 
 const regardLabel = (v: number) => `${regardTier(v)} (${Math.round(v)}/100)`;
 
@@ -236,6 +296,7 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
     rides: s.world.rides,
     totalAreas: lagosDistricts.length,
     flights: s.travel.history.length,
+    shows: (s.world.tickets ?? []).filter((t) => t.status === 'used').length,
   };
 }
 
@@ -250,6 +311,46 @@ export interface ShiftRun {
   seconds: number;
   level: number;
   outcome: (ShiftOutcome & { levelUp: boolean; paid: boolean }) | null;
+}
+
+export interface RepairRun {
+  repairId: string;
+  runId: string;
+  queue: number[];
+  index: number;
+  progress: number;
+  mistakes: number;
+  buttons: string[];
+  results: DeviceResult[];
+  deadline: number;
+  seconds: number;
+  level: number;
+  outcome: { fixed: number; pay: number; tip: number; xp: number; levelUp: boolean } | null;
+}
+
+/** Furniture placed in a home and things in its chest go back to the bag (when you sell or move out). */
+function returnBelongings(inv: Inventory, prop: Property): Inventory {
+  let out = inv;
+  const { furniture, stored } = belongings(prop);
+  for (const itemId of furniture) out = addItem(out, { itemId, category: 'furniture', quantity: 1, purchasePrice: 0, destinationId: 'home', at: Date.now() });
+  for (const st of stored) out = addItem(out, { itemId: st.itemId, category: st.category as ItemCategory, quantity: st.quantity, purchasePrice: st.purchasePrice, destinationId: st.destinationId, at: Date.now() });
+  return out;
+}
+
+/** What requirement checks need from the state, with readable names for NPCs, jobs and landmarks. */
+export function requirementContext(s: Pick<GameState, 'life' | 'jobs' | 'world'>): RequirementContext {
+  const all = ALL_PACKS;
+  const name = (id: string) =>
+    all.flatMap((p) => p.npcs).find((n) => n.id === id)?.name ??
+    all.flatMap((p) => p.jobs).find((j) => j.id === id)?.title ??
+    all.flatMap((p) => p.landmarks).find((l) => l.id === id)?.name ??
+    id;
+  return { regard: s.life.regard, jobs: s.jobs, discovered: s.world.discovered, skills: s.life.skills, name };
+}
+
+/** Requirements of a job or repair bench by id (anywhere), or undefined. */
+export function requirementsOf(id: string): Requirement | undefined {
+  return ALL_PACKS.flatMap((p) => p.jobs).find((j) => j.id === id)?.requires ?? ALL_PACKS.flatMap((p) => p.repairs ?? []).find((r) => r.id === id)?.requires;
 }
 
 export const findShift = (p: DestinationPack, id: string): ShiftDef | undefined => p.shifts?.find((x) => x.id === id);
@@ -278,6 +379,27 @@ export const useGame = create<GameState>()((set, get): GameState => {
     if (r.wallet.balance < 300) get().showTip('low-money');
     get().checkGoals();
     return true;
+  };
+
+  /** One device done (fixed or timed out): next device, or score the session and pay once. */
+  const finishDevice = (run: RepairRun, def: RepairDef, done: boolean) => {
+    const results = [...run.results, { mistakes: run.mistakes, done }];
+    const index = run.index + 1;
+    if (index < run.queue.length) {
+      set({ repair: { ...run, results, index, progress: 0, mistakes: 0, buttons: shuffledSteps(def.devices[run.queue[index]].steps, index * 977 + run.queue[index]), deadline: Date.now() + run.seconds * 1000 } });
+      return;
+    }
+    const s = get();
+    const p = pack();
+    const o = scoreRepair(def, results, run.level);
+    const total = o.pay + o.tip;
+    const pay = total > 0 ? credit(s.wallet, { id: `repair:${def.id}:${run.runId}`, amount: total, reason: `${def.title}${o.tip ? ' + clean-work tip' : ''}`, at: Date.now(), destinationId: p.id }) : { ok: false, wallet: s.wallet };
+    const xp = (s.life.skills[def.skill] ?? 0) + o.xp;
+    const before = s.life.regard[def.npcId] ?? 0;
+    const life: LifeState = { ...s.life, needs: spend(s.life.needs, def.energyCost), skills: { ...s.life.skills, [def.skill]: xp }, regard: addRegard(s.life.regard, def.npcId, o.regard) };
+    set({ wallet: pay.wallet, life, repair: { ...run, results, index, outcome: { fixed: o.fixed, pay: o.pay, tip: o.tip, xp: o.xp, levelUp: skillLevel(xp) > run.level } }, world: { ...s.world, time: (s.world.time ?? START_TIME) + 40 }, critical: s.critical + 1 });
+    announceTier(def.npcId, before, life.regard[def.npcId] ?? 0);
+    get().checkGoals();
   };
 
   return {
@@ -309,6 +431,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
     resting: null,
     homeId: null,
     dealerId: null,
+    repair: null,
+    slotId: null,
+    eventId: null,
     travel: emptyTravel(),
     flight: null,
     dirty: 0,
@@ -426,7 +551,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     },
 
     setNearby(nearby) {
-      if (get().nearby?.id === nearby?.id) return;
+      if (get().nearby?.id === nearby?.id && get().nearby?.verb === nearby?.verb) return;
       set({ nearby });
     },
 
@@ -436,10 +561,35 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (nearby.kind === 'npc') get().openDialogue(nearby.id);
       else if (nearby.kind === 'vehicle') get().mountVehicle(nearby.id);
       else if (nearby.kind === 'dismount') get().dismount();
+      else if (nearby.kind === 'interior') {
+        const s = get();
+        const def = s.world.inside ? findInterior(s.world.inside.interiorId) : undefined;
+        if (!def) return;
+        if (nearby.id === 'exit') get().exitInterior();
+        else if (nearby.id.startsWith('slot:')) {
+          set({ ui: 'furnish', slotId: nearby.id.slice(5) });
+          setUiMode('furnish');
+        } else if (nearby.id.startsWith('use:')) {
+          const fx = def.fixed[Number(nearby.id.slice(4))];
+          if (fx?.use === 'sleep') get().startRest('home');
+          else if (fx?.use === 'storage') {
+            set({ ui: 'storage' });
+            setUiMode('storage');
+          } else if (fx?.use === 'dine') {
+            set({ ui: 'menu' });
+            setUiMode('menu');
+          }
+        }
+      }
       else {
         get().parkIfRiding();
         const spot = pack().spots?.find((x) => x.id === nearby.id);
         if (spot?.kind === 'bench') get().startRest('bench');
+        else if (spot?.kind === 'door' && spot.interiorId) get().enterInterior(spot.interiorId);
+        else if (spot?.kind === 'event' && spot.eventId) {
+          set({ ui: 'event', eventId: spot.eventId });
+          setUiMode('event');
+        }
         else if (spot?.kind === 'home' && spot.homeId) {
           set({ ui: 'home', homeId: spot.homeId });
           setUiMode('home');
@@ -462,6 +612,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         isDropoff: (id) => {
           const j = findJob(p, id);
           if (!j || s.jobs.active?.jobId !== id || j.dropoffNpcId !== npcId) return false;
+          if (j.kind === 'tour') return (s.jobs.active.collected?.length ?? 0) >= (j.tour?.stops.length ?? 0);
           return j.kind !== 'collect' || (s.jobs.active.collected?.length ?? 0) >= (j.collect?.count ?? 0);
         },
         jobCompletedBefore: (id) => completedCount(s.jobs, id) > 0,
@@ -471,6 +622,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
           return findFlight(t.routeId)?.from === p.id ? t.stage : 'elsewhere';
         },
         carryingLiquids: () => liquidsIn(s.inventory).length > 0,
+        meets: (target) => meets(requirementsOf(target), requirementContext(s)).ok,
       };
       const opening = resolveEntry(npc.dialogue, ctx);
       set({ ui: 'dialogue', dialogue: { npcId, nodeId: opening, opening } });
@@ -527,6 +679,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
         case 'dealer':
           get().openDealer(a.dealerId);
           return;
+        case 'startRepair':
+          get().startRepair(a.repairId);
+          return;
       }
     },
 
@@ -538,7 +693,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     openPhone(app = 'home') {
       const ui = get().ui;
-      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight' || ui === 'gift' || ui === 'dealer') return;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight' || ui === 'gift' || ui === 'dealer' || ui === 'repair' || ui === 'storage' || ui === 'furnish' || ui === 'menu' || ui === 'event' || ui === 'benchmark') return;
       set({ ui: 'phone', phoneApp: app });
       setUiMode('phone');
       if (app === 'messages') get().markMessagesRead();
@@ -551,7 +706,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     togglePause() {
       const ui = get().ui;
-      if (ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'flight') return;
+      if (ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'flight' || ui === 'repair') return;
       if (ui === 'pause') {
         set({ ui: 'play' });
         setUiMode('play');
@@ -580,8 +735,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     closePanel() {
       const ui0 = get().ui;
-      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight') return;
-      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null, dealerId: null });
+      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight' || ui0 === 'repair') return;
+      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null, dealerId: null, slotId: null, eventId: null });
       setUiMode('play');
     },
 
@@ -658,7 +813,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const visited = s.world.visited.includes(t.to) ? s.world.visited : [...s.world.visited, t.to];
       set({
         destinationId: dest.id,
-        world: { ...s.world, visited, rides: s.world.rides + 1 },
+        world: { ...s.world, visited, rides: s.world.rides + 1, time: (s.world.time ?? START_TIME) + minutesBetween(t.from, t.to) },
         transit: null,
         arrival: { firstVisit: t.firstVisit },
         ui: 'play',
@@ -676,6 +831,12 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (!route) return false;
       if (regionOf(route.from) !== regionOf(s.destinationId)) {
         get().pushToast({ kind: 'warn', title: 'Not from here', detail: `That flight leaves from ${findArea(route.from)?.district ?? 'another airport'}.` });
+        return false;
+      }
+      const dest = cityOfArea(route.arriveAt);
+      if (dest && !isCityLoaded(dest.id)) {
+        get().pushToast({ kind: 'warn', title: `${cityName(dest.id)} isn't ready yet`, detail: 'It downloads when you open the flight — connect to the internet and try again.' });
+        void loadCity(dest.id).catch(() => undefined);
         return false;
       }
       const id = makeId('trip');
@@ -774,7 +935,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         travel: r.state,
         flight: null,
         life: { ...s.life, needs: eat(s.life.needs, route.snack.fullness) },
-        world: { ...s.world, visited },
+        world: { ...s.world, visited, time: (s.world.time ?? START_TIME) + route.minutes + 40 },
         arrival: { firstVisit: f.firstVisit },
         ui: 'play',
         nearby: null,
@@ -796,7 +957,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
         return;
       }
       const before = s.life.regard[npc.id] ?? 0;
-      const r = chatFn(s.life, npc.id, now);
+      const r0 = chatFn(s.life, npc.id, now);
+      const r = { ...r0, life: { ...r0.life, needs: cheer(r0.life.needs, 4) } };
       const said = npc.social.lines[(Math.floor(now / 1000) + (r.life.social[npc.id]?.lastChat ?? 0)) % npc.social.lines.length];
       set({ life: r.life, dialogue: { ...d, nodeId: '__social', line: `“${said}”` }, critical: s.critical + 1 });
       get().pushToast({ kind: 'info', title: `You chatted with ${npc.name}`, detail: `+${r.gain} · ${regardLabel(r.life.regard[npc.id] ?? 0)}` });
@@ -822,7 +984,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const liked = npc.social.likes.includes(item.id) || npc.social.likes.includes(item.category);
       const now = Date.now();
       const before = s.life.regard[npc.id] ?? 0;
-      const r = giveGiftFn(s.life, npc.id, liked, now);
+      const g0 = giveGiftFn(s.life, npc.id, liked, now);
+      const r = { ...g0, life: { ...g0.life, needs: cheer(g0.life.needs, 3) } };
       const line = liked ? `“For me? Ah, ${item.name.toLowerCase()}! You know me well. Thank you!”` : `“Thank you, that's kind of you.”`;
       set({ inventory: r0.inventory, life: r.life, ui: 'dialogue', dialogue: { ...d, nodeId: '__social', line }, critical: s.critical + 1 });
       setUiMode('dialogue');
@@ -901,6 +1064,292 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (v) get().pushToast({ kind: 'info', title: `${findVehicle(v.vehicleId)?.name ?? 'Vehicle'} parked`, detail: `Left in ${pack().area}. It'll be here when you come back.` });
     },
 
+    enterInterior(interiorId) {
+      const s = get();
+      const def = findInterior(interiorId);
+      if (!def || s.world.inside) return;
+      if (def.kind === 'home' && !s.life.homes.includes(interiorId)) return;
+      if (def.hours && !isOpen(def.hours, s.world.time ?? START_TIME)) {
+        get().pushToast({ kind: 'warn', title: `${def.name} is closed`, detail: `Opens at ${opensAt(def.hours)}.` });
+        return;
+      }
+      get().parkIfRiding();
+      const p = runtime.player;
+      const from = { areaId: s.destinationId, x: p.x, z: p.z, yaw: p.yaw + Math.PI };
+      resetRuntime(def.entry.position[0], def.entry.position[1], def.entry.facing);
+      set({ world: { ...s.world, inside: { interiorId, from } }, ui: 'play', homeId: null, nearby: null, phase: 'loading', critical: s.critical + 1 });
+      setUiMode('play');
+      if (def.kind === 'home') get().showTip('home-inside');
+    },
+
+    exitInterior() {
+      const s = get();
+      const inside = s.world.inside;
+      if (!inside) return;
+      resetRuntime(inside.from.x, inside.from.z, inside.from.yaw);
+      set({ world: { ...s.world, inside: null }, ui: 'play', nearby: null, slotId: null, phase: 'loading', critical: s.critical + 1 });
+      setUiMode('play');
+    },
+
+    buyHome(homeId) {
+      const s = get();
+      const p = pack();
+      const home = ALL_PACKS.flatMap((x) => x.homes ?? []).find((h) => h.id === homeId);
+      if (!home?.buyPrice) return false;
+      const prop = s.life.property[homeId];
+      if (prop?.tenure === 'own') return false;
+      const n = s.wallet.ledger.filter((t) => t.id.startsWith(`buyhome:${homeId}`)).length;
+      const r = debit(s.wallet, { id: `buyhome:${homeId}:${n}`, amount: home.buyPrice, reason: `Bought · ${home.name}`, at: Date.now(), destinationId: p.id });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, home.buyPrice - s.wallet.balance)} more` });
+        return false;
+      }
+      const property = { ...(prop ?? emptyProperty('own', home.buyPrice)), tenure: 'own' as const, paid: home.buyPrice };
+      set({
+        wallet: r.wallet,
+        life: { ...s.life, homes: s.life.homes.includes(homeId) ? s.life.homes : [...s.life.homes, homeId], property: { ...s.life.property, [homeId]: property } },
+        critical: s.critical + 1,
+      });
+      get().pushToast({ kind: 'goal', title: 'You own a home', detail: `${home.name} is yours — furnish it, store things, sell it any time for its valuation.` });
+      get().checkGoals();
+      return true;
+    },
+
+    sellHome(homeId) {
+      const s = get();
+      const p = pack();
+      const prop = s.life.property[homeId];
+      const home = ALL_PACKS.flatMap((x) => x.homes ?? []).find((h) => h.id === homeId);
+      if (!prop || prop.tenure !== 'own' || !home || s.world.inside?.interiorId === homeId) return false;
+      const value = homeValuation(prop);
+      const n = s.wallet.ledger.filter((t) => t.id.startsWith(`sellhome:${homeId}`)).length;
+      const pay = credit(s.wallet, { id: `sellhome:${homeId}:${n}`, amount: value, reason: `Sold · ${home.name}`, at: Date.now(), destinationId: p.id });
+      const inventory = returnBelongings(s.inventory, prop);
+      const property = { ...s.life.property };
+      delete property[homeId];
+      set({ wallet: pay.wallet, inventory, life: { ...s.life, homes: s.life.homes.filter((h) => h !== homeId), property }, critical: s.critical + 1 });
+      get().closePanel();
+      get().pushToast({ kind: 'money', title: `+${formatMoney(p, value)}`, detail: `Sold ${home.name}. Your furniture and stored things are in your bag.` });
+      return true;
+    },
+
+    moveOut(homeId) {
+      const s = get();
+      const prop = s.life.property[homeId];
+      if (!s.life.homes.includes(homeId) || s.world.inside?.interiorId === homeId) return;
+      if (prop?.tenure === 'own') return; // owned homes are sold, not left
+      const inventory = prop ? returnBelongings(s.inventory, prop) : s.inventory;
+      const property = { ...s.life.property };
+      delete property[homeId];
+      set({ inventory, life: { ...s.life, homes: s.life.homes.filter((h) => h !== homeId), property }, critical: s.critical + 1 });
+      get().closePanel();
+      get().pushToast({ kind: 'info', title: 'You moved out', detail: 'Your furniture and stored things are in your bag.' });
+    },
+
+    placeFurniture(slotId, stackKey) {
+      const s = get();
+      const inside = s.world.inside;
+      const def = inside && findInterior(inside.interiorId);
+      const prop = inside && s.life.property[inside.interiorId];
+      const entry = s.inventory.entries.find((e) => e.key === stackKey);
+      if (!inside || !def || !prop || !entry || !fits(def, slotId, entry.itemId)) return;
+      const r0 = removeFromStack(s.inventory, stackKey, 1);
+      if (!r0.ok) return;
+      const { property, replaced } = place(prop, slotId, entry.itemId);
+      let inventory = r0.inventory;
+      if (replaced) inventory = addItem(inventory, { itemId: replaced, category: 'furniture', quantity: 1, purchasePrice: 0, destinationId: s.destinationId, at: Date.now() });
+      set({ inventory, life: { ...s.life, property: { ...s.life.property, [inside.interiorId]: property } }, critical: s.critical + 1 });
+      const item = findItem(pack(), entry.itemId);
+      get().pushToast({ kind: 'item', title: `Placed: ${item?.name}`, detail: `Home comfort ${comfort(property)}${comfort(property) >= WELL_RESTED_COMFORT ? ' — comfy enough to wake well rested' : ''}` });
+    },
+
+    removeFurniture(slotId) {
+      const s = get();
+      const inside = s.world.inside;
+      const prop = inside && s.life.property[inside.interiorId];
+      if (!inside || !prop) return;
+      const { property, removed } = unplace(prop, slotId);
+      if (!removed) return;
+      const inventory = addItem(s.inventory, { itemId: removed, category: 'furniture', quantity: 1, purchasePrice: 0, destinationId: s.destinationId, at: Date.now() });
+      set({ inventory, life: { ...s.life, property: { ...s.life.property, [inside.interiorId]: property } }, critical: s.critical + 1 });
+    },
+
+    storeItem(stackKey) {
+      const s = get();
+      const inside = s.world.inside;
+      const prop = inside && s.life.property[inside.interiorId];
+      const entry = s.inventory.entries.find((e) => e.key === stackKey);
+      if (!inside || !prop || !entry) return;
+      const r0 = removeFromStack(s.inventory, stackKey, 1);
+      if (!r0.ok) return;
+      set({ inventory: r0.inventory, life: { ...s.life, property: { ...s.life.property, [inside.interiorId]: storeFn(prop, entry) } }, critical: s.critical + 1 });
+    },
+
+    takeItem(index) {
+      const s = get();
+      const inside = s.world.inside;
+      const prop = inside && s.life.property[inside.interiorId];
+      if (!inside || !prop) return;
+      const t = takeFn(prop, index);
+      if (!t) return;
+      const inventory = addItem(s.inventory, { itemId: t.item.itemId, category: t.item.category as ItemCategory, quantity: 1, purchasePrice: t.item.purchasePrice, destinationId: t.item.destinationId, at: Date.now() });
+      set({ inventory, life: { ...s.life, property: { ...s.life.property, [inside.interiorId]: t.property } }, critical: s.critical + 1 });
+    },
+
+    orderMeal(itemId) {
+      const s = get();
+      const inside = s.world.inside;
+      const def = inside && findInterior(inside.interiorId);
+      const dish = def?.menu?.find((m) => m.itemId === itemId);
+      const item = findItem(pack(), itemId);
+      if (!def || !dish || !item) return false;
+      const r = debit(s.wallet, { id: makeId('meal'), amount: dish.price, reason: `${item.name} · ${def.name}`, at: Date.now(), destinationId: s.destinationId });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(pack(), dish.price - s.wallet.balance)} more` });
+        return false;
+      }
+      // sit down at the nearest table, facing it; stand back up where you were afterwards
+      const p = runtime.player;
+      const from = { x: p.x, z: p.z };
+      const table = def.fixed
+        .filter((f) => f.use === 'dine')
+        .map((f) => ({ x: f.position[0], z: f.position[1], d: Math.hypot(f.position[0] - p.x, f.position[1] - p.z) }))
+        .sort((a, b) => a.d - b.d)[0];
+      if (table) {
+        const side = p.z >= table.z ? 1 : -1;
+        p.x = table.x;
+        p.z = table.z + side * 0.95;
+        p.yaw = side > 0 ? Math.PI : 0;
+      }
+      p.eatUntil = performance.now() + 3200;
+      set({
+        wallet: r.wallet,
+        ui: 'resting',
+        resting: { at: 'meal', to: 0, until: Date.now() + 3400, from, meal: { itemId, joy: dish.joy + 8, nutrition: item.nutrition ?? 40 } },
+        world: { ...s.world, meals: (s.world.meals ?? 0) + 1 },
+        critical: s.critical + 1,
+      });
+      setUiMode('resting');
+      get().checkGoals();
+      return true;
+    },
+
+    startBenchmark() {
+      if (get().phase !== 'playing') return;
+      set({ ui: 'benchmark', dialogue: null, haggle: null, homeId: null, nearby: null });
+      setUiMode('benchmark');
+    },
+
+    finishBenchmark() {
+      if (get().ui !== 'benchmark') return;
+      set({ ui: 'phone', phoneApp: 'settings' });
+      setUiMode('phone');
+    },
+
+    buyTicket(eventId, atGate) {
+      const s = get();
+      const ev = findEvent(eventId);
+      if (!ev) return false;
+      const t = s.world.time ?? START_TIME;
+      const show = nextShowing(ev, t);
+      if (!show) return false;
+      const txId = ticketTxId(ev.id, show.day);
+      if (s.wallet.ledger.some((x) => x.id === txId) || (s.world.tickets ?? []).some((x) => x.eventId === ev.id && x.day === show.day)) {
+        get().pushToast({ kind: 'info', title: 'You already have a ticket', detail: `${ev.name} · Day ${show.day}` });
+        return false;
+      }
+      const price = atGate ? gatePrice(ev) : ev.price;
+      const r = debit(s.wallet, { id: txId, amount: price, reason: `Ticket · ${ev.name} (day ${show.day})`, at: Date.now(), destinationId: s.destinationId });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(pack(), price - s.wallet.balance)} more` });
+        return false;
+      }
+      const ticket: EventTicket = { id: txId, eventId: ev.id, day: show.day, paid: price, status: 'booked' };
+      set({ wallet: r.wallet, world: { ...s.world, tickets: [...(s.world.tickets ?? []), ticket].slice(-40) }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'item', title: 'Ticket booked', detail: `${ev.name} · Day ${show.day}, ${formatClock(show.start)}` });
+      return true;
+    },
+
+    attendEvent(eventId) {
+      const s = get();
+      const ev = findEvent(eventId);
+      if (!ev) return;
+      const t = s.world.time ?? START_TIME;
+      const day = onNow(ev, t);
+      const has = day !== null && (s.world.tickets ?? []).some((x) => x.eventId === ev.id && x.day === day && x.status === 'booked');
+      if (!has) return;
+      get().parkIfRiding();
+      set({ ui: 'resting', eventId: null, resting: { at: 'event', to: 0, until: Date.now() + 4200, eventId } });
+      setUiMode('resting');
+    },
+
+    startRepair(repairId) {
+      const p = pack();
+      const def = p.repairs?.find((x) => x.id === repairId);
+      const s = get();
+      if (!def) return;
+      const req = meets(def.requires, requirementContext(s));
+      if (!req.ok) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: `Not yet: ${def.title}`, detail: req.missing.join(' · ') });
+        return;
+      }
+      if (s.jobs.active) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: 'Finish your current job first' });
+        return;
+      }
+      if (s.life.needs.energy < def.minEnergy) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: 'Too tired to work', detail: 'Rest first — benches are free, and a bed at home restores you fully.' });
+        return;
+      }
+      get().parkIfRiding();
+      const level = skillLevel(s.life.skills[def.skill]);
+      const seconds = repairSeconds(def, level);
+      const seed = Math.floor(Math.random() * 1e9);
+      const queue = repairQueue(def, seed);
+      set({
+        ui: 'repair',
+        dialogue: null,
+        repair: { repairId, runId: makeId('rep'), queue, index: 0, progress: 0, mistakes: 0, buttons: shuffledSteps(def.devices[queue[0]].steps, seed), results: [], deadline: Date.now() + seconds * 1000 + 1500, seconds, level, outcome: null },
+      });
+      setUiMode('repair');
+      get().showTip('repair');
+    },
+
+    tapRepair(step) {
+      const run = get().repair;
+      const def = run && pack().repairs?.find((x) => x.id === run.repairId);
+      if (!run || !def || run.outcome) return;
+      const steps = def.devices[run.queue[run.index]].steps;
+      const t = tapStep(steps, run.progress, step);
+      if (!t.correct) {
+        set({ repair: { ...run, mistakes: run.mistakes + 1 } });
+        return;
+      }
+      if (t.progress < steps.length) {
+        set({ repair: { ...run, progress: t.progress } });
+        return;
+      }
+      finishDevice(run, def, true);
+    },
+
+    repairTimeout() {
+      const run = get().repair;
+      const def = run && pack().repairs?.find((x) => x.id === run.repairId);
+      if (!run || !def || run.outcome || Date.now() < run.deadline) return;
+      finishDevice(run, def, false);
+    },
+
+    closeRepair() {
+      const run = get().repair;
+      if (run && !run.outcome) return;
+      set({ repair: null, ui: 'play' });
+      setUiMode('play');
+      if (run?.outcome?.levelUp) get().pushToast({ kind: 'goal', title: `Repair skill up: level ${skillLevel(get().life.skills.repair)}`, detail: 'More time per phone and better pay.' });
+    },
+
     discover(landmarkId) {
       const s = get();
       if (s.world.discovered.includes(landmarkId)) return;
@@ -961,6 +1410,11 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const p = pack();
       const job = findJob(p, jobId);
       if (!job) return;
+      const req = meets(job.requires, requirementContext(get()));
+      if (!req.ok) {
+        get().pushToast({ kind: 'warn', title: `Not yet: ${job.title}`, detail: req.missing.join(' · ') });
+        return;
+      }
       const r = acceptJobFn(get().jobs, job, Date.now(), makeId('run'));
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: r.reason === 'busy' ? 'Finish your current job first' : 'Not ready yet' });
@@ -971,6 +1425,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (job.kind === 'collect' && job.collect) {
         get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `Pick up ${job.collect.count} ${job.collect.item}s, then report to ${dropoff?.name}` });
         get().showTip('collect');
+      } else if (job.kind === 'tour' && job.tour) {
+        const first = p.landmarks.find((l) => l.id === job.tour!.stops[0]);
+        get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `${dropoff?.name} follows you. First stop: ${first?.name}. Walk — don’t lose her.` });
+        get().showTip('tour');
       } else {
         get().pushToast({ kind: 'info', title: `${job.title} started`, detail: `Take the ${job.cargo.toLowerCase()} to ${dropoff?.name}` });
         get().showTip('job-started');
@@ -998,10 +1456,14 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().pushToast({ kind: 'warn', title: msg[r.reason] });
         return;
       }
+      // courier rank: errands (delivery/collect) pay more as your record grows
+      const courier = job.kind !== 'tour';
+      const runsBefore = courierRuns(get().jobs, isCourierJob);
+      const extra = courier ? rankBonus(r.payout.base, runsBefore) : 0;
       const pay = credit(get().wallet, {
         id: r.payout.txId,
-        amount: r.payout.total,
-        reason: `${job.title}${r.payout.bonus ? ' + speed bonus' : ''}`,
+        amount: r.payout.total + extra,
+        reason: `${job.title}${r.payout.bonus ? ' + speed bonus' : ''}${extra ? ` + ${courierRank(runsBefore).name} bonus` : ''}`,
         at: Date.now(),
         destinationId: p.id,
       });
@@ -1020,9 +1482,12 @@ export const useGame = create<GameState>()((set, get): GameState => {
         const secs = (r.payout.elapsedMs / 1000).toFixed(1);
         get().pushToast({
           kind: 'money',
-          title: `+${formatMoney(p, r.payout.total)}`,
-          detail: r.payout.bonus ? `Done in ${secs}s — includes ${formatMoney(p, r.payout.bonus)} speed bonus` : `Done in ${secs}s`,
+          title: `+${formatMoney(p, r.payout.total + extra)}`,
+          detail: `${r.payout.bonus ? `Done in ${secs}s — includes ${formatMoney(p, r.payout.bonus)} speed bonus` : `Done in ${secs}s`}${extra ? ` · rank bonus ${formatMoney(p, extra)}` : ''}`,
         });
+        const after = courierRuns(get().jobs, isCourierJob);
+        if (courier && courierRank(after).name !== courierRank(runsBefore).name)
+          setTimeout(() => get().pushToast({ kind: 'goal', title: `Courier rank: ${courierRank(after).name}`, detail: `Errands now pay ${Math.round(courierRank(after).bonus * 100)}% more.` }), 1200);
         get().showTip('first-money');
         get().showTip('travel');
         get().checkGoals();
@@ -1037,19 +1502,44 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const s = get();
       if (s.phase !== 'playing') return;
       if (s.ui === 'pause' || s.ui === 'transit' || s.ui === 'wardrobe' || s.ui === 'flight') return;
-      const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
+      // the clock follows real time (not the per-frame step, which is capped for physics), so slow phones
+      // don't get longer days; a jump after the tab was hidden is limited to a second
+      const nowMs = performance.now();
+      const realMs = lastTick ? Math.min(1000, Math.max(0, nowMs - lastTick)) : dtMs;
+      lastTick = nowMs;
+      const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs, world: runtime.clockPaused ? s.world : { ...s.world, time: advance(s.world.time ?? START_TIME, realMs) } };
       if (s.ui === 'play') {
         const pl = runtime.player;
         const activity = !pl.moving ? 'idle' : s.life.riding ? 'ride' : pl.speed > 4 ? 'run' : 'walk';
         const before = s.life.needs;
-        const needs = drainNeeds(before, dtMs, activity);
+        const needs = drainNeeds(before, dtMs, activity, { wellRested: (s.world.time ?? 0) < (s.life.wellRestedUntil ?? 0) });
         patch.life = { ...s.life, needs };
         patch.dirty = s.dirty + 1;
         const crossed = (k: 'energy' | 'fullness', at: number) => before[k] >= at && needs[k] < at;
         if (crossed('energy', 40)) get().showTip('tired');
         if (crossed('energy', LOW)) get().pushToast({ kind: 'warn', title: 'Exhausted', detail: 'You can only walk now. Rest on a bench or at home.' });
         if (crossed('fullness', 40)) get().showTip('hungry');
+        if ((before.joy ?? 70) >= 25 && needs.joy < 25) get().showTip('low-joy');
         if (crossed('fullness', LOW)) get().pushToast({ kind: 'warn', title: 'Starving', detail: 'Eat something — an empty stomach tires you twice as fast.' });
+      }
+      // a tour reaches its next stop when you and your guest are both there
+      const ta = s.jobs.active;
+      const tourJob = ta ? findJob(pack(), ta.jobId) : undefined;
+      if (ta && tourJob?.kind === 'tour' && tourJob.tour && s.ui === 'play') {
+        const i = ta.collected?.length ?? 0;
+        const lm = pack().landmarks.find((l) => l.id === tourJob.tour!.stops[i]);
+        const guest = runtime.actors.get(tourJob.giverNpcId);
+        const pl = runtime.player;
+        if (lm && guest && Math.hypot(pl.x - lm.position[0], pl.z - lm.position[1]) < lm.radius + 1 && Math.hypot(guest.x - lm.position[0], guest.z - lm.position[1]) < lm.radius + 3) {
+          const next = visitStop(s.jobs, tourJob, i);
+          if (next) {
+            set({ jobs: next, dirty: s.dirty + 1 });
+            const left = tourJob.tour.stops.length - i - 1;
+            const nm = findNpc(pack(), tourJob.giverNpcId)?.name;
+            get().pushToast({ kind: 'discover', title: `Stop ${i + 1} of ${tourJob.tour.stops.length}: ${lm.name}`, detail: left ? `${nm} takes photos. Next: ${pack().landmarks.find((l) => l.id === tourJob.tour!.stops[i + 1])?.name}` : `${nm} is delighted. Talk to her to finish the tour.` });
+            return;
+          }
+        }
       }
       if (s.jobs.active) {
         const p = pack();
@@ -1205,7 +1695,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         regard: addRegard(s.life.regard, def.npcId, o.regard),
         shiftsDone: s.life.shiftsDone + 1,
       };
-      set({ wallet: pay.wallet, life, shift: { ...run, results, index, outcome: { ...o, levelUp, paid: pay.ok } }, critical: s.critical + 1 });
+      set({ wallet: pay.wallet, life, shift: { ...run, results, index, outcome: { ...o, levelUp, paid: pay.ok } }, world: { ...s.world, time: (s.world.time ?? START_TIME) + 45 }, critical: s.critical + 1 });
       announceTier(def.npcId, s.life.regard[def.npcId] ?? 0, life.regard[def.npcId] ?? 0);
       get().checkGoals();
     },
@@ -1225,6 +1715,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     startRest(at) {
       const s = get();
       if (at === 'home' && !s.life.homes.length) return;
+      if (at === 'meal' || at === 'event') return;
       const to = at === 'home' ? 100 : 70;
       if (s.life.needs.energy >= to - 1) {
         get().pushToast({ kind: 'info', title: 'You are already rested', detail: at === 'bench' ? 'A bench only gets you so far — a bed at home restores you fully.' : undefined });
@@ -1245,7 +1736,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
           p.z = bench.z;
         }
       }
-      set({ ui: 'resting', homeId: null, resting: { at, to, until: Date.now() + (at === 'home' ? 3200 : 2600), from } });
+      const homeId = at === 'home' ? (s.world.inside?.interiorId ?? s.homeId ?? s.life.homes[0]) : undefined;
+      set({ ui: 'resting', homeId: null, resting: { at, to, until: Date.now() + (at === 'home' ? 3200 : 2600), from, homeId } });
       setUiMode('resting');
     },
 
@@ -1253,14 +1745,38 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const s = get();
       const r = s.resting;
       if (!r) return;
-      const needs = rest(s.life.needs, r.to);
+      let needs = rest(s.life.needs, r.to);
+      const comfy = r.at === 'home' && r.homeId ? comfort(s.life.property[r.homeId]) : 0;
+      if (r.at === 'home') needs = cheer(needs, 4 + comfy * 2);
+      if (r.at === 'meal' && r.meal) needs = cheer(eat(s.life.needs, r.meal.nutrition), r.meal.joy);
+      if (r.at === 'event' && r.eventId) {
+        const ev = findEvent(r.eventId);
+        const t0 = s.world.time ?? START_TIME;
+        if (!ev) return;
+        const showDay = onNow(ev, t0) ?? dayOf(t0);
+        const after = cheer(spend(s.life.needs, ev.energy), ev.joy);
+        const tickets = (s.world.tickets ?? []).map((t) => (t.eventId === ev.id && t.day === showDay && t.status === 'booked' ? { ...t, status: 'used' as const } : t));
+        set({ resting: null, ui: 'play', life: { ...s.life, needs: after }, world: { ...s.world, tickets, time: Math.max(t0, showtime(ev, showDay).end) }, critical: s.critical + 1 });
+        setUiMode('play');
+        get().pushToast({ kind: 'goal', title: `What a night!`, detail: `${ev.name} · Joy ${Math.round(after.joy)}` });
+        get().checkGoals();
+        return;
+      }
       if (r.from) {
         runtime.player.x = r.from.x;
         runtime.player.z = r.from.z;
       }
-      set({ resting: null, ui: 'play', life: { ...s.life, needs }, critical: s.critical + 1 });
+      const time = r.at === 'home' ? afterSleep(s.world.time ?? START_TIME) : (s.world.time ?? START_TIME) + (r.at === 'meal' ? 45 : 30);
+      // a comfortable home leaves you well rested: energy drains more slowly for six game hours
+      const wellRested = r.at === 'home' && comfy >= WELL_RESTED_COMFORT;
+      set({ resting: null, ui: 'play', life: { ...s.life, needs, wellRestedUntil: wellRested ? time + 6 * 60 : s.life.wellRestedUntil }, world: { ...s.world, time }, critical: s.critical + 1 });
       setUiMode('play');
-      get().pushToast({ kind: 'info', title: r.at === 'home' ? 'You slept well' : 'You caught your breath', detail: `Energy ${Math.round(needs.energy)}` });
+      if (r.at === 'meal') {
+        get().pushToast({ kind: 'info', title: 'That was lovely', detail: `Fullness ${Math.round(needs.fullness)} · Joy ${Math.round(needs.joy)}` });
+        return;
+      }
+      if (wellRested) setTimeout(() => get().pushToast({ kind: 'goal', title: 'Well rested', detail: 'Your comfortable home pays off: energy drains 25% slower until midday.' }), 1500);
+      get().pushToast({ kind: 'info', title: r.at === 'home' ? (hourOf(time) < 8 ? 'Good morning!' : 'You had a nap') : 'You caught your breath', detail: `Energy ${Math.round(needs.energy)} · Day ${dayOf(time)}, ${formatClock(time)}` });
     },
 
     rentHome(homeId) {
@@ -1268,12 +1784,13 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const home = p.homes?.find((h) => h.id === homeId);
       const s = get();
       if (!home || s.life.homes.includes(homeId)) return false;
-      const r = debit(s.wallet, { id: `home:${homeId}`, amount: home.moveInCost, reason: `Move-in · ${home.name}`, at: Date.now(), destinationId: p.id });
+      const txId = s.wallet.ledger.some((t) => t.id === `home:${homeId}`) ? `home:${homeId}:${makeId('again')}` : `home:${homeId}`;
+      const r = debit(s.wallet, { id: txId, amount: home.moveInCost, reason: `Move-in · ${home.name}`, at: Date.now(), destinationId: p.id });
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, home.moveInCost - s.wallet.balance)} more` });
         return false;
       }
-      set({ wallet: r.wallet, life: { ...s.life, homes: [...s.life.homes, homeId] }, critical: s.critical + 1 });
+      set({ wallet: r.wallet, life: { ...s.life, homes: [...s.life.homes, homeId], property: { ...s.life.property, [homeId]: emptyProperty('rent', home.moveInCost) } }, critical: s.critical + 1 });
       get().pushToast({ kind: 'goal', title: 'You have a home', detail: `${home.name} is yours to rest in.` });
       get().checkGoals();
       return true;
@@ -1302,7 +1819,6 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
 /** Ids of every goal, for the Goals list. */
 export const GOAL_IDS = GOALS.map((g) => g.id);
-export const AREA_COUNT = ALL_PACKS.length;
 
 /** Builds the persistent snapshot used by the save manager. */
 export function snapshotForSave() {

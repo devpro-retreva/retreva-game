@@ -1,11 +1,12 @@
 // Runs browser playtests against the production build.
 //
-//   node playtests/run.mjs                      → regression, expansion, wardrobe
+//   node playtests/run.mjs                      → all default suites (see DEFAULT)
 //   node playtests/run.mjs expansion            → one suite
 //   node playtests/run.mjs avatar-gallery       → screenshots only (no pass/fail)
 //
 // Starts `vite preview` on port 4173 unless PLAYTEST_URL is set (then it uses that server).
-// Build first (`npm run build`); `npm run playtest` does both.
+// Build first (`npm run build`); `npm run playtest` does both. `device` and `cities` also serve dist/
+// themselves (PLAYTEST_DIST to point elsewhere) so they can stop the server to test real offline play.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,12 +14,12 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city', 'device', 'travel', 'lifestyle', 'responsive', 'resilience'];
+const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city', 'device', 'travel', 'lifestyle', 'responsive', 'resilience', 'daynight', 'work', 'homes', 'leisure', 'performance', 'cities'];
 const suites = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT;
 
 for (const s of suites) {
   if (!fs.existsSync(path.join(here, `${s}.mjs`))) {
-    console.error(`Unknown suite "${s}". Available: ${fs.readdirSync(here).filter((f) => f.endsWith('.mjs') && !['lib.mjs', 'run.mjs'].includes(f)).map((f) => f.slice(0, -4)).join(', ')}`);
+    console.error(`Unknown suite "${s}". Available: ${fs.readdirSync(here).filter((f) => f.endsWith('.mjs') && !['lib.mjs', 'run.mjs', 'static-server.mjs'].includes(f)).map((f) => f.slice(0, -4)).join(', ')}`);
     process.exit(2);
   }
 }

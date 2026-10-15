@@ -1,3 +1,5 @@
+import type { EventTicket } from '../systems/events';
+import type { BenchResult } from '../core/benchmark';
 import type { Wallet } from '../systems/economy';
 import type { Inventory } from '../systems/inventory';
 import type { JobsState } from '../systems/jobs';
@@ -5,7 +7,7 @@ import type { PhoneMessage } from '../systems/progress';
 import type { LifeState } from '../systems/life';
 import type { TravelState } from '../systems/travel';
 
-export const SAVE_SCHEMA_VERSION = 6;
+export const SAVE_SCHEMA_VERSION = 8;
 
 export type Gender = 'male' | 'female';
 export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
@@ -49,9 +51,13 @@ export interface Settings {
   /** Sound (added with v6; older saves get the defaults). */
   ambienceVolume?: number;
   effectsVolume?: number;
+  /** Generated music (0 = off). */
+  musicVolume?: number;
   muted?: boolean;
   /** Show first-time tip cards. */
   tips: boolean;
+  /** The last benchmark run on this device (Settings → Performance). */
+  lastBenchmark?: BenchResult;
 }
 
 /** Exploration and social progress across all areas. */
@@ -63,6 +69,14 @@ export interface WorldProgress {
   messages: PhoneMessage[];
   bestBargain: number;
   rides: number;
+  /** Game clock: minutes since midnight of day 1 (v7). */
+  time: number;
+  /** Inside a room or restaurant (v8): which interior, and the spot outside to return to. */
+  inside: { interiorId: string; from: { areaId: string; x: number; z: number; yaw: number } } | null;
+  /** Sit-down meals eaten (v8, optional). */
+  meals?: number;
+  /** Tickets to shows (v8, optional). */
+  tickets?: EventTicket[];
 }
 
 export const emptyWorld = (home: string): WorldProgress => ({
@@ -73,6 +87,8 @@ export const emptyWorld = (home: string): WorldProgress => ({
   messages: [],
   bestBargain: 0,
   rides: 0,
+  time: 8 * 60,
+  inside: null,
 });
 
 export interface SaveData {

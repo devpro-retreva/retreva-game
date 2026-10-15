@@ -3,18 +3,23 @@ import { formatMoney } from '../../game/content';
 import { findShift, useGame } from '../../game/store/gameStore';
 import { LOW, needLabel, skillLevel, levelProgress } from '../../game/systems/life';
 import { usePack } from '../../scene/worldContext';
+import { findInterior } from '../../game/content/interiors';
+import { TenurePanel } from './HomePanels';
 import { IconBed, IconBolt, IconClose, IconHome, IconPlate, IconStar, ITEM_ICONS } from '../icons/Icons';
 
 /** Two compact need chips under the wallet. Text labels so state never relies on colour alone. */
 export function NeedsChips() {
   const energy = useGame((s) => Math.round(s.life.needs.energy));
   const fullness = useGame((s) => Math.round(s.life.needs.fullness));
-  const chip = (kind: 'energy' | 'fullness', v: number) => {
+  const joy = useGame((s) => Math.round(s.life.needs.joy ?? 70));
+  const rested = useGame((s) => (s.world.time ?? 0) < (s.life.wellRestedUntil ?? 0));
+  const chip = (kind: 'energy' | 'fullness' | 'joy', v: number) => {
     const low = v < LOW;
     const warn = v < 40;
-    const Icon = kind === 'energy' ? IconBolt : IconPlate;
+    const Icon = kind === 'energy' ? IconBolt : kind === 'joy' ? IconStar : IconPlate;
+    const name = kind === 'energy' ? 'Energy' : kind === 'joy' ? 'Joy' : 'Fullness';
     return (
-      <div className={`need cut-sm ${low ? 'is-low' : warn ? 'is-warn' : ''}`} aria-label={`${kind === 'energy' ? 'Energy' : 'Fullness'} ${v} — ${needLabel(kind, v)}`}>
+      <div className={`need cut-sm need-${kind} ${low ? 'is-low' : warn ? 'is-warn' : ''} ${kind === 'energy' && rested ? 'is-rested' : ''}`} data-need={kind} aria-label={`${name} ${v} — ${needLabel(kind, v)}${kind === 'energy' && rested ? ', well rested' : ''}`}>
         <Icon size={14} />
         <span className="need-bar" aria-hidden="true">
           <i style={{ width: `${v}%` }} />
@@ -27,6 +32,7 @@ export function NeedsChips() {
     <div className="needs">
       {chip('energy', energy)}
       {chip('fullness', fullness)}
+      {chip('joy', joy)}
     </div>
   );
 }
@@ -166,6 +172,7 @@ export function HomePanel() {
   const energy = useGame((s) => Math.round(s.life.needs.energy));
   const rentHome = useGame((s) => s.rentHome);
   const startRest = useGame((s) => s.startRest);
+  const enter = useGame((s) => s.enterInterior);
   const close = useGame((s) => s.closePanel);
   const [confirm, setConfirm] = useState(false);
   const home = pack.homes?.find((h) => h.id === homeId);
@@ -189,9 +196,17 @@ export function HomePanel() {
         {mine ? (
           <>
             <p className="muted">Energy {energy}. Sleeping here restores you fully, for free.</p>
-            <button className="btn block" onClick={() => startRest('home')} disabled={energy >= 99}>
-              <IconBed size={18} /> {energy >= 99 ? 'Fully rested' : 'Sleep'}
-            </button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {findInterior(home.id) && (
+                <button className="btn" data-act="enter" onClick={() => enter(home.id)}>
+                  <IconHome size={18} /> Go inside
+                </button>
+              )}
+              <button className="btn ghost" onClick={() => startRest('home')} disabled={energy >= 99}>
+                <IconBed size={18} /> {energy >= 99 ? 'Fully rested' : 'Sleep'}
+              </button>
+            </div>
+            <TenurePanel homeId={home.id} />
           </>
         ) : !confirm ? (
           <>
@@ -204,11 +219,18 @@ export function HomePanel() {
               <b className="num">{formatMoney(pack, balance)}</b>
             </div>
             <p className="muted" style={{ marginTop: 10 }}>
-              With a home you can sleep to full energy any time. Without one, benches get you back to 70.
+              With a home you can sleep to full energy any time, furnish it and store things. Without one, benches get you back to 70.
             </p>
+            {home.buyPrice && (
+              <div className="card-line">
+                <span className="muted">Or buy it outright (sell later for 85%)</span>
+                <b className="num">{formatMoney(pack, home.buyPrice)}</b>
+              </div>
+            )}
             <button className="btn block" disabled={!afford} onClick={() => setConfirm(true)}>
               {afford ? 'Rent this room' : `Need ${formatMoney(pack, home.moveInCost - balance)} more`}
             </button>
+            {home.buyPrice && <TenurePanel homeId={home.id} />}
           </>
         ) : (
           <>
@@ -242,8 +264,8 @@ export function RestOverlay() {
   if (!resting) return null;
   return (
     <div className={`rest-overlay ${resting.at === 'bench' ? 'on-bench' : ''}`} role="status">
-      <IconBed size={34} />
-      <div>{resting.at === 'home' ? 'Sleeping…' : 'Resting on the bench…'}</div>
+      {resting.at === 'meal' ? <IconPlate size={34} /> : <IconBed size={34} />}
+      <div>{resting.at === 'home' ? 'Sleeping…' : resting.at === 'meal' ? 'Enjoying your meal…' : 'Resting on the bench…'}</div>
     </div>
   );
 }
