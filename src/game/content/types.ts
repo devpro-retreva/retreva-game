@@ -142,7 +142,12 @@ export type DialogueAction =
   | { kind: 'security'; liquids?: 'drink' | 'leave' }
   | { kind: 'board' }
   /** Opens the phone's Travel app on the flights section. */
-  | { kind: 'openFlights' };
+  | { kind: 'openFlights' }
+  /** Social: chat a while, or pick something from your bag to give. */
+  | { kind: 'chat' }
+  | { kind: 'gift' }
+  /** Opens a vehicle dealer (buy / sell). */
+  | { kind: 'dealer'; dealerId: string };
 
 export interface DialogueOption {
   label: string;
@@ -174,6 +179,8 @@ export interface NpcDef {
   dialogue: DialogueDef;
   /** Optional idle animation flavour. */
   idle?: 'sway' | 'wave' | 'busy';
+  /** People you can get to know: things they say when you chat, and what they'd love as a gift (item ids or categories). */
+  social?: { lines: string[]; likes: string[] };
 }
 
 export type WalkerActivity = 'shop' | 'wait' | 'chat' | 'eat' | 'photo';
@@ -282,6 +289,8 @@ export interface DestinationPack {
     sun: string;
   };
   road: { halfWidth: number; sidewalk: number; length: number; style?: 'asphalt' | 'paved' | 'sand' };
+  /** The area's soundscape (synthesised, see src/audio/ambience.ts): traffic, crowd, horns/min, waves, chimes/min. */
+  ambience?: { traffic: number; crowd: number; horns: number; waves?: number; chimes?: number };
   /** What lies behind the street: city blocks (default), or an airfield with parked planes beyond the north end. */
   backdrop?: 'city' | 'airfield';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
@@ -303,5 +312,7 @@ export interface DestinationPack {
   spots?: SpotDef[];
   traffic?: TrafficDef;
   homes?: HomeDef[];
+  /** People who sell (and buy back) vehicles here. A new vehicle is parked at `parkAt`. */
+  dealers?: { id: string; name: string; npcId: string; stock: { vehicleId: string; price: number }[]; parkAt: { position: Vec2; yaw: number } }[];
   startingMoney: number;
 }

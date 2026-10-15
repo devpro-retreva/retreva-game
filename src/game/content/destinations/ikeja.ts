@@ -31,6 +31,7 @@ export const ikeja: DestinationPack = {
     sun: '#ffdcae',
   },
   road: { halfWidth: 4, sidewalk: 3, length: 86, style: 'asphalt' },
+  ambience: { traffic: 0.8, crowd: 0.75, horns: 8 },
   landmarks: [
     { id: 'ikeja-village', name: 'Computer Village', blurb: 'If it has a screen, someone here can fix it.', position: [0, 2], radius: 5 },
     { id: 'ikeja-plaza', name: 'Ikeja Tech Plaza', blurb: 'Five floors of phones, laptops and chargers.', position: [6, -14], radius: 4 },
@@ -91,6 +92,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#5a3420', top: '#2c5f9e', bottom: '#2a2a2a', outfit: 'shirt', hair: 'low', facialHair: 'goatee', accessory: 'glasses', height: 1.76 },
       promptVerb: 'Talk to',
+      social: { lines: ["A phone tells you its story — the scratches, the battery, the drops.", "I trained in Computer Village for six years before I opened my shop.", "Never buy a 'UK-used' phone without testing the charging port."], likes: ["power-bank", "earbuds", "meat-pie"] },
       idle: 'busy',
       dialogue: {
         entries: [
@@ -134,6 +136,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#7a3b72', bottom: '#2b2b33', outfit: 'dress', hair: 'bun', accessory: 'earrings', height: 1.68 },
       promptVerb: 'Talk to',
+      social: { lines: ["Three branches, two meetings, one phone. Life!", "Pharmacy, provisions, phones — diversify, my dear.", "You're dependable. I like that in people."], likes: ["lace-fabric", "shea-butter", "kente-stole"] },
       idle: 'sway',
       dialogue: {
         entries: [
@@ -164,6 +167,7 @@ export const ikeja: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#2a2a2a', bottom: '#4a5a72', outfit: 'shirt', hair: 'hightop', facialHair: 'none', headwear: 'cap', headColor: '#f2b705', height: 1.8 },
       promptVerb: 'Bargain with',
+      social: { lines: ["Original or copy? Ask me — I'll tell you honestly. Mostly.", "Gadgets move fast. Last year's phone is this year's bargain.", "Customer is king — but bargain is queen."], likes: ["jollof-plate", "beach-suya", "roasted-corn"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -187,6 +191,7 @@ export const ikeja: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#f2b705', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'beard', headwear: 'cap', headColor: '#15130f', height: 1.72 },
       promptVerb: 'Talk to',
+      social: { lines: ["My voice? Gone since 2019. Shouting 'Ikeja!' all day.", "Ojota, Oshodi, Obalende — I know them like my palm.", "Keep your change ready and we'll be friends."], likes: ["water", "zobo", "puff-puff"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],

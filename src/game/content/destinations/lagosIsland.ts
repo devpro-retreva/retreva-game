@@ -32,6 +32,7 @@ export const lagosIsland: DestinationPack = {
     sun: '#ffdcaa',
   },
   road: { halfWidth: 2.8, sidewalk: 2.4, length: 82, style: 'paved' },
+  ambience: { traffic: 0.3, crowd: 0.95, horns: 3 },
   landmarks: [
     { id: 'island-lane', name: 'Balogun market lane', blurb: 'Bolts of cloth stacked to the sky and a hundred prices.', position: [0, 8], radius: 4.5 },
     { id: 'island-asooke', name: "Aso-oke weavers' corner", blurb: 'Hand-woven cloth for owambe season.', position: [3.5, -12], radius: 3.5 },
@@ -97,6 +98,7 @@ export const lagosIsland: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#c9583b', bottom: '#f2b705', outfit: 'dress', hair: 'short', headwear: 'gele', headColor: '#f2b705', accessory: 'earrings', height: 1.64 },
       promptVerb: 'Bargain with',
+      social: { lines: ["My mother sold fabric at this same spot. Her mother too.", "Real Ankara feels heavier. The cheap ones fade after two washes.", "Bring your friends — friends of mine get a better price."], likes: ["coconut", "shea-butter", "kente-stole"] },
       idle: 'busy',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -128,6 +130,7 @@ export const lagosIsland: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#e4572e', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'none', height: 1.8 },
       promptVerb: 'Talk to',
+      social: { lines: ["I can carry a hundred kilos up those stairs. Ask anybody.", "Market starts before sunrise. I've been up since four.", "Save small every day — that's how I bought my phone."], likes: ["jollof-plate", "puff-puff", "meat-pie", "water"] },
       idle: 'sway',
       dialogue: {
         entries: [
@@ -171,6 +174,7 @@ export const lagosIsland: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#f4ead8', bottom: '#2c5f9e', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#2c5f9e', accessory: 'glasses', height: 1.74 },
       promptVerb: 'Talk to',
+      social: { lines: ["Give me fabric in the morning, you'll wear it by evening.", "Aso-oke for weddings, Ankara for Fridays, lace for big men.", "My hands are fast, but my thread is faster."], likes: ["ankara-6yd", "lace-fabric", "aso-oke-cap"] },
       idle: 'sway',
       dialogue: {
         entries: [
@@ -201,6 +205,7 @@ export const lagosIsland: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#1d7f86', bottom: '#2a2a2a', outfit: 'top-trousers', hair: 'braids', headwear: 'cap', headColor: '#f2b705', height: 1.66 },
       promptVerb: 'Talk to',
+      social: { lines: ["Keke is small, but she goes where danfo can't.", "Women riders are the safest on the Island — that's a fact.", "I'm saving for a second keke. Then I'm a fleet owner!"], likes: ["zobo", "plantain-chips", "straw-hat"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],

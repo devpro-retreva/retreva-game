@@ -12,6 +12,7 @@ import { GOALS } from '../../game/systems/progress';
 import { fareBetween, modeBetween, regionOf } from '../../game/content/regions';
 import { findFlight, flightsFrom } from '../../game/content/flights';
 import { tripBudget } from '../../game/systems/travel';
+import { findVehicle } from '../../game/content/vehicles';
 import { describeLook } from '../avatar/AvatarEditor';
 import { deviceEnv, resolveTier } from '../../game/core/quality';
 import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
@@ -616,6 +617,16 @@ function LifeSection() {
       <Stat k="Fullness" v={`${Math.round(life.needs.fullness)} · ${needLabel('fullness', life.needs.fullness)}`} />
       <Stat k={homes.length > 1 ? 'Homes' : 'Home'} v={homes.length ? homes.join(' · ') : 'None yet'} />
       <Stat k="Shifts worked" v={life.shiftsDone} />
+      <Stat
+        k="Vehicles"
+        v={
+          life.vehicles.length
+            ? life.vehicles
+                .map((v) => `${findVehicle(v.vehicleId)?.name ?? v.vehicleId} · ${life.riding === v.uid ? 'riding' : `parked in ${v.parked ? getDestination(v.parked.areaId).area : '—'}`}`)
+                .join(' · ')
+            : 'None yet'
+        }
+      />
       <h3 className="phone-sub">Skills</h3>
       <Stat k="Cooking" v={`Level ${skillLevel(life.skills.cooking)} · ${life.skills.cooking ?? 0} XP`} />
       <h3 className="phone-sub">People</h3>
@@ -718,6 +729,71 @@ function GraphicsSetting() {
   );
 }
 
+/** Export / import the save as a file: a manual backup that survives clearing the browser, and a way to move a game to another browser. */
+function SaveBackup() {
+  const hydrate = useGame((s) => s.hydrate);
+  const setPhase = useGame((s) => s.setPhase);
+  const [info, setInfo] = useState<{ persisted: boolean; usage: number; quota: number } | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, setPending] = useState<File | null>(null);
+  useEffect(() => {
+    void saves.storageInfo().then(setInfo);
+  }, []);
+  const exportSave = async () => {
+    const text = await saves.exportJson();
+    if (!text) return setMsg('Nothing to export yet.');
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `retreva-save-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setMsg('Save file downloaded. Keep it somewhere safe.');
+  };
+  const importSave = async () => {
+    if (!pending) return;
+    try {
+      const data = await saves.importJson(await pending.text());
+      hydrate(data);
+      setPhase('loading');
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'That file could not be imported.');
+      setPending(null);
+    }
+  };
+  const mb = (n: number) => (n / (1024 * 1024)).toFixed(n < 1024 * 1024 * 10 ? 1 : 0);
+  return (
+    <div className="backup" data-persisted={info?.persisted ? 'yes' : 'no'}>
+      <p className="sub">
+        Clearing this browser's data erases local progress. {info?.persisted ? 'This browser has agreed to keep Retreva’s storage.' : 'Export a save file now and then as a backup.'}
+        {info && info.quota > 0 && ` Using ${mb(info.usage)} MB of ${mb(info.quota)} MB.`}
+      </p>
+      <div className="backup-row">
+        <button className="btn ghost" onClick={exportSave}>
+          Export save file
+        </button>
+        <label className="btn ghost file-btn">
+          Import save file
+          <input type="file" accept="application/json,.json" onChange={(e) => { setMsg(null); setPending(e.target.files?.[0] ?? null); }} />
+        </label>
+      </div>
+      {pending && (
+        <div className="backup-row">
+          <button className="btn danger" onClick={importSave}>
+            Replace current game with {pending.name}
+          </button>
+          <button className="btn ghost" onClick={() => setPending(null)}>
+            Cancel
+          </button>
+        </div>
+      )}
+      {msg && <p className="sub" role="status">{msg}</p>}
+    </div>
+  );
+}
+
 function SettingsApp() {
   const settings = useGame((s) => s.settings);
   const update = useGame((s) => s.updateSettings);
@@ -761,6 +837,29 @@ function SettingsApp() {
           ))}
         </div>
       </div>
+      <div className="eyelabel section-title">Sound</div>
+      <label className="setting">
+        <div>
+          Sound
+          <div className="sub">City ambience and effects, made on your device — nothing to download</div>
+        </div>
+        <input type="checkbox" className="toggle" checked={!(settings.muted ?? false)} onChange={(e) => update({ muted: !e.target.checked })} aria-label="Sound on" />
+      </label>
+      <div className="setting">
+        <div>
+          City ambience
+          <div className="sub num">{Math.round((settings.ambienceVolume ?? 0.7) * 100)}%</div>
+        </div>
+        <input type="range" min={0} max={1} step={0.05} value={settings.ambienceVolume ?? 0.7} onChange={(e) => update({ ambienceVolume: Number(e.target.value) })} aria-label="City ambience volume" disabled={settings.muted ?? false} />
+      </div>
+      <div className="setting">
+        <div>
+          Effects
+          <div className="sub num">{Math.round((settings.effectsVolume ?? 0.8) * 100)}%</div>
+        </div>
+        <input type="range" min={0} max={1} step={0.05} value={settings.effectsVolume ?? 0.8} onChange={(e) => update({ effectsVolume: Number(e.target.value) })} aria-label="Effects volume" disabled={settings.muted ?? false} />
+      </div>
+      <div className="eyelabel section-title">Display</div>
       <GraphicsSetting />
       <div className="setting">
         <div>
@@ -794,6 +893,7 @@ function SettingsApp() {
           <div className="sub">{status.error ? `Save problem: ${status.error}` : savedAgo === null ? 'Not saved yet' : `Last saved ${savedAgo}s ago · ${status.adapter === 'indexeddb' ? 'IndexedDB' : 'local storage'}`}</div>
         </div>
       </div>
+      <SaveBackup />
       <div style={{ marginTop: 14 }}>
         {confirm ? (
           <div style={{ display: 'flex', gap: 8 }}>

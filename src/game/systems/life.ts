@@ -1,3 +1,5 @@
+import type { SocialRecord } from './social';
+import type { OwnedVehicle } from './vehicles';
 /**
  * Daily-life rules: needs, skills, regard (relationships), kitchen-shift scoring and resale.
  * Pure functions only — the store applies them; tests exercise them directly.
@@ -19,6 +21,12 @@ export interface LifeState {
   /** Homes the player rents (one per city at most is typical), by home id. */
   homes: string[];
   shiftsDone: number;
+  /** Chats and gifts per person (v6). */
+  social: Record<string, SocialRecord>;
+  /** Vehicles you own and where they're parked (v6). */
+  vehicles: OwnedVehicle[];
+  /** The vehicle you're riding right now, by uid (v6). */
+  riding: string | null;
 }
 
 export const emptyLife = (): LifeState => ({
@@ -27,14 +35,17 @@ export const emptyLife = (): LifeState => ({
   regard: {},
   homes: [],
   shiftsDone: 0,
+  social: {},
+  vehicles: [],
+  riding: null,
 });
 
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
 
-export type Activity = 'idle' | 'walk' | 'run';
+export type Activity = 'idle' | 'walk' | 'run' | 'ride';
 
 /** Per real minute of play. Gentle: a full tank lasts roughly an hour of mixed play. */
-export const DRAIN = { energy: { idle: 0.6, walk: 1.1, run: 2.2 }, fullness: 1.0 } as const;
+export const DRAIN = { energy: { idle: 0.6, walk: 1.1, run: 2.2, ride: 0.7 }, fullness: 1.0 } as const;
 
 export const LOW = 15;
 

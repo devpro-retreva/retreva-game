@@ -302,6 +302,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
     palette: a.palette,
     road: { halfWidth: 4, sidewalk: 6, length: 84, style: 'asphalt' },
     backdrop: 'airfield',
+    ambience: { traffic: 0.35, crowd: 0.45, horns: 1, chimes: 1.5 },
     landmarks: [
       { id: `${a.id}-departures`, name: `${a.city} Departures`, blurb: 'The hall where every trip abroad begins.', position: [7, 4], radius: 4 },
       { id: `${a.id}-planes`, name: 'Plane spotting', blurb: 'Jets parked on the apron, past the north fence.', position: [0, -37], radius: 4 },

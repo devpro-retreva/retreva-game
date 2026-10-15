@@ -14,7 +14,7 @@ export const lagosAirport = makeAirport({
     security: { id: 'officer-musa', name: 'Officer Musa', look: { gender: 'male', skin: '#4a2c1c', top: '#2b3a4a', bottom: '#1d1d1f', outfit: 'shirt', hair: 'low', facialHair: 'moustache', headwear: 'cap', headColor: '#2b3a4a', height: 1.84 } },
     gate: { id: 'bisola', name: 'Bisola', look: { gender: 'female', skin: '#5a3420', top: '#1f6f4a', bottom: '#1d1d1f', outfit: 'top-trousers', hair: 'braids', accessory: 'earrings', height: 1.7 } },
     shop: {
-      id: 'chidi', name: 'Chidi', shopName: 'Skyway Mart', greeting: 'Last naira before you fly? Meat pie, water, something to remember Lagos by.',
+      id: 'obinna', name: 'Obinna', shopName: 'Skyway Mart', greeting: 'Last naira before you fly? Meat pie, water, something to remember Lagos by.',
       look: { gender: 'male', skin: '#5b3622', top: '#f2b705', bottom: '#2a2a2a', outfit: 'shirt', hair: 'hightop', height: 1.76 },
     },
     porter: {

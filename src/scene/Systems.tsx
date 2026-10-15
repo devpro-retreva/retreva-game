@@ -4,6 +4,7 @@ import { runtime } from '../game/core/runtime';
 import { useGame } from '../game/store/gameStore';
 import { saves } from '../game/persistence/instance';
 import { usePack } from './worldContext';
+import { findVehicle } from '../game/content/vehicles';
 
 const INTERACT_RANGE = 2.5;
 
@@ -31,7 +32,21 @@ export function InteractionSystem() {
       const d = Math.hypot(sp.position[0] - p.x, sp.position[1] - p.z);
       if (d < 1.8 && (!spotHit || d < spotHit.d)) spotHit = { id: sp.id, d };
     }
-    if (spotHit && (!best || spotHit.d < best.d)) {
+    // your parked vehicles here (get on), or — while riding with nothing else in reach — get off
+    let vehHit: { id: string; d: number } | null = null;
+    if (!s.life.riding) {
+      for (const v of s.life.vehicles) {
+        if (v.parked?.areaId !== pack.id) continue;
+        const d = Math.hypot(v.parked.x - p.x, v.parked.z - p.z);
+        if (d < 1.9 && (!vehHit || d < vehHit.d)) vehHit = { id: v.uid, d };
+      }
+    }
+    if (vehHit && (!best || vehHit.d < best.d) && (!spotHit || vehHit.d < spotHit.d)) {
+      const v = s.life.vehicles.find((x) => x.uid === vehHit!.id)!;
+      s.setNearby({ id: v.uid, kind: 'vehicle', label: `your ${findVehicle(v.vehicleId)?.name.toLowerCase() ?? 'vehicle'}`, verb: 'Ride' });
+    } else if (s.life.riding && !best && !spotHit) {
+      s.setNearby({ id: 'dismount', kind: 'dismount', label: 'and park here', verb: 'Get off' });
+    } else if (spotHit && (!best || spotHit.d < best.d)) {
       const sp = pack.spots!.find((x) => x.id === spotHit!.id)!;
       const mine = sp.kind === 'home' && !!sp.homeId && s.life.homes.includes(sp.homeId);
       s.setNearby({ id: sp.id, kind: 'spot', label: mine ? 'your room' : sp.label, verb: mine ? 'Go into' : sp.verb });
@@ -84,7 +99,12 @@ export function GameLoop() {
 export function ReadySignal() {
   const frames = useRef(0);
   useFrame(() => {
-    if (++frames.current === 3 && useGame.getState().phase === 'loading') useGame.getState().setPhase('playing');
+    // count frames rendered while loading, so it also works when the same area reloads (e.g. importing a save)
+    if (useGame.getState().phase !== 'loading') {
+      frames.current = 0;
+      return;
+    }
+    if (++frames.current >= 3) useGame.getState().setPhase('playing');
   });
   return null;
 }

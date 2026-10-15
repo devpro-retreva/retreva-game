@@ -8,6 +8,9 @@ import { canRun, useGame } from '../game/store/gameStore';
 import { Character, type CharacterAnim } from './Character';
 import { HEIGHT } from '../game/core/avatarPresets';
 import { groundHeight, lerpAngle, useCollisionWorld, usePack } from './worldContext';
+import { findVehicle } from '../game/content/vehicles';
+import { bicycleGeometry } from './Vehicles';
+import { worldColorMaterial } from './materials';
 
 const WALK = 3.4;
 const RUN = 6.4;
@@ -19,6 +22,8 @@ export function Player() {
   const group = useRef<THREE.Group>(null);
   const anim = useRef<CharacterAnim>({ speed: 0 });
   const vel = useRef({ x: 0, z: 0, y: 0 });
+  const bike = useRef<THREE.Mesh>(null);
+  const ridingColor = useGame((s) => findVehicle(s.life.vehicles.find((v) => v.uid === s.life.riding)?.vehicleId ?? '')?.color ?? '#1f6f4a');
 
   useFrame((_, dt) => {
     const g = group.current;
@@ -36,8 +41,10 @@ export function Player() {
     const dx = Math.sin(cy) * m.y - Math.cos(cy) * m.x;
     const dz = Math.cos(cy) * m.y + Math.sin(cy) * m.x;
     const mag = Math.min(1, Math.hypot(dx, dz));
-    const sprint = m.sprint && canRun(useGame.getState().life.needs);
-    const speed = mag * (sprint ? RUN : WALK);
+    const sprint = m.sprint && canRun(s.life.needs);
+    const ridingUid = s.life.riding;
+    const ride = ridingUid ? findVehicle(s.life.vehicles.find((v) => v.uid === ridingUid)?.vehicleId ?? '') : undefined;
+    const speed = mag * (ride ? (sprint ? ride.sprint : ride.speed) : sprint ? RUN : WALK);
     const tx = mag > 0.01 ? (dx / Math.hypot(dx, dz)) * speed : 0;
     const tz = mag > 0.01 ? (dz / Math.hypot(dx, dz)) * speed : 0;
     const accel = mag > 0.01 ? 11 : 14;
@@ -66,7 +73,10 @@ export function Player() {
     g.position.set(p.x, vel.current.y, p.z);
     g.rotation.y = p.yaw;
     anim.current.speed = p.speed;
-    anim.current.talking = s.ui === 'dialogue';
+    anim.current.talking = s.ui === 'dialogue' && !ride;
+    anim.current.pose = ride ? 'ride' : s.resting?.at === 'bench' ? 'sit' : undefined;
+    anim.current.eatUntil = p.eatUntil;
+    if (bike.current) bike.current.visible = !!ride;
   });
 
   if (!profile) return null;
@@ -74,6 +84,7 @@ export function Player() {
   return (
     <group ref={group}>
       <Character look={look} anim={anim} />
+      <mesh ref={bike} geometry={bicycleGeometry(ridingColor)} material={worldColorMaterial} visible={false} castShadow />
       {/* soft contact shadow, useful when real shadows are off */}
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.015, 0]} renderOrder={1}>
         <circleGeometry args={[0.38, 16]} />

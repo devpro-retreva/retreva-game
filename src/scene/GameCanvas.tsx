@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { saves } from '../game/persistence/instance';
 import * as THREE from 'three';
 import { input } from '../game/core/input';
 import { useGame } from '../game/store/gameStore';
@@ -7,6 +8,7 @@ import { makeSkyTexture } from './builders/painters';
 import { Beacons } from './Beacons';
 import { Collectibles } from './Collectibles';
 import { Traffic } from './Traffic';
+import { ParkedVehicles } from './Vehicles';
 import { CameraRig } from './CameraRig';
 import { Lighting } from './Lighting';
 import { Npcs } from './Npcs';
@@ -27,6 +29,7 @@ export function GameCanvas() {
   const shadows = t.shadows && (shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse));
   const sky = useMemo(makeSkyTexture, []);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
+  const [lost, setLost] = useState(false);
 
   // Desktop: drag with mouse to orbit. Touch look is handled by TouchControls.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -66,12 +69,25 @@ export function GameCanvas() {
           scene.fog = new THREE.Fog(pack.palette.fog, Math.min(28, t.viewDistance * 0.35), t.viewDistance);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
+          // the GPU can take its memory back (backgrounded tab, low-memory phone): save, tell the player, recover
+          // (a canvas being rebuilt for a new area or graphics setting also "loses" its context as it is
+          //  thrown away — only react to the canvas that is still on screen)
+          setLost(false);
+          const canvas = gl.domElement;
+          canvas.addEventListener('webglcontextlost', (e) => {
+            if (!canvas.isConnected) return;
+            e.preventDefault();
+            void saves.saveNow();
+            setLost(true);
+          });
+          canvas.addEventListener('webglcontextrestored', () => setLost(false));
         }}
       >
         <Lighting shadows={shadows} sun={pack.palette.sun} />
         <StaticWorld pack={pack} shadows={shadows} />
         <Npcs />
         <Traffic />
+        <ParkedVehicles />
         <Player />
         <Beacons />
         <Collectibles />
@@ -80,6 +96,17 @@ export function GameCanvas() {
         <GameLoop />
         <ReadySignal />
       </Canvas>
+      {lost && (
+        <div className="gfx-lost" role="alert" data-gfx="lost">
+          <div className="gfx-card cut">
+            <h2>Graphics paused</h2>
+            <p>The device needed its graphics memory back. Your progress is saved. Retreva will continue when graphics are restored — or reload now.</p>
+            <button className="btn" onClick={() => location.reload()}>
+              Reload game
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

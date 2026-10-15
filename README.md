@@ -2,7 +2,7 @@
 
 **Build a virtual lifestyle and travel to places of your dreams.**
 
-A mobile-first, third-person 3D virtual-life and travel game. This build covers four areas of Lagos State with jobs, bargaining, goals and local saves.
+A mobile-first, third-person 3D virtual-life and travel game for the browser. This build covers four areas of Lagos State, Lagos and Accra airports and Osu in Accra: jobs and shifts, needs, friendships, a bicycle you can own and ride, homes to rent, shopping and bargaining, flights with a trip budget, city soundscapes, offline play and local saves with backups.
 
 ## Run it
 
@@ -15,7 +15,7 @@ npm run preview    # serve the production build
 npm run playtest   # build + browser playtests (run `npx playwright install chromium` once first)
 ```
 
-The browser playtests in `playtests/` play the game in headless Chromium: the regression suite (40 checks), the Lagos expansion (31) and the wardrobe (14). See `CLAUDE.md` for options.
+The browser playtests in `playtests/` play the real game in headless Chromium — ten suites (regression, expansion, wardrobe, life, city, device, travel, lifestyle, responsive, resilience). See `CLAUDE.md` for what each covers and how to run them.
 
 No account, server, API key or paid service is needed. Progress saves to IndexedDB on the device (falls back to localStorage).
 
@@ -26,33 +26,32 @@ No account, server, API key or paid service is needed. Progress saves to Indexed
 | Move | WASD / arrows | Left thumb (floating stick) |
 | Run | Shift | Push the stick to the edge, or the run button |
 | Look | Drag with the mouse | Right thumb drag |
-| Interact | E / Enter, or click the prompt | Yellow action button |
-| Reply in dialogue | 1–4 or click | Tap |
+| Interact (talk, ride, get off, rest, doors) | E / Enter, or click the prompt | Yellow action button |
+| Reply in dialogue | 1–9 or click | Tap |
 | Phone · Bag · Map | P · I · M | Phone button (top right) |
 | Pause | Esc | Pause button |
 
-## What's in the slice
+## What you can do
 
-Adeniyi Street (fictional) on the Lagos mainland: 14 buildings with painted facades and hand-painted signboards, a parked danfo, okadas, a kiosk, generators, rooftop water tanks, power lines, open drains, street trees and pedestrians.
+- **Work:** delivery and collect jobs in every area (each pays once per run through the wallet ledger), and timed kitchen shifts at Mama Titi's (Yaba) and Auntie Akosua's waakye stall (Osu) that build a cooking skill.
+- **Live:** energy and fullness fall as you move and work; eat from your bag (with an eating animation), rest on a bench (you sit on it) or rent a room and sleep. Homes in more than one city can be yours.
+- **People:** named characters can be befriended — chat (once every few minutes), give gifts (things they like count more), and they move from Stranger → Acquaintance → Friend → Close friend. Friends text you and give 10–15% off at their shop.
+- **Own a vehicle:** buy a city bicycle from Chidi in Yaba (₦8,000, confirm first), ride it (about twice walking speed, less tiring), get off anywhere and it stays parked there — across reloads and trips. Danfos, taxis and planes don't take bikes. Sell it back for half.
+- **Shop:** fixed-price shops and market stalls with bargaining; sell eligible items back for half; Accra shops show the cedi equivalent beside the naira price.
+- **Travel:** danfos between Lagos areas, a taxi to the airport, then flights to Accra with a full trip budget (taxi, ticket, stay, getting around), check-in, security (no bottled drinks), boarding and a short flight. A return ticket brings you home.
+- **Goals and messages:** 9 goals paid once each, tip cards, discovery toasts and texts from people you meet.
+- **Sound:** each area has its own synthesised soundscape (traffic, crowds, horns, waves, airport chimes) plus small effects; separate ambience/effects volume and mute in Settings.
 
-- **Mama Titi** (buka owner) gives the **Jollof Run**: carry food to **Tunde** at the barbing salon within 60 s. ₦1,500, plus ₦500 if you make it in under 25 s. 20 s cooldown before it can be taken again.
-- **Iya Bisi** sells provisions and souvenirs; **Mama Titi** sells food. Purchases go into the bag with where and for how much they were bought. Food and drink can be consumed.
-- **Kunle** (danfo conductor) and **Chidi** (okada rider) add local colour and point toward the travel features to come.
-- **Phone**: Map, Jobs, Bag, Wallet, Profile and Settings work. Messages, Travel, Events and Bookings are visible entry points, marked as coming later.
+## Areas
 
-## Lagos State areas
-
-| Area | Setting | Work | Shopping | Landmarks |
-|---|---|---|---|---|
-| **Yaba** (home) | Adeniyi Street — bukas, barbers, danfos | Jollof Run (delivery) | Mama Titi's menu, Iya Bisi provisions | 3 |
-| **Lagos Island** | Balogun market lane — stalls, bunting, old buildings | Bale Run (delivery) | Alhaja Kudi's wax prints — **bargaining** | 3 |
-| **Lekki** | Atlantic beachfront — sand, sea, palms, huts | Beach Clean-up (**collect 6 bottles**) | Musa's coconut & corn, Ada's crafts — **bargaining** | 3 |
-| **Ikeja** | Computer Village gadget street | Phone Run (delivery) | Chuka's Gadget Plug — **bargaining** | 3 |
-
-- **Travel:** talk to the conductor at each bus stop (teal marker). Fares come from map distance (₦450–₦750); you can't travel mid-job. A short trip screen animates the route.
-- **Bargaining:** sellers have a hidden floor price and limited patience. Fair offers get counters; insulting ones burn patience twice as fast; when patience runs out you get a final take-it-or-leave-it price.
-- **Goals:** 8 goals (first job, first ride, sharp bargainer, beach guardian, sightseer, souvenir hunter, Lagos hustler, Lagos explorer), each paid once through the wallet ledger.
-- **Notifications:** area title card on arrival, first-time tip cards (dismissible, never repeated, can be turned off), discovery and goal toasts, and texts from characters in the Messages app with unread badges.
+| Area | Setting | Work | Shopping |
+|---|---|---|---|
+| **Yaba** (home) | Adeniyi Street — bukas, barbers, danfos | Jollof Run, kitchen shift | Mama Titi, Iya Bisi, Chidi's Bicycles |
+| **Lagos Island** | Balogun market lane | Bale Run | Alhaja Kudi's fabrics (bargaining) |
+| **Lekki** | Atlantic beachfront | Beach Clean-up (collect 6) | Musa's coconut & corn, Ada's crafts |
+| **Ikeja** | Computer Village gadget street | Phone Run | Chuka's Gadget Plug (bargaining) |
+| **Lagos / Accra airports** | Terminal forecourt, glass terminal, airfield | Suitcase Dash | Airport shops |
+| **Osu, Accra** | Oxford Street — chop bars, crafts, forex | Kente Run, waakye shift | Auntie Akos' Chop Bar, Sankofa Crafts (bargaining), guesthouse |
 
 ## Architecture
 
@@ -91,18 +90,19 @@ src/
 - **Destinations are data.** Accra, Abuja or Dubai should be a new file in `content/destinations/` plus a registry line: buildings, palette, signage, NPCs, dialogue, shops, prices and jobs. The engine reads the pack; it doesn't know it's Lagos.
 - **Persistence sits behind `SaveAdapter`.** Saves carry `schemaVersion`, an incrementing `revision`, `updatedAt` and a `deviceId`, so a cloud adapter can detect conflicts rather than overwrite newer progress.
 - **Built for budget Android.** No downloaded models or textures: everything is generated in code at load. The whole street draws in roughly 25–55 draw calls and ~10–13k triangles. Shadows are off by default on touch devices. Per-frame data (positions, camera, input) lives outside React; the HUD minimap updates via refs. Movement integrates in fixed sub-steps so slow frames don't slow the player or let them pass through props.
-- **Assets are replaceable.** The low-poly characters and props come from builder functions keyed by `kind`; swapping in GLB models later means changing the builder, not the game logic or content.
+- **Assets are replaceable.** The low-poly characters and props come from builder functions keyed by `kind`; swapping in GLB models later means changing the builder, not the game logic or content. Every asset and its licence is listed in `docs/assets.md`.
 
 ## Saves and offline
 
-The game needs no network after it loads: fonts are bundled, and there are no remote assets. Saves persist across refresh and reopen. It is **not yet an installable offline app** — there's no service worker, so a cold start without a connection won't load. That's planned for the PWA milestone.
+- **Offline:** after one online visit a service worker has every built file cached; the game opens, continues and saves with no connection (tested in the `device` suite).
+- **Saves** go to IndexedDB (localStorage fallback) with a schema version and migrations (now v6). A **backup copy** is kept; if the main save can't be read, the backup is restored and the unreadable copy is kept aside — a new game never silently erases it. **Settings → Export save file / Import save file** gives a manual backup (and works from the title screen too). If saving starts failing (e.g. storage full) the game says so.
+- **No WebGL?** A clear explanation screen instead of a blank page; if the GPU drops the context mid-game, "Graphics paused" appears and progress is saved.
+- Clearing the browser's site data erases local progress unless you exported a save file. Saves don't sync between devices.
 
-## Next milestones (from the blueprint)
+## Next milestones (from the V6 architecture, `docs/architecture-v6.md`)
 
-1. Lagos vertical slice: a home, more jobs, time of day
-2. Avatar customisation (hair, clothing items, accessories)
-3. Shops and negotiation (ask → offer → counter → deal)
-4. Restaurant interior loop
-5. Airport: taxi → check-in → security → gate
-6. Flight experience
-7. Accra arrival and hotel
+1. Time of day with NPC schedules; more job types (with requirements and progression)
+2. Home personalisation and storage; buying (not just renting) property
+3. Leisure: a restaurant interior, cinema/beach events with tickets
+4. City-pack manifests (install/verify/remove per city) and a third destination
+5. Real-device performance measurement on a budget Android phone and an iPhone

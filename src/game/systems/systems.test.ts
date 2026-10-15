@@ -5,13 +5,16 @@ import { acceptJob, deliverJob, emptyJobs, isAvailable, tickJob, DELIVERY_RANGE 
 import { resolveEntry } from './dialogue';
 import { lagos } from '../content/destinations/lagos';
 import { MemorySaveAdapter } from '../persistence/adapters';
-import { SaveManager, migrate } from '../persistence/saveManager';
+import { BACKUP_SLOT, MAIN_SLOT, QUARANTINE_SLOT, SaveManager, migrate } from '../persistence/saveManager';
 import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
 import { ALL_AREAS, fareBetween, LAGOS_AREAS, modeBetween, regionOf, REGIONS } from '../content/regions';
 import { FLIGHTS, findFlight } from '../content/flights';
+import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
+import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
+import { VEHICLES, findVehicle } from '../content/vehicles';
 import { bookFlight, canBoard, checkIn, clearSecurity, completeFlight, emptyTravel, liquidsIn, tripBudget } from './travel';
 import { ALL_PACKS } from '../content';
 import { emptyInventory as emptyInv } from './inventory';
@@ -160,6 +163,60 @@ describe('persistence', () => {
     expect(reloaded?.wallet.balance).toBe(3500);
     expect(reloaded?.revision).toBe(3);
     expect(reloaded?.deviceId).toBe('dev-test');
+  });
+
+  it('keeps a backup, restores it when the main save is unreadable, and never overwrites the unreadable copy', async () => {
+    const adapter = new MemorySaveAdapter();
+    let balance = 2000;
+    const snap = () => ({
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-adeniyi', wallet: { balance, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: emptyWorld('lagos-adeniyi'), life: emptyLife(), travel: emptyTravel(),
+      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, graphics: 'auto' as const, showFps: false, tips: true },
+      player: { position: [1, 2] as [number, number], yaw: 0 }, stats: { playTimeMs: 0 },
+    });
+    const m = new SaveManager(adapter, snap);
+    await m.saveNow(); // first save also writes the backup
+    expect(adapter.store.has(BACKUP_SLOT)).toBe(true);
+    // the main save gets corrupted (e.g. written by a newer version)
+    adapter.store.set(MAIN_SLOT, JSON.stringify({ schemaVersion: 99, junk: true }));
+    const m2 = new SaveManager(adapter, snap);
+    const loaded = await m2.load();
+    expect(loaded?.wallet.balance).toBe(2000);
+    expect(m2.notice?.kind).toBe('restored-backup');
+    expect(JSON.parse(adapter.store.get(QUARANTINE_SLOT)!).schemaVersion).toBe(99);
+    // no backup at all: nothing loads, the unreadable save is kept, and saving a new game leaves the copy alone
+    const lonely = new MemorySaveAdapter();
+    lonely.store.set(MAIN_SLOT, '{"schemaVersion":99}');
+    const m3 = new SaveManager(lonely, snap);
+    expect(await m3.load()).toBeNull();
+    expect(m3.notice?.kind).toBe('unreadable-kept');
+    balance = 50;
+    await m3.saveNow();
+    expect(JSON.parse(lonely.store.get(QUARANTINE_SLOT)!).schemaVersion).toBe(99);
+  });
+
+  it('exports and imports a save file; import validates and keeps the replaced game as the backup', async () => {
+    const adapter = new MemorySaveAdapter();
+    let balance = 1234;
+    const snap = () => ({
+      profile: { name: 'Bimpe', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lekki-beach', wallet: { balance, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: emptyWorld('lagos-adeniyi'), life: emptyLife(), travel: emptyTravel(),
+      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, graphics: 'auto' as const, showFps: false, tips: true },
+      player: { position: [0, 0] as [number, number], yaw: 0 }, stats: { playTimeMs: 5 },
+    });
+    const m = new SaveManager(adapter, snap);
+    const file = (await m.exportJson())!;
+    expect(JSON.parse(file).wallet.balance).toBe(1234);
+    balance = 99;
+    await m.saveNow();
+    const restored = await m.importJson(file);
+    expect(restored.wallet.balance).toBe(1234);
+    expect(restored.revision).toBeGreaterThan(JSON.parse(file).revision);
+    expect(JSON.parse(adapter.store.get(BACKUP_SLOT)!).wallet.balance).toBe(99);
+    await expect(m.importJson('not json')).rejects.toThrow('isn’t a Retreva save');
+    await expect(m.importJson(JSON.stringify({ schemaVersion: 99, profile: {}, wallet: { balance: 1, ledger: [] }, inventory: {}, jobs: {} }))).rejects.toThrow('newer version');
   });
 
   it('rejects corrupt or future-version saves', () => {
@@ -643,5 +700,99 @@ describe('graphics tiers', () => {
       expect(a.viewDistance).toBeLessThanOrEqual(b.viewDistance);
     }
     expect(TIERS.low.shadows).toBe(false);
+  });
+});
+
+
+describe('social life', () => {
+  it('a chat raises regard once per cooldown; gifts count more when liked, little when repeated', () => {
+    let life = emptyLife();
+    const a = chat(life, 'mama-titi', 1_000_000);
+    expect(a.gain).toBe(CHAT_GAIN);
+    life = a.life;
+    expect(chatReady(life, 'mama-titi', 1_000_000 + 1000)).toBe(false);
+    expect(chat(life, 'mama-titi', 1_000_000 + 1000).gain).toBe(0);
+    expect(chatReady(life, 'mama-titi', 1_000_000 + CHAT_COOLDOWN_MS)).toBe(true);
+    const g1 = giveGift(life, 'mama-titi', true, 2_000_000);
+    expect(g1.gain).toBe(GIFT_LIKED);
+    const g2 = giveGift(g1.life, 'mama-titi', true, 2_000_000 + 10);
+    expect(g2.gain).toBe(1);
+    expect(giveGift(emptyLife(), 'x', false, 0).gain).toBe(GIFT_OK);
+    expect(g2.life.social['mama-titi'].gifts).toBe(2);
+  });
+  it('friends get 10% off, close friends 15%, rounded to ₦50', () => {
+    expect(friendDiscount(29)).toBe(0);
+    expect(friendDiscount(30)).toBe(0.1);
+    expect(friendDiscount(60)).toBe(0.15);
+    expect(friendPrice(2500, 10)).toBe(2500);
+    expect(friendPrice(2500, 35)).toBe(2250);
+    expect(friendPrice(8000, 70)).toBe(6800);
+    expect(friendPrice(300, 70)).toBe(250);
+    expect(tierUp(28, 31)).toBe('Friend');
+    expect(tierUp(31, 33)).toBeNull();
+  });
+  it('people who can be befriended have lines and likes; NPC ids are unique across every area', () => {
+    const ids = ALL_PACKS.flatMap((p) => p.npcs.map((n) => n.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    const social = ALL_PACKS.flatMap((p) => p.npcs).filter((n) => n.social);
+    expect(social.length).toBeGreaterThanOrEqual(15);
+    for (const n of social) {
+      expect(n.social!.lines.length, n.id).toBeGreaterThan(0);
+      expect(n.social!.likes.length, n.id).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('vehicles', () => {
+  const at = { areaId: 'lagos-adeniyi', x: -8.2, z: -8.4, yaw: 0 };
+  it('buy → ride → park elsewhere → get back on; resale is half price', () => {
+    let list = addVehicle([], 'v1', 'bicycle', 8000, at);
+    expect(canMount(list[0], 'lagos-adeniyi', -8, -8)).toBe(true);
+    expect(canMount(list[0], 'lagos-adeniyi', 0, 0)).toBe(false);
+    expect(canMount(list[0], 'lekki-beach', -8.2, -8.4)).toBe(false);
+    list = mount(list, 'v1');
+    expect(list[0].parked).toBeNull();
+    list = park(list, 'v1', { areaId: 'lagos-adeniyi', x: 3, z: 20, yaw: 1 });
+    expect(canMount(list[0], 'lagos-adeniyi', 3.5, 20)).toBe(true);
+    expect(vehicleResale(8000)).toBe(4000);
+    expect(vehicleResale(7230)).toBe(3600);
+    expect(removeVehicle(list, 'v1')).toEqual([]);
+  });
+  it('riding is faster than walking and less tiring; every dealer sells real vehicles from a reachable spot', () => {
+    for (const v of VEHICLES) {
+      expect(v.speed).toBeGreaterThan(3.4);
+      expect(v.effort).toBeLessThan(1);
+    }
+    for (const p of ALL_PACKS) {
+      const w = buildCollisionWorld(p);
+      for (const d of p.dealers ?? []) {
+        expect(p.npcs.find((n) => n.id === d.npcId), d.id).toBeDefined();
+        for (const st of d.stock) expect(findVehicle(st.vehicleId), st.vehicleId).toBeDefined();
+        expect(isBlocked(w, d.parkAt.position[0], d.parkAt.position[1]), `${d.id} parking`).toBe(false);
+      }
+      for (const n of p.npcs) for (const node of Object.values(n.dialogue.nodes)) for (const o of node.options)
+        if (o.action.kind === 'dealer') { const id = o.action.dealerId; expect(p.dealers?.find((d) => d.id === id), id).toBeDefined(); }
+    }
+  });
+  it('v5 saves upgrade to v6 with no vehicles and no social history; unknown vehicles are dropped', () => {
+    const v5 = {
+      schemaVersion: 5, revision: 3, updatedAt: 1, deviceId: 'd',
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-adeniyi', wallet: { balance: 700, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: emptyWorld('lagos-adeniyi'), settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 1 },
+      life: { needs: { energy: 60, fullness: 40 }, skills: { cooking: 10 }, regard: { tunde: 12 }, homes: ['yaba-room'], shiftsDone: 1 },
+      travel: emptyTravel(),
+    };
+    const up = migrate(v5)!;
+    expect(up.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    expect(up.life.vehicles).toEqual([]);
+    expect(up.life.social).toEqual({});
+    expect(up.life.riding).toBeNull();
+    expect(up.life.regard.tunde).toBe(12);
+    const odd = migrate({ ...up, life: { ...up.life, vehicles: [{ uid: 'a', vehicleId: 'bicycle', paid: 8000, parked: null }, { uid: 'b', vehicleId: 'hoverboard', paid: 1, parked: null }], riding: 'b' } })!;
+    expect(odd.life.vehicles.map((v) => v.uid)).toEqual(['a']);
+    expect(odd.life.riding).toBeNull();
+    const riding = migrate({ ...up, life: { ...up.life, vehicles: [{ uid: 'a', vehicleId: 'bicycle', paid: 8000, parked: null }], riding: 'a' } })!;
+    expect(riding.life.riding).toBe('a');
   });
 });

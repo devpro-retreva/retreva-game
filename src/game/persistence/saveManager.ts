@@ -1,10 +1,22 @@
 import { emptyLife, type LifeState } from '../systems/life';
 import { emptyTravel, type Ticket, type TravelState } from '../systems/travel';
 import { findFlight } from '../content/flights';
+import { findVehicle } from '../content/vehicles';
 import { SAVE_SCHEMA_VERSION, emptyWorld, type SaveAdapter, type SaveData } from './types';
 import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
 export const MAIN_SLOT = 'main';
+/** A rolling copy of a known-good save (written at most once a minute). */
+export const BACKUP_SLOT = 'backup';
+/** Where an unreadable save is kept untouched, so a new game never silently erases it. */
+export const QUARANTINE_SLOT = 'unreadable';
+const BACKUP_EVERY_MS = 60_000;
+
+/** What happened on the last load, for the title screen. */
+export type LoadNotice =
+  | { kind: 'restored-backup'; savedAt: number }
+  | { kind: 'unreadable-kept' }
+  | null;
 
 /** Validates and upgrades a loaded document. Returns null if it is unusable. */
 export function migrate(raw: unknown): SaveData | null {
@@ -44,7 +56,15 @@ export function migrate(raw: unknown): SaveData | null {
       ? l.homes.filter((h): h is string => typeof h === 'string')
       : typeof (l as { home?: unknown }).home === 'string' ? [(l as { home: string }).home] : [],
     shiftsDone: typeof l.shiftsDone === 'number' ? l.shiftsDone : 0,
+    // v5 → v6: social records, owned vehicles, riding. Vehicles naming an unknown model are dropped.
+    social: l.social && typeof l.social === 'object' ? { ...l.social } : {},
+    vehicles: Array.isArray(l.vehicles)
+      ? l.vehicles.filter((v) => v && typeof v.uid === 'string' && typeof v.paid === 'number' && !!findVehicle(v.vehicleId))
+      : [],
+    riding: null,
   };
+  // riding is only kept if that vehicle still exists
+  if (typeof l.riding === 'string' && life.vehicles.some((v) => v.uid === l.riding)) life.riding = l.riding;
   // v4 → v5: flights. Drop a ticket that names an unknown route rather than crash on it.
   const t = (d.travel ?? {}) as Partial<TravelState>;
   const rawTicket = t.ticket as Partial<Ticket> | null | undefined;
@@ -91,6 +111,8 @@ export class SaveManager {
   private timer: ReturnType<typeof setTimeout> | null = null;
   lastSavedAt = 0;
   lastError: string | null = null;
+  lastBackupAt = 0;
+  notice: LoadNotice = null;
 
   constructor(
     private adapter: SaveAdapter,
@@ -103,15 +125,47 @@ export class SaveManager {
     return this.adapter.id;
   }
 
+  /**
+   * Loads the main save. If it exists but can't be read (corrupt, or from a newer version of the game),
+   * it is copied aside untouched and the backup is used instead — progress is never silently erased.
+   */
   async load(): Promise<SaveData | null> {
+    this.notice = null;
+    let raw: unknown = null;
+    let readFailed = false;
     try {
-      const data = migrate(await this.adapter.load(this.slot));
-      if (data) this.revision = data.revision;
-      return data;
+      raw = await this.adapter.load(this.slot);
     } catch (e) {
       this.lastError = String(e);
-      return null;
+      readFailed = true;
     }
+    const data = migrate(raw);
+    if (data) {
+      this.revision = data.revision;
+      return data;
+    }
+    if (!raw && !readFailed) return null; // a fresh start: nothing saved yet
+    if (raw) {
+      try {
+        if (!(await this.adapter.load(QUARANTINE_SLOT))) await this.adapter.save(QUARANTINE_SLOT, raw as SaveData);
+      } catch {
+        /* keeping the copy is best effort; the original is still in the main slot */
+      }
+    }
+    try {
+      const backup = migrate(await this.adapter.load(BACKUP_SLOT));
+      if (backup) {
+        this.revision = Math.max(backup.revision, typeof (raw as SaveData | null)?.revision === 'number' ? (raw as SaveData).revision : 0);
+        this.notice = { kind: 'restored-backup', savedAt: backup.updatedAt };
+        return backup;
+      }
+    } catch {
+      /* no usable backup */
+    }
+    this.notice = { kind: 'unreadable-kept' };
+    // keep revisions moving forward so a later save sorts after the unreadable one
+    if (typeof (raw as SaveData | null)?.revision === 'number') this.revision = (raw as SaveData).revision;
+    return null;
   }
 
   /** Debounced save for frequent, low-stakes changes. */
@@ -141,6 +195,10 @@ export class SaveManager {
         this.revision = doc.revision;
         this.lastSavedAt = doc.updatedAt;
         this.lastError = null;
+        if (doc.updatedAt - this.lastBackupAt >= BACKUP_EVERY_MS) {
+          await this.adapter.save(BACKUP_SLOT, doc);
+          this.lastBackupAt = doc.updatedAt;
+        }
       } catch (e) {
         this.lastError = String(e);
       }
@@ -149,9 +207,42 @@ export class SaveManager {
     return run;
   }
 
+  /** "Start over" (confirmed in Settings): removes the save and its backup. An unreadable copy, if any, is kept. */
   async wipe(): Promise<void> {
     await this.chain;
     await this.adapter.remove(this.slot);
+    await this.adapter.remove(BACKUP_SLOT);
     this.revision = 0;
+    this.lastBackupAt = 0;
+  }
+
+  /** The current game as a JSON file's text (saves first so it's up to date). */
+  async exportJson(): Promise<string | null> {
+    await this.saveNow();
+    const doc = await this.adapter.load(this.slot);
+    return doc ? JSON.stringify(doc) : null;
+  }
+
+  /**
+   * Restores a save from an exported file. The file is validated and upgraded first; the save it
+   * replaces is kept as the backup. Throws a readable message if the file isn't a Retreva save.
+   */
+  async importJson(text: string): Promise<SaveData> {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error('That file isn’t a Retreva save.');
+    }
+    const data = migrate(parsed);
+    if (!data) throw new Error(((parsed as SaveData | null)?.schemaVersion ?? 0) > SAVE_SCHEMA_VERSION ? 'That save is from a newer version of Retreva.' : 'That file isn’t a Retreva save.');
+    await this.chain;
+    const current = await this.adapter.load(this.slot).catch(() => null);
+    if (current) await this.adapter.save(BACKUP_SLOT, current);
+    const doc: SaveData = { ...data, revision: Math.max(this.revision, data.revision) + 1, updatedAt: Date.now(), deviceId: this.deviceId };
+    await this.adapter.save(this.slot, doc);
+    this.revision = doc.revision;
+    this.lastSavedAt = doc.updatedAt;
+    return doc;
   }
 }

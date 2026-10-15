@@ -1,3 +1,4 @@
+import { webglSupport } from '../../game/core/webgl';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import * as THREE from 'three';
@@ -36,6 +37,14 @@ function Turntable({ look }: { look: AvatarLook }) {
 }
 
 export function AvatarPreview({ look }: { look: AvatarLook }) {
+  // without WebGL the preview can't draw; describe the look instead of crashing the screen
+  if (webglSupport() === null) {
+    return (
+      <div className="avatar-fallback" role="img" aria-label="Character preview unavailable">
+        <p>3D preview isn’t available in this browser. Your choices are still saved.</p>
+      </div>
+    );
+  }
   return (
     <Canvas dpr={[1, 1.5]} camera={{ position: [0, 1.15, 5.2], fov: 26 }} gl={{ antialias: true }} onCreated={({ camera }) => camera.lookAt(0, 0.95, 0)}>
       <hemisphereLight args={['#fde9cf', '#9a5a3a', 1.6]} />

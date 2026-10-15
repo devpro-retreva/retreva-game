@@ -34,6 +34,7 @@ export const accra: DestinationPack = {
     sun: '#ffdcae',
   },
   road: { halfWidth: 4, sidewalk: 3, length: 86, style: 'asphalt' },
+  ambience: { traffic: 0.6, crowd: 0.65, horns: 4 },
   landmarks: [
     { id: 'osu-oxford-street', name: 'Oxford Street', blurb: 'Accra’s busiest strip — food, fashion, forex and music spilling onto the pavement.', position: [0, 2], radius: 5 },
     { id: 'osu-danquah', name: 'Danquah Circle', blurb: 'The roundabout at the top of the street — everyone in Osu meets here.', position: [0, 38], radius: 4 },
@@ -96,6 +97,7 @@ export const accra: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#4a2c1c', top: '#8d1f2b', bottom: '#e8b21c', outfit: 'kaftan', hair: 'short', headwear: 'wrap', headColor: '#e8b21c', accessory: 'earrings', height: 1.64 },
       promptVerb: 'Talk to',
+      social: { lines: ["My waakye leaves come from my sister's farm in Kumasi.", "Lagos people say their jollof is better. We'll see!", "Come by on Sunday — I make light soup for regulars."], likes: ["kente-keyring", "shea-butter", "adire-scarf"] },
       idle: 'busy',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -120,6 +122,7 @@ export const accra: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#1f6f4a', bottom: '#e8b21c', outfit: 'dress', hair: 'braids', accessory: 'earrings', height: 1.7 },
       promptVerb: 'Talk to',
+      social: { lines: ["Each kente pattern has a name and a meaning. This one means 'unity'.", "My weavers are in Bonwire — the kente village.", "Sankofa: go back and fetch what you left behind. I like that."], likes: ["ankara-6yd", "lace-fabric", "sobolo"] },
       idle: 'wave',
       dialogue: {
         entries: [
@@ -159,6 +162,7 @@ export const accra: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#3f2516', top: '#f4f0e6', bottom: '#2b2f3a', outfit: 'shirt', hair: 'low', facialHair: 'moustache', accessory: 'glasses', height: 1.72 },
       promptVerb: 'Talk to',
+      social: { lines: ["A good suit takes three fittings. Patience, my friend.", "I made the president's nephew's wedding suit. True story.", "Kaba and slit, kaftan, suit — I do it all."], likes: ["kente-stole", "adinkra-shirt", "aso-oke-cap"] },
       idle: 'busy',
       dialogue: {
         entries: [
@@ -189,6 +193,7 @@ export const accra: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#d9a31c', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'beard', headwear: 'cap', headColor: '#15130f', height: 1.76 },
       promptVerb: 'Talk to',
+      social: { lines: ["Highlife in the taxi, always. It calms the traffic.", "Osu at night is another city. The lights, the music!", "If you need a driver tomorrow, call Kofi."], likes: ["kelewele", "sobolo", "sausage-roll"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],

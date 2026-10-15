@@ -241,7 +241,7 @@ export function RestOverlay() {
   }, [resting, finish]);
   if (!resting) return null;
   return (
-    <div className="rest-overlay" role="status">
+    <div className={`rest-overlay ${resting.at === 'bench' ? 'on-bench' : ''}`} role="status">
       <IconBed size={34} />
       <div>{resting.at === 'home' ? 'Sleeping…' : 'Resting on the bench…'}</div>
     </div>

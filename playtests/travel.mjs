@@ -110,7 +110,7 @@ const b = await launch();
   await shot('04-lagos-airport');
 
   // buy a bottle of water at the airport shop (it will meet security)
-  await talk('chidi', [7.3, 17, Math.PI / 2]);
+  await talk('obinna', [7.3, 17, Math.PI / 2]);
   await choose('Show me');
   await p.click('button[aria-label^="Buy Bottled water"]');
   await sleep(300);

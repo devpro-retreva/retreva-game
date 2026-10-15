@@ -30,6 +30,10 @@ export interface CharacterAnim {
   idle?: 'sway' | 'wave' | 'busy';
   /** When true, the character gestures as if talking. */
   talking?: boolean;
+  /** Riding a bicycle: legs pedal with speed, hands on the bars, a slight lean. */
+  pose?: 'ride' | 'sit';
+  /** Eating or drinking: the right hand goes to the mouth until this time (performance.now ms). */
+  eatUntil?: number;
 }
 
 interface Parts {
@@ -285,6 +289,35 @@ export function Character({ look, anim, castShadow = true, lod = 'near' }: { loo
     s.blend += ((moving ? 1 : 0) - s.blend) * Math.min(1, d * 10);
     s.phase += d * (2.2 + a.speed * 1.9);
     const swing = Math.sin(s.phase) * (0.35 + Math.min(a.speed, 6.5) * 0.08) * s.blend;
+    if (a.pose === 'ride' && legL.current && legR.current && armL.current && armR.current && root.current) {
+      // pedalling: the cycle advances with speed; at a standstill one foot rests down
+      s.phase += d * (a.speed * 1.6 - (2.2 + a.speed * 1.9)); // replace the walk cadence with a pedal cadence
+      const crank = Math.sin(s.phase) * 0.42;
+      legL.current.rotation.x = -0.95 + crank;
+      legR.current.rotation.x = -0.95 - crank;
+      armL.current.rotation.x = -1.05;
+      armR.current.rotation.x = -1.05;
+      armL.current.rotation.z = 0.16;
+      armR.current.rotation.z = -0.16;
+      root.current.position.y = 0.16;
+      root.current.rotation.x = 0.16;
+      root.current.rotation.z = 0;
+      return;
+    }
+    if (a.pose === 'sit' && legL.current && legR.current && armL.current && armR.current && root.current) {
+      // seated on a bench: thighs forward, hands resting on the knees, slow breathing
+      legL.current.rotation.x = -1.42;
+      legR.current.rotation.x = -1.38;
+      armL.current.rotation.x = -0.55;
+      armR.current.rotation.x = -0.6;
+      armL.current.rotation.z = 0.12;
+      armR.current.rotation.z = -0.12;
+      root.current.position.y = -0.4 + Math.sin(s.t * 1.3) * 0.004;
+      root.current.rotation.x = -0.05;
+      root.current.rotation.z = 0;
+      return;
+    }
+    if (root.current) root.current.rotation.x = 0;
     if (legL.current && legR.current && armL.current && armR.current && root.current) {
       legL.current.rotation.x = swing;
       legR.current.rotation.x = -swing;
@@ -304,6 +337,8 @@ export function Character({ look, anim, castShadow = true, lod = 'near' }: { loo
           la += idle * (-0.5 + Math.cos(s.t * 4) * 0.2);
         }
       }
+      // eating or drinking: right hand to the mouth, a little bob of the head-hand
+      if (a.eatUntil && performance.now() < a.eatUntil) ra = -2.35 + Math.sin(s.t * 7) * 0.12;
       armL.current.rotation.x = la;
       armR.current.rotation.x = ra;
       armR.current.rotation.z = -0.06 - rz;

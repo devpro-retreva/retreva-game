@@ -31,6 +31,7 @@ export const lekki: DestinationPack = {
     sun: '#ffe2b0',
   },
   road: { halfWidth: 4, sidewalk: 3, length: 86, style: 'sand' },
+  ambience: { traffic: 0, crowd: 0.25, horns: 0, waves: 0.85 },
   sea: { fromX: 9.8 },
   landmarks: [
     { id: 'lekki-tower', name: 'Lifeguard tower', blurb: 'Tolu keeps watch over the swimmers from here.', position: [8, 0], radius: 4 },
@@ -83,6 +84,7 @@ export const lekki: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#4a2c1c', top: '#e4572e', bottom: '#1f3a5f', outfit: 'top-trousers', hair: 'puff', accessory: 'none', height: 1.72 },
       promptVerb: 'Talk to',
+      social: { lines: ["The tide changes fast here. Always swim near the flags.", "Best time on this beach? Six in the morning, before anyone.", "I've pulled eleven people out of the water this year."], likes: ["coconut", "water", "beach-towel"] },
       idle: 'sway',
       dialogue: {
         entries: [
@@ -134,6 +136,7 @@ export const lekki: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#f4f0e6', bottom: '#4b4033', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#1f6f4a', height: 1.76 },
       promptVerb: 'Buy from',
+      social: { lines: ["Coconut water is better than any soft drink. Trust me.", "I came from Kano with nothing. Now I have two stalls.", "Corn roasted on coals — the smoke is the secret."], likes: ["plantain-chips", "chin-chin", "sobolo"] },
       idle: 'busy',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -157,6 +160,7 @@ export const lekki: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#f2b705', bottom: '#1d7f86', outfit: 'top-skirt', hair: 'long', accessory: 'earrings', height: 1.65 },
       promptVerb: 'Bargain with',
+      social: { lines: ["Every shell on my necklaces I picked myself.", "Tourists from Abuja buy the most. They love the sea.", "I'm learning to make earrings next. Watch this space."], likes: ["ankara-tote", "adire-scarf", "beaded-bracelet"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -180,6 +184,7 @@ export const lekki: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#3f2516', top: '#1f6f4a', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'hightop', facialHair: 'moustache', height: 1.78 },
       promptVerb: 'Talk to',
+      social: { lines: ["Lekki to CMS? Pray for the bridge.", "I've driven this route so long the bus knows the way.", "Beach on Sunday, church first. That's the plan."], likes: ["beach-suya", "coconut", "zobo"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],

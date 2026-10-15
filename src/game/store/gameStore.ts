@@ -25,6 +25,7 @@ import {
   LOW,
   orderSeconds,
   resaleValue,
+  regardTier,
   rest,
   scoreShift,
   shiftOrders,
@@ -39,6 +40,9 @@ import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings
 import { sanitizeLook } from '../core/avatarPresets';
 import { districts, fareBetween, findArea, modeBetween, regionOf, REGIONS } from '../content/regions';
 import { findFlight } from '../content/flights';
+import { findVehicle } from '../content/vehicles';
+import { chat as chatFn, chatReady, friendPrice, giveGift as giveGiftFn, tierUp } from '../systems/social';
+import { addVehicle, canMount, mount as mountFn, park as parkFn, removeVehicle, vehicleResale } from '../systems/vehicles';
 import {
   bookFlight as bookFlightFn,
   canBoard,
@@ -53,7 +57,7 @@ import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight' | 'gift' | 'dealer';
 export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel';
 
 export interface Toast {
@@ -65,7 +69,7 @@ export interface Toast {
 
 export interface Nearby {
   id: string;
-  kind: 'npc' | 'spot';
+  kind: 'npc' | 'spot' | 'vehicle' | 'dismount';
   label: string;
   verb: string;
 }
@@ -79,6 +83,9 @@ export const DEFAULT_SETTINGS: Settings = {
   graphics: 'auto',
   showFps: false,
   tips: true,
+  ambienceVolume: 0.7,
+  effectsVolume: 0.8,
+  muted: false,
 };
 
 interface GameState {
@@ -94,7 +101,10 @@ interface GameState {
   playTimeMs: number;
 
   ui: UiMode;
-  dialogue: { npcId: string; nodeId: string } | null;
+  /** The conversation: which node, the node it opened on (where Chat/Gift are offered), and a one-off line (chat replies). */
+  dialogue: { npcId: string; nodeId: string; opening?: string; line?: string } | null;
+  /** Vehicle dealer panel. */
+  dealerId: string | null;
   shopId: string | null;
   phoneApp: PhoneApp;
   nearby: Nearby | null;
@@ -109,7 +119,7 @@ interface GameState {
   life: LifeState;
   shift: ShiftRun | null;
   /** Resting overlay: where and until when (ms timestamp). */
-  resting: { at: 'bench' | 'home'; until: number; to: number } | null;
+  resting: { at: 'bench' | 'home'; until: number; to: number; from?: { x: number; z: number } } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
   /** Flight ticket + history (saved). */
@@ -178,11 +188,41 @@ interface GameState {
   startRest(at: 'bench' | 'home'): void;
   finishRest(): void;
   rentHome(homeId: string): boolean;
+  // social
+  chat(): void;
+  openGift(): void;
+  giveGift(stackKey: string): void;
+  // vehicles
+  openDealer(dealerId: string): void;
+  buyVehicle(dealerId: string, vehicleId: string): boolean;
+  sellVehicle(uid: string): boolean;
+  mountVehicle(uid: string): void;
+  dismount(): void;
+  /** Gets off and parks if riding (called before travel, shifts, resting…). */
+  parkIfRiding(): void;
+  /** Price at a shop, with a friend's discount from the owner. */
+  priceAt(businessId: string, itemId: string): number | null;
   updateSettings(patch: Partial<Settings>): void;
 }
 
 const pack = (): DestinationPack => getDestination(useGame.getState().destinationId);
 const lagosDistricts = districts(REGIONS[0]).map((a) => a.id);
+
+const regardLabel = (v: number) => `${regardTier(v)} (${Math.round(v)}/100)`;
+
+/** When someone starts to see you as an acquaintance, friend or close friend: a toast and a text from them. */
+function announceTier(npcId: string, before: number, after: number) {
+  const tier = tierUp(before, after);
+  if (!tier) return;
+  const npc = ALL_PACKS.flatMap((p) => p.npcs).find((n) => n.id === npcId);
+  if (!npc) return;
+  const owns = ALL_PACKS.some((p) => p.businesses.some((b) => b.ownerNpcId === npcId) || p.dealers?.some((d) => d.npcId === npcId));
+  const perk = owns && tier === 'Friend' ? ' Friends get 10% off at my place.' : owns && tier === 'Close friend' ? ' For you, 15% off — always.' : '';
+  const text =
+    tier === 'Acquaintance' ? `Good to see you around. Come and say hello anytime.${perk}` : tier === 'Friend' ? `You're a real friend now, you know that?${perk}` : `You're family now. Anything you need, just ask.${perk}`;
+  useGame.getState().pushToast({ kind: 'goal', title: `${npc.name}: ${tier}`, detail: 'Your friendship grew.' });
+  setTimeout(() => useGame.getState().sendMessage(npc.name, text), 1800);
+}
 
 /** What goals measure. "Visit every area" is about Lagos districts; airports and other cities don't count toward it. */
 export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventory' | 'travel'>): ProgressSnapshot {
@@ -268,6 +308,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     shift: null,
     resting: null,
     homeId: null,
+    dealerId: null,
     travel: emptyTravel(),
     flight: null,
     dirty: 0,
@@ -393,7 +434,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const { ui, nearby } = get();
       if (ui !== 'play' || !nearby) return;
       if (nearby.kind === 'npc') get().openDialogue(nearby.id);
+      else if (nearby.kind === 'vehicle') get().mountVehicle(nearby.id);
+      else if (nearby.kind === 'dismount') get().dismount();
       else {
+        get().parkIfRiding();
         const spot = pack().spots?.find((x) => x.id === nearby.id);
         if (spot?.kind === 'bench') get().startRest('bench');
         else if (spot?.kind === 'home' && spot.homeId) {
@@ -428,7 +472,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
         },
         carryingLiquids: () => liquidsIn(s.inventory).length > 0,
       };
-      set({ ui: 'dialogue', dialogue: { npcId, nodeId: resolveEntry(npc.dialogue, ctx) } });
+      const opening = resolveEntry(npc.dialogue, ctx);
+      set({ ui: 'dialogue', dialogue: { npcId, nodeId: opening, opening } });
       setUiMode('dialogue');
     },
 
@@ -437,7 +482,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       switch (a.kind) {
         case 'goto': {
           const d = get().dialogue;
-          if (d) set({ dialogue: { ...d, nodeId: a.node } });
+          if (d) set({ dialogue: { ...d, nodeId: a.node, line: undefined } });
           return;
         }
         case 'close':
@@ -473,6 +518,15 @@ export const useGame = create<GameState>()((set, get): GameState => {
           get().closePanel();
           get().openPhone('travel');
           return;
+        case 'chat':
+          get().chat();
+          return;
+        case 'gift':
+          get().openGift();
+          return;
+        case 'dealer':
+          get().openDealer(a.dealerId);
+          return;
       }
     },
 
@@ -484,7 +538,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     openPhone(app = 'home') {
       const ui = get().ui;
-      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight') return;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight' || ui === 'gift' || ui === 'dealer') return;
       set({ ui: 'phone', phoneApp: app });
       setUiMode('phone');
       if (app === 'messages') get().markMessagesRead();
@@ -527,7 +581,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     closePanel() {
       const ui0 = get().ui;
       if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight') return;
-      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null });
+      set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null, dealerId: null });
       setUiMode('play');
     },
 
@@ -576,6 +630,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const from = s.destinationId;
       const area = findArea(areaId);
       if (!area || areaId === from || s.jobs.active || regionOf(areaId) !== regionOf(from)) return;
+      get().parkIfRiding();
       const fare = fareBetween(from, areaId);
       const p = pack();
       const r = debit(s.wallet, { id: makeId('ride'), amount: fare, reason: `${modeBetween(from, areaId)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
@@ -695,6 +750,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().pushToast({ kind: 'warn', title: ok === 'not-cleared' ? 'Security first' : ok === 'not-checked-in' ? 'Check in first' : 'No boarding pass' });
         return;
       }
+      get().parkIfRiding();
       set({ ui: 'flight', flight: { routeId: route.id, firstVisit: !s.world.visited.includes(route.arriveAt) }, dialogue: null, nearby: null });
       setUiMode('flight');
     },
@@ -727,6 +783,122 @@ export const useGame = create<GameState>()((set, get): GameState => {
       });
       setUiMode('play');
       if (r.state.ticket) setTimeout(() => get().pushToast({ kind: 'info', title: 'Return ticket ready', detail: `${findFlight(r.state.ticket!.routeId)?.code} home is in your Travel app.` }), 4200);
+    },
+
+    chat() {
+      const s = get();
+      const d = s.dialogue;
+      const npc = d && findNpc(pack(), d.npcId);
+      if (!d || !npc?.social) return;
+      const now = Date.now();
+      if (!chatReady(s.life, npc.id, now)) {
+        set({ dialogue: { ...d, nodeId: '__social', line: `${npc.name} smiles. “We just talked! Come and gist again in a little while — I have customers.”` } });
+        return;
+      }
+      const before = s.life.regard[npc.id] ?? 0;
+      const r = chatFn(s.life, npc.id, now);
+      const said = npc.social.lines[(Math.floor(now / 1000) + (r.life.social[npc.id]?.lastChat ?? 0)) % npc.social.lines.length];
+      set({ life: r.life, dialogue: { ...d, nodeId: '__social', line: `“${said}”` }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'info', title: `You chatted with ${npc.name}`, detail: `+${r.gain} · ${regardLabel(r.life.regard[npc.id] ?? 0)}` });
+      announceTier(npc.id, before, r.life.regard[npc.id] ?? 0);
+    },
+
+    openGift() {
+      const d = get().dialogue;
+      if (!d) return;
+      set({ ui: 'gift' });
+      setUiMode('gift');
+    },
+
+    giveGift(stackKey) {
+      const s = get();
+      const d = s.dialogue;
+      const npc = d && findNpc(pack(), d.npcId);
+      const entry = s.inventory.entries.find((e) => e.key === stackKey);
+      const item = entry && findItem(pack(), entry.itemId);
+      if (!d || !npc?.social || !entry || !item) return;
+      const r0 = removeFromStack(s.inventory, stackKey, 1);
+      if (!r0.ok) return;
+      const liked = npc.social.likes.includes(item.id) || npc.social.likes.includes(item.category);
+      const now = Date.now();
+      const before = s.life.regard[npc.id] ?? 0;
+      const r = giveGiftFn(s.life, npc.id, liked, now);
+      const line = liked ? `“For me? Ah, ${item.name.toLowerCase()}! You know me well. Thank you!”` : `“Thank you, that's kind of you.”`;
+      set({ inventory: r0.inventory, life: r.life, ui: 'dialogue', dialogue: { ...d, nodeId: '__social', line }, critical: s.critical + 1 });
+      setUiMode('dialogue');
+      get().pushToast({ kind: 'info', title: `You gave ${npc.name} ${item.name.toLowerCase()}`, detail: `+${r.gain}${liked ? ' · they loved it' : ''} · ${regardLabel(r.life.regard[npc.id] ?? 0)}` });
+      announceTier(npc.id, before, r.life.regard[npc.id] ?? 0);
+    },
+
+    openDealer(dealerId) {
+      if (!pack().dealers?.some((x) => x.id === dealerId)) return;
+      set({ ui: 'dealer', dealerId, dialogue: null });
+      setUiMode('dealer');
+    },
+
+    buyVehicle(dealerId, vehicleId) {
+      const s = get();
+      const p = pack();
+      const dealer = p.dealers?.find((x) => x.id === dealerId);
+      const stock = dealer?.stock.find((x) => x.vehicleId === vehicleId);
+      const def = findVehicle(vehicleId);
+      if (!dealer || !stock || !def) return false;
+      const price = friendPrice(stock.price, s.life.regard[dealer.npcId] ?? 0);
+      const uid = makeId('veh');
+      const r = debit(s.wallet, { id: `vehicle:${uid}`, amount: price, reason: `${def.name} · ${dealer.name}`, at: Date.now(), destinationId: p.id });
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, price - s.wallet.balance)} more` });
+        return false;
+      }
+      const at = { areaId: p.id, x: dealer.parkAt.position[0], z: dealer.parkAt.position[1], yaw: dealer.parkAt.yaw };
+      set({ wallet: r.wallet, life: { ...s.life, vehicles: addVehicle(s.life.vehicles, uid, vehicleId, price, at) }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'goal', title: `You own a ${def.name.toLowerCase()}`, detail: 'It’s parked by the lot — walk up to it to ride.' });
+      get().checkGoals();
+      return true;
+    },
+
+    sellVehicle(uid) {
+      const s = get();
+      const p = pack();
+      const v = s.life.vehicles.find((x) => x.uid === uid);
+      const dealer = p.dealers?.find((x) => x.id === s.dealerId);
+      const here = v && (s.life.riding === uid || v.parked?.areaId === p.id);
+      if (!v || !dealer || !here) return false;
+      const value = vehicleResale(v.paid);
+      const pay = credit(s.wallet, { id: `sellvehicle:${uid}`, amount: value, reason: `Sold ${findVehicle(v.vehicleId)?.name ?? 'vehicle'} · ${dealer.name}`, at: Date.now(), destinationId: p.id });
+      set({
+        wallet: pay.wallet,
+        life: { ...s.life, vehicles: removeVehicle(s.life.vehicles, uid), riding: s.life.riding === uid ? null : s.life.riding },
+        critical: s.critical + 1,
+      });
+      get().pushToast({ kind: 'money', title: `+${formatMoney(p, value)}`, detail: `Sold to ${dealer.name}` });
+      return true;
+    },
+
+    mountVehicle(uid) {
+      const s = get();
+      const p = pack();
+      const v = s.life.vehicles.find((x) => x.uid === uid);
+      if (s.life.riding || !canMount(v, p.id, runtime.player.x, runtime.player.z)) return;
+      runtime.player.x = v!.parked!.x;
+      runtime.player.z = v!.parked!.z;
+      set({ life: { ...s.life, vehicles: mountFn(s.life.vehicles, uid), riding: uid }, nearby: null, critical: s.critical + 1 });
+      get().showTip('riding');
+    },
+
+    dismount() {
+      const s = get();
+      const uid = s.life.riding;
+      if (!uid) return;
+      const p = runtime.player;
+      set({ life: { ...s.life, vehicles: parkFn(s.life.vehicles, uid, { areaId: s.destinationId, x: p.x, z: p.z, yaw: p.yaw }), riding: null }, nearby: null, critical: s.critical + 1 });
+    },
+
+    parkIfRiding() {
+      if (!get().life.riding) return;
+      get().dismount();
+      const v = get().life.vehicles.find((x) => x.parked?.areaId === get().destinationId);
+      if (v) get().pushToast({ kind: 'info', title: `${findVehicle(v.vehicleId)?.name ?? 'Vehicle'} parked`, detail: `Left in ${pack().area}. It'll be here when you come back.` });
     },
 
     discover(landmarkId) {
@@ -868,7 +1040,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
       if (s.ui === 'play') {
         const pl = runtime.player;
-        const activity = !pl.moving ? 'idle' : pl.speed > 4 ? 'run' : 'walk';
+        const activity = !pl.moving ? 'idle' : s.life.riding ? 'ride' : pl.speed > 4 ? 'run' : 'walk';
         const before = s.life.needs;
         const needs = drainNeeds(before, dtMs, activity);
         patch.life = { ...s.life, needs };
@@ -896,16 +1068,23 @@ export const useGame = create<GameState>()((set, get): GameState => {
     },
 
     buy(businessId, itemId) {
-      const stock = findBusiness(pack(), businessId)?.stock.find((x) => x.itemId === itemId);
-      if (!stock) return false;
-      return purchase(businessId, itemId, stock.price);
+      const price = get().priceAt(businessId, itemId);
+      if (price === null) return false;
+      return purchase(businessId, itemId, price);
+    },
+
+    priceAt(businessId, itemId) {
+      const biz = findBusiness(pack(), businessId);
+      const stock = biz?.stock.find((x) => x.itemId === itemId);
+      if (!biz || !stock) return null;
+      return friendPrice(stock.price, get().life.regard[biz.ownerNpcId] ?? 0);
     },
 
     startHaggle(businessId, itemId) {
       const biz = findBusiness(pack(), businessId);
       const stock = biz?.stock.find((x) => x.itemId === itemId);
       if (!biz?.haggle || !stock) return;
-      set({ haggle: { ...startHaggleFn(itemId, stock.price, biz.haggle), businessId } });
+      set({ haggle: { ...startHaggleFn(itemId, get().priceAt(businessId, itemId) ?? stock.price, biz.haggle), businessId } });
     },
 
     offer(amount) {
@@ -941,6 +1120,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const life = get().life;
       const needs = eat(life.needs, gain);
       set({ inventory: r.inventory, life: { ...life, needs }, critical: get().critical + 1 });
+      runtime.player.eatUntil = performance.now() + 2200;
       get().pushToast({
         kind: 'info',
         title: item.category === 'drink' ? `You drank the ${item.name.toLowerCase()}` : `You ate the ${item.name.toLowerCase()}`,
@@ -980,6 +1160,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().pushToast({ kind: 'warn', title: 'Too tired to work', detail: 'Rest first — benches are free, and a bed at home restores you fully.' });
         return;
       }
+      get().parkIfRiding();
       const level = skillLevel(s.life.skills[def.skill]);
       const seconds = orderSeconds(def, level);
       const runId = makeId('shift');
@@ -1025,6 +1206,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         shiftsDone: s.life.shiftsDone + 1,
       };
       set({ wallet: pay.wallet, life, shift: { ...run, results, index, outcome: { ...o, levelUp, paid: pay.ok } }, critical: s.critical + 1 });
+      announceTier(def.npcId, s.life.regard[def.npcId] ?? 0, life.regard[def.npcId] ?? 0);
       get().checkGoals();
     },
 
@@ -1048,7 +1230,22 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().pushToast({ kind: 'info', title: 'You are already rested', detail: at === 'bench' ? 'A bench only gets you so far — a bed at home restores you fully.' : undefined });
         return;
       }
-      set({ ui: 'resting', homeId: null, resting: { at, to, until: Date.now() + (at === 'home' ? 3200 : 2600) } });
+      // on a bench, sit on it (facing the way you came) and stand back up where you were afterwards
+      let from: { x: number; z: number } | undefined;
+      if (at === 'bench') {
+        const p = runtime.player;
+        const bench = pack()
+          .props.filter((x) => x.kind === 'bench')
+          .map((x) => ({ x: x.position[0], z: x.position[1], d: Math.hypot(x.position[0] - p.x, x.position[1] - p.z) }))
+          .sort((a, b) => a.d - b.d)[0];
+        if (bench && bench.d < 2.2) {
+          from = { x: p.x, z: p.z };
+          p.yaw = Math.atan2(p.x - bench.x, p.z - bench.z);
+          p.x = bench.x;
+          p.z = bench.z;
+        }
+      }
+      set({ ui: 'resting', homeId: null, resting: { at, to, until: Date.now() + (at === 'home' ? 3200 : 2600), from } });
       setUiMode('resting');
     },
 
@@ -1057,6 +1254,10 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const r = s.resting;
       if (!r) return;
       const needs = rest(s.life.needs, r.to);
+      if (r.from) {
+        runtime.player.x = r.from.x;
+        runtime.player.z = r.from.z;
+      }
       set({ resting: null, ui: 'play', life: { ...s.life, needs }, critical: s.critical + 1 });
       setUiMode('play');
       get().pushToast({ kind: 'info', title: r.at === 'home' ? 'You slept well' : 'You caught your breath', detail: `Energy ${Math.round(needs.energy)}` });

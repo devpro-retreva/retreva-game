@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { findBusiness, findItem, findNpc, formatMoney, localPrice } from '../../game/content';
+import { friendDiscount, friendPrice } from '../../game/systems/social';
 import { round50 } from '../../game/systems/negotiation';
 import { countItem } from '../../game/systems/inventory';
 import { useGame } from '../../game/store/gameStore';
@@ -121,12 +122,14 @@ export function ShopPanel() {
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [pending, setPending] = useState<string | null>(null);
   const biz = shopId ? findBusiness(pack, shopId) : undefined;
+  const ownerRegard = useGame((st) => (biz ? st.life.regard[biz.ownerNpcId] ?? 0 : 0));
   if (!biz) return null;
   const buysBack = biz.kind !== 'food';
   const sellable = inventory.entries
     .map((e) => ({ e, item: findItem(pack, e.itemId) }))
     .filter((x) => x.item && resaleValue(x.e.purchasePrice, x.item.category) > 0);
   const owner = findNpc(pack, biz.ownerNpcId);
+  const friendPct = friendDiscount(ownerRegard);
 
   return (
     <section className="sheet cut" role="dialog" aria-label={biz.name}>
@@ -134,6 +137,7 @@ export function ShopPanel() {
         <div>
           <div className="eyelabel">
             {biz.kind === 'food' ? 'Menu' : biz.haggle ? 'Market stall · bargaining welcome' : 'Shop'} · {owner?.name}
+            {friendPct > 0 && ` · friend price −${Math.round(friendPct * 100)}%`}
           </div>
           <h2>{biz.name}</h2>
           <p>“{biz.greeting}”</p>
@@ -208,7 +212,7 @@ export function ShopPanel() {
               if (!item) return null;
               const Icon = ITEM_ICONS[item.icon] ?? ITEM_ICONS.bag;
               const owned = countItem(inventory, item.id);
-              const afford = balance >= s.price;
+              const afford = balance >= friendPrice(s.price, ownerRegard);
               return (
                 <li key={s.itemId} className="row-item">
                   <span className="glyph cut-sm">
@@ -220,14 +224,15 @@ export function ShopPanel() {
                     {owned > 0 && <div className="desc" style={{ color: 'var(--cream-2)' }}>In your bag: {owned}</div>}
                   </div>
                   <div className="side">
-                    <span className="price num">{formatMoney(pack, s.price)}</span>
-                    {localPrice(pack, s.price) && <span className="local-price num">{localPrice(pack, s.price)}</span>}
+                    {friendPct > 0 && <s className="num muted">{formatMoney(pack, s.price)}</s>}
+                    <span className="price num">{formatMoney(pack, friendPrice(s.price, ownerRegard))}</span>
+                    {localPrice(pack, friendPrice(s.price, ownerRegard)) && <span className="local-price num">{localPrice(pack, friendPrice(s.price, ownerRegard))}</span>}
                     {biz.haggle ? (
                       <button className="btn" onClick={() => startHaggle(biz.id, item.id)} aria-label={`Bargain for ${item.name}`}>
                         Bargain
                       </button>
                     ) : (
-                      <button className="btn" disabled={!afford} onClick={() => buy(biz.id, item.id)} aria-label={`Buy ${item.name} for ${formatMoney(pack, s.price)}`}>
+                      <button className="btn" disabled={!afford} onClick={() => buy(biz.id, item.id)} aria-label={`Buy ${item.name} for ${formatMoney(pack, friendPrice(s.price, ownerRegard))}`}>
                         {afford ? 'Buy' : 'Short'}
                       </button>
                     )}

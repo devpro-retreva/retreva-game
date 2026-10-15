@@ -3,7 +3,7 @@
  * Nothing here triggers React renders — that is the point.
  */
 export const runtime = {
-  player: { x: 0, z: 0, yaw: 0, speed: 0, moving: false },
+  player: { x: 0, z: 0, yaw: 0, speed: 0, moving: false, eatUntil: 0 },
   camera: { yaw: Math.PI, pitch: 0.32, distance: 5.6 },
   /** Live positions of NPCs and walkers, keyed by id. */
   actors: new Map<string, { x: number; z: number }>(),

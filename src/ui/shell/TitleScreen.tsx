@@ -122,7 +122,19 @@ function Journey() {
   );
 }
 
-export function TitleScreen({ save, onContinue, onNew }: { save: SaveData | null; onContinue: () => void; onNew: () => void }) {
+export function TitleScreen({
+  save,
+  notice,
+  onImport,
+  onContinue,
+  onNew,
+}: {
+  save: SaveData | null;
+  notice?: string | null;
+  onImport?: (file: File) => void;
+  onContinue: () => void;
+  onNew: () => void;
+}) {
   const [confirm, setConfirm] = useState(false);
   const o = useOrientation();
   const L = LAYOUT[o];
@@ -171,6 +183,11 @@ export function TitleScreen({ save, onContinue, onNew }: { save: SaveData | null
             </p>
           )}
           <div className="sp-bottom">
+          {notice && (
+            <p className="title-notice" role="status">
+              {notice}
+            </p>
+          )}
           <div className="title-actions">
             {save ? (
               <button className="sp-btn primary cta-shine" onClick={onContinue} autoFocus>
@@ -194,7 +211,15 @@ export function TitleScreen({ save, onContinue, onNew }: { save: SaveData | null
           </div>
           <Journey />
           <div className="sp-story">Your story starts from your city.</div>
-          <div className="title-foot">Saves on this device · No account needed</div>
+          <div className="title-foot">
+            Saves on this device · No account needed
+            {onImport && (
+              <label className="title-import">
+                · Import a save file
+                <input type="file" accept="application/json,.json" onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
+              </label>
+            )}
+          </div>
           </div>
         </div>
       </div>

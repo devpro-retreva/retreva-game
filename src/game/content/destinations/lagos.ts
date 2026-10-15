@@ -45,6 +45,7 @@ export const lagos: DestinationPack = {
     sun: '#ffd9a0',
   },
   road: { halfWidth: 4, sidewalk: 3, length: 92 },
+  ambience: { traffic: 0.7, crowd: 0.6, horns: 6 },
 
   buildings: [
     // ── East side (faces west) ─────────────────────────────────
@@ -168,6 +169,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#6b4026', top: '#e2a400', bottom: '#2f7a52', outfit: 'top-skirt', hair: 'short', headwear: 'gele', headColor: '#d8452b', accessory: 'earrings', height: 1.62 },
       promptVerb: 'Talk to',
+      social: { lines: ["You know, I started this buka with one pot and a stool. Twenty years now!", "Tunde owes me for three plates. Don't tell him I said so.", "Eat before you go — you're too thin for Lagos hustle."], likes: ["chin-chin", "puff-puff", "ankara-6yd", "adire-scarf"] },
       idle: 'busy',
       dialogue: {
         entries: [
@@ -217,6 +219,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'male', skin: '#4a2c1c', top: '#f4f0e6', bottom: '#1b2a3a', outfit: 'shirt', hair: 'hightop', facialHair: 'goatee', height: 1.8 },
       promptVerb: 'Talk to',
+      social: { lines: ["Saturday is the busiest — every man wants a fresh cut for the owambe.", "One day I'll open a second salon in Lekki. Watch.", "You want a lineup? Next time, I'll fit you in."], likes: ["jollof-plate", "zobo", "earbuds"] },
       idle: 'sway',
       dialogue: {
         entries: [
@@ -252,6 +255,7 @@ export const lagos: DestinationPack = {
       facing: -Math.PI / 2,
       look: { gender: 'female', skin: '#5a3420', top: '#2c5f9e', bottom: '#f0c75e', outfit: 'dress', hair: 'bun', headwear: 'wrap', headColor: '#f2b705', accessory: 'glasses', height: 1.6 },
       promptVerb: 'Shop with',
+      social: { lines: ["I can tell how the day will go by the first customer's change.", "My daughter is studying accounting at UNILAG — she checks my books now.", "Prices are going up, my dear. Buy your chin chin while it's cheap."], likes: ["adire-scarf", "lace-fabric", "shea-butter"] },
       idle: 'sway',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -275,6 +279,7 @@ export const lagos: DestinationPack = {
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#5b3622', top: '#c9583b', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', facialHair: 'moustache', headwear: 'cap', headColor: '#f2b705', height: 1.74 },
       promptVerb: 'Talk to',
+      social: { lines: ["Third Mainland at 6pm? I've seen sunrise in that traffic.", "A good conductor never forgets a face — or a fare.", "One day I'll own my own danfo. Three, even."], likes: ["zobo", "water", "puff-puff", "power-bank"] },
       idle: 'wave',
       dialogue: {
         entries: [{ node: 'hello' }],
@@ -300,19 +305,21 @@ export const lagos: DestinationPack = {
     {
       id: 'chidi',
       name: 'Chidi',
-      role: 'Okada rider',
-      personality: 'Laid-back, generous with advice.',
+      role: 'Bicycle mechanic',
+      personality: 'Ex-okada rider, laid-back, generous with advice. Sells and fixes bicycles at the lot.',
       position: [-9.6, -6.6],
       facing: Math.PI / 2,
       look: { gender: 'male', skin: '#3f2516', top: '#1f6f4a', bottom: '#4b4033', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#f4f0e6', height: 1.76 },
       promptVerb: 'Talk to',
+      social: { lines: ["Okada is banned on this road, so I fix bicycles now. Honest money.", "A bicycle in Yaba? Fastest thing on the street when traffic stands still.", "Oil the chain, check the brakes, ring the bell. That's the whole religion."], likes: ["roasted-corn", "beach-suya", "water"] },
       idle: 'sway',
       dialogue: {
         entries: [{ node: 'hello' }],
         nodes: {
           hello: {
-            text: 'Okada? Not on this street, my friend — rules are rules. But if you want quick money, Mama Titi at the kitchen always needs a fast runner.',
+            text: 'Okada? Not on this street, my friend — rules are rules. So now I sell and fix bicycles. Want to see one? And if you need quick money, Mama Titi at the kitchen always needs a fast runner.',
             options: [
+              { label: 'Bicycles', action: { kind: 'dealer', dealerId: 'chidi-bikes' } },
               { label: 'Where is her kitchen?', action: { kind: 'goto', node: 'where' } },
               { label: 'Thanks, Chidi', action: { kind: 'close' } },
             ],
@@ -450,6 +457,9 @@ export const lagos: DestinationPack = {
   spots: [
     { id: 'okada-bench', kind: 'bench', position: [-9.4, -4.3], label: 'Bench', verb: 'Rest on' },
     { id: 'yaba-room-door', kind: 'home', position: [-5.7, 23.4], label: 'Room to let', verb: 'Check', homeId: 'yaba-room' },
+  ],
+  dealers: [
+    { id: 'chidi-bikes', name: "Chidi's Bicycles", npcId: 'chidi', stock: [{ vehicleId: 'bicycle', price: 8000 }], parkAt: { position: [-8.2, -8.4], yaw: Math.PI / 2 } },
   ],
   homes: [
     { id: 'yaba-room', name: 'Room on Adeniyi Street', description: 'A self-contained room upstairs: bed, fan, a lock that works. Rest here for free whenever you like.', moveInCost: 6000 },

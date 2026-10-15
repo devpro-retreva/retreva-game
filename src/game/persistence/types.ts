@@ -5,7 +5,7 @@ import type { PhoneMessage } from '../systems/progress';
 import type { LifeState } from '../systems/life';
 import type { TravelState } from '../systems/travel';
 
-export const SAVE_SCHEMA_VERSION = 5;
+export const SAVE_SCHEMA_VERSION = 6;
 
 export type Gender = 'male' | 'female';
 export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
@@ -46,6 +46,10 @@ export interface Settings {
   /** Graphics tier (added after v4; missing in older saves → 'auto'). */
   graphics: 'auto' | 'low' | 'medium' | 'high';
   showFps: boolean;
+  /** Sound (added with v6; older saves get the defaults). */
+  ambienceVolume?: number;
+  effectsVolume?: number;
+  muted?: boolean;
   /** Show first-time tip cards. */
   tips: boolean;
 }

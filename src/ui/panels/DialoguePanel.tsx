@@ -1,7 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { findNpc } from '../../game/content';
+import type { DialogueNode, NpcDef } from '../../game/content/types';
+import { regardTier } from '../../game/systems/life';
 import { useGame } from '../../game/store/gameStore';
 import { usePack } from '../../scene/worldContext';
+
+/**
+ * The node to show. People you can get to know (npc.social) also offer "Chat a while" and
+ * "Give a gift" on the line they open with; a chat or gift reply is a one-off line ('__social').
+ */
+function socialNode(npc: NpcDef, d: { nodeId: string; opening?: string; line?: string }): DialogueNode | undefined {
+  if (d.nodeId === '__social') {
+    return {
+      text: d.line ?? '',
+      options: [
+        ...(d.opening ? [{ label: 'Back', action: { kind: 'goto' as const, node: d.opening } }] : []),
+        { label: 'Bye', action: { kind: 'close' as const } },
+      ],
+    };
+  }
+  const node = npc.dialogue.nodes[d.nodeId];
+  if (!node || !npc.social || d.nodeId !== d.opening) return node;
+  const extra = [
+    { label: 'Chat a while', action: { kind: 'chat' as const } },
+    { label: 'Give a gift', action: { kind: 'gift' as const } },
+  ];
+  const last = node.options[node.options.length - 1];
+  const closes = last?.action.kind === 'close';
+  return { ...node, options: closes ? [...node.options.slice(0, -1), ...extra, last] : [...node.options, ...extra] };
+}
 
 /** Conversation panel: speaker tag, typed line, numbered choices (1–4 or tap). */
 export function DialoguePanel() {
@@ -10,7 +37,8 @@ export function DialoguePanel() {
   const choose = useGame((s) => s.chooseOption);
   const reduced = useGame((s) => s.settings.reducedMotion);
   const npc = dialogue ? findNpc(pack, dialogue.npcId) : undefined;
-  const node = npc && dialogue ? npc.dialogue.nodes[dialogue.nodeId] : undefined;
+  const regard = useGame((s) => (dialogue ? s.life.regard[dialogue.npcId] ?? 0 : 0));
+  const node = useMemo(() => (npc && dialogue ? socialNode(npc, dialogue) : undefined), [npc, dialogue]);
   const text = node?.text ?? '';
   // Progress is tied to the exact line, so switching nodes can never briefly
   // report the previous line as "finished".
@@ -61,6 +89,11 @@ export function DialoguePanel() {
       <div className="tag cut-sm">
         <b>{npc.name}</b>
         <span>{npc.role}</span>
+        {npc.social && (
+          <span className="regard" aria-label={`${regardTier(regard)}, regard ${Math.round(regard)} of 100`}>
+            {regardTier(regard)}
+          </span>
+        )}
       </div>
       <div className="body">
         <p className="line" aria-live="polite">
