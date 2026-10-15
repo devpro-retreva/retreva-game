@@ -140,9 +140,9 @@ await shot('08-haggle-deal');
 await p.keyboard.press('Escape');
 
 // ── visit the other areas
-for (const [conductor, label, dest, name] of [['emeka', 'Lagos Island', 'lagos-island', '09-island'], ['sade', 'Ikeja', 'ikeja-village', '10-ikeja']]) {
+for (const [conductor, label, dest, name] of [['emeka', 'Lagos Island', 'lagos-island', '09-island'], ['sade', 'Ikeja', 'ikeja-village', '10-ikeja'], ['wale', 'Badagry', 'badagry-marina', '11-badagry']]) {
   const npc = await S((id) => window.__retreva.store.getState() && null, conductor);
-  const pos = { emeka: [-3.4, 35.2], sade: [1.6, 36.2] }[conductor];
+  const pos = { emeka: [-3.4, 35.2], sade: [1.6, 36.2], wale: [-3.4, 34.4] }[conductor];
   await placeNear(pos[0], pos[1]);
   await talk(conductor);
   await choose(conductor === 'sade' ? 'Take a ride' : 'Take a danfo');
@@ -156,7 +156,7 @@ for (const [conductor, label, dest, name] of [['emeka', 'Lagos Island', 'lagos-i
 }
 await sleep(2500);
 s = await st();
-log('Lagos explorer goal after visiting all 4 areas', s.world.goalsDone.includes('explorer'), `visited ${s.world.visited.length}`);
+log('Lagos explorer goal after visiting all 5 areas', s.world.goalsDone.includes('explorer'), `visited ${s.world.visited.length}`);
 log('goal rewards each paid exactly once', s.ledger.filter((id) => id.startsWith('goal:')).length === new Set(s.ledger.filter((id) => id.startsWith('goal:'))).size);
 
 // ── phone apps

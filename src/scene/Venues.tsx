@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { EventDef } from '../game/content/types';
@@ -79,10 +79,23 @@ function Stage({ ev, on }: { ev: EventDef; on: boolean }) {
   useFrame(({ clock }) => {
     if (lights.current) lights.current.color.setHSL(on ? (clock.elapsedTime * 0.08) % 1 : 0.12, on ? 0.9 : 0.2, on ? 0.6 : 0.35);
   });
-  // the stage faces +x (toward the sea at Lekki); the truss stands at its back edge
+  // built facing +x (yaw π/2, toward the sea at Lekki) and turned to the stage's `facing`; the truss stands at its back edge
   const back = -sx / 2 + 0.15;
+  // the string lights are one instanced mesh: one draw call instead of one per bulb
+  const bulbMesh = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    const m = bulbMesh.current;
+    if (!m) return;
+    const o = new THREE.Object3D();
+    bulbs.forEach((z, i) => {
+      o.position.set(back + 0.12, 3.4, z);
+      o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+    });
+    m.instanceMatrix.needsUpdate = true;
+  }, [bulbs, back]);
   return (
-    <group position={[st.position[0], 0, st.position[1]]}>
+    <group position={[st.position[0], 0, st.position[1]]} rotation-y={st.facing - Math.PI / 2}>
       <mesh position={[0, 0.4, 0]}>
         <boxGeometry args={[sx, 0.8, sz]} />
         <meshLambertMaterial color={st.color} />
@@ -107,12 +120,10 @@ function Stage({ ev, on }: { ev: EventDef; on: boolean }) {
         <meshLambertMaterial color={st.accent} side={THREE.DoubleSide} />
       </mesh>
       {/* string lights on the truss */}
-      {bulbs.map((z) => (
-        <mesh key={z} position={[back + 0.12, 3.4, z]}>
-          <sphereGeometry args={[0.07, 6, 5]} />
-          <meshBasicMaterial ref={z === bulbs[0] ? lights : undefined} color="#f2b705" toneMapped={false} />
-        </mesh>
-      ))}
+      <instancedMesh ref={bulbMesh} args={[undefined, undefined, bulbs.length]}>
+        <sphereGeometry args={[0.07, 6, 5]} />
+        <meshBasicMaterial ref={lights} color="#f2b705" toneMapped={false} />
+      </instancedMesh>
       {/* speakers */}
       {[-1, 1].map((s) => (
         <mesh key={s} position={[sx / 2 - 0.4, 1.35, (s * (sz / 2 - 0.35))]}>

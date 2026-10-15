@@ -6,7 +6,7 @@ Every asset the shipped game uses, where it came from, and its terms. Update thi
 
 | Asset | Where | Source / tool | Licence / terms | Runtime cost |
 |---|---|---|---|---|
-| City geometry (buildings, roads, props, vehicles, airliners, bicycle) | `src/scene/builders/*.ts`, `src/scene/Vehicles.tsx` | Procedural, written for this project (merged vertex-coloured meshes) | Original work of the project | No download; one merged mesh + one atlas per area |
+| City geometry (buildings, roads, props incl. jetty, canoes and memorial arch, vehicles, airliners, bicycle) | `src/scene/builders/*.ts`, `src/scene/Vehicles.tsx` | Procedural, written for this project (merged vertex-coloured meshes) | Original work of the project | No download; one merged mesh + one atlas per area |
 | Shop fronts, facades, signs, glass terminals | `src/scene/builders/painters.ts` | Procedural canvas painting at load time; sign names are fictional | Original | One 2048² canvas atlas per area, generated in the browser |
 | Characters (player, NPCs, walkers) | `src/scene/Character.tsx` | Procedural sculpted primitives (lathes, capsules, ellipsoids), two LODs | Original | ~15–33k triangles for a busy street at near LOD |
 | Animations (walk, run, idle, talk, wave, busy, ride, sit, eat) | `src/scene/Character.tsx` | Procedural, code-driven joint rotations | Original | None |
@@ -17,6 +17,8 @@ Every asset the shipped game uses, where it came from, and its terms. Update thi
 | App icons | `public/icons/*` | Drawn for the project ("Orbit R" mark) | Original | ~60 KB |
 | Bricolage Grotesque (variable) | `@fontsource-variable/bricolage-grotesque` | Google Fonts via Fontsource, self-hosted | SIL Open Font License 1.1 | ~70 KB woff2 |
 | Caveat 700 | `@fontsource/caveat` | Google Fonts via Fontsource, self-hosted | SIL Open Font License 1.1 | ~50 KB woff2 |
+
+Badagry (`destinations/badagry.ts`) depicts real public monuments by name — the First Storey Building (1845), the Badagry Heritage Museum, the Agia Tree monument, the jetty to Gberefu Island and, across the lagoon, a stylised Point of No Return arch — all modelled procedurally, not copied from photos; its businesses and people are fictional. The slave-trade history is stated plainly and is never the object of a job: the paid work there is guiding a visitor and carrying fish.
 
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 

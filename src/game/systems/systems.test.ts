@@ -1141,3 +1141,49 @@ describe('Dubai', () => {
     expect(g.progress({ cities: 3 } as never)).toEqual([3, 3]);
   });
 });
+
+describe('Badagry', () => {
+  const pack = ALL_PACKS.find((p) => p.id === 'badagry-marina')!;
+  const w = buildCollisionWorld(pack);
+  it('is a built-in Lagos district you reach by danfo, counted by the explorer goal', () => {
+    expect(pack).toBeDefined();
+    expect(regionOf('badagry-marina')?.id).toBe('lagos');
+    expect(modeBetween('lagos-adeniyi', 'badagry-marina')).toBe('Danfo');
+    expect(fareBetween('lagos-adeniyi', 'badagry-marina')).toBe(550);
+    expect(LAGOS_AREAS.filter((a) => !a.hub).map((a) => a.id)).toContain('badagry-marina');
+    expect(cityAreas('lagos')).toContain('badagry-marina');
+  });
+  it('the heritage walk visits real landmarks in order, and each stop can be walked to', () => {
+    const job = pack.jobs.find((j) => j.id === 'heritage-walk')!;
+    expect(job.kind).toBe('tour');
+    expect(job.requires?.discovered).toEqual(job.tour!.stops);
+    for (const id of job.tour!.stops) {
+      const lm = pack.landmarks.find((l) => l.id === id);
+      expect(lm, id).toBeDefined();
+      expect(isBlocked(w, lm!.position[0], lm!.position[1]), id).toBe(false);
+    }
+  });
+  it('the jetty is walkable out over the lagoon, but the water beside it is not', () => {
+    expect(isBlocked(w, 14, -28)).toBe(false);
+    expect(isBlocked(w, 14, -32)).toBe(true);
+  });
+  it('the room by the marina and the drums are in the Lagos city index', () => {
+    const lagosCity = CITY_PACKS.find((c) => c.id === 'lagos')!;
+    expect(lagosCity.homeIds).toContain('badagry-room');
+    expect(lagosCity.eventIds).toContain('heritage-drums');
+    expect(findInterior('badagry-room')?.kind).toBe('home');
+  });
+});
+
+describe('stages', () => {
+  it('a stage blocks the footprint it is drawn with, whichever way it faces', () => {
+    const base = ALL_PACKS.find((p) => p.id === 'badagry-marina')!;
+    const ev = base.events![0];
+    const turned = (facing: number) => buildCollisionWorld({ ...base, events: [{ ...ev, stage: { ...ev.stage!, position: [0, 0], size: [4, 2], facing } }] });
+    // facing the street the long side (4 m) runs along x; a quarter turn puts it along z
+    expect(isBlocked(turned(Math.PI / 2), 1.8, 0, 0.01)).toBe(true);
+    expect(isBlocked(turned(Math.PI / 2), 0, 1.8, 0.01)).toBe(false);
+    expect(isBlocked(turned(0), 0, 1.8, 0.01)).toBe(true);
+    expect(isBlocked(turned(0), 1.8, 0, 0.01)).toBe(false);
+  });
+});

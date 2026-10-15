@@ -10,6 +10,7 @@ export const LAGOS_AREAS: RegionArea[] = [
   { id: 'lagos-adeniyi', district: 'Yaba', known: 'Bukas & barbers', map: [40, 50] },
   { id: 'lagos-island', district: 'Lagos Island', known: 'Fabric markets', map: [36, 74] },
   { id: 'lekki-beach', district: 'Lekki', known: 'Beach & coconut', map: [76, 82] },
+  { id: 'badagry-marina', district: 'Badagry', known: 'Heritage & lagoon', map: [11, 58] },
   { id: 'lagos-airport', district: 'Airport', known: 'Flights abroad', map: [20, 9], hub: 'airport' },
 ];
 

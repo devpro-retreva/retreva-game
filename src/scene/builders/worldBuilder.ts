@@ -294,6 +294,39 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const [lx, lz] of [[0.25, 0.8], [-0.25, 0.8], [0.25, -0.4], [-0.25, -0.4]]) g.box('#8a7a66', at(lx, 0.15, lz), [0.05, 0.3, 0.05], r);
       break;
     }
+    case 'jetty': {
+      // wooden landing stage running out over the water along local +z (walk on it: the pack adds a walkable strip)
+      const len = 7.4;
+      g.box('#8a6a48', at(0, 0.0, len / 2), [2.2, 0.1, len], r);
+      for (let i = 0; i < 9; i++) g.box('#6f5238', at(0, 0.055, 0.4 + i * 0.82), [2.2, 0.01, 0.06], r);
+      for (let lz = 0.4; lz <= len; lz += 1.8) {
+        for (const lx of [-1.05, 1.05]) g.cylinder('#5a3b26', at(lx, -0.2, lz), 0.09, 0.09, 0.7, 6);
+      }
+      for (const lx of [-1.05, 1.05]) g.cylinder('#5a3b26', at(lx, 0.35, len - 0.1), 0.1, 0.1, 0.8, 6);
+      break;
+    }
+    case 'canoe': {
+      // dugout canoe afloat, long axis along local z, with a paddle across it
+      const c = p.color ?? '#6b4a2e';
+      g.box(c, at(0, 0.08, 0), [0.75, 0.36, 3.6], r);
+      g.box(shade(c, -0.2), at(0, 0.27, 0), [0.55, 0.02, 3.3], r);
+      for (const s of [1, -1]) {
+        g.box(c, at(0, 0.12, s * 2.0), [0.5, 0.28, 0.5], r);
+        g.box(c, at(0, 0.16, s * 2.35), [0.26, 0.22, 0.3], r);
+      }
+      g.boxR('#a5845c', at(0, 0.32, 0.6), [1.6, 0.04, 0.08], [0, r + 0.5, 0]);
+      break;
+    }
+    case 'arch': {
+      // a memorial arch on a sandbank across the water, seen from the shore (the Point of No Return on Gberefu)
+      g.cylinder('#d8c39a', at(0, 0.02, 0), 9, 10, 0.3, 20);
+      g.box('#cbb48a', at(0, 0.3, 0), [3.6, 0.5, 7.6], r);
+      for (const lz of [-2.4, 2.4]) g.box('#ebe4d6', at(0, 3.4, lz), [1.2, 6, 1.2], r);
+      g.box('#ebe4d6', at(0, 6.9, 0), [1.4, 1.2, 6.2], r);
+      g.box('#5b3a24', at(0, 6.3, 0), [1.42, 0.16, 6.22], r);
+      for (const [lx, lz] of [[-5, -5], [5.5, 3], [-4, 6]]) prop(g, { id: `${p.id}-palm-${lx}`, kind: 'palm', position: [p.position[0] + lx, p.position[1] + lz] });
+      break;
+    }
     case 'busstop': {
       // shelter: back panel at local -z, roof, bench, sign post; long side along local x
       g.box('#3a5a7a', at(0, 1.25, -0.45), [3.0, 2.3, 0.08], r);

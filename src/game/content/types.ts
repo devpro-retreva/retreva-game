@@ -87,6 +87,10 @@ export type PropKind =
   | 'lounger'
   | 'busstop'
   | 'keke'
+  // waterfronts
+  | 'jetty'
+  | 'canoe'
+  | 'arch'
   // airports
   | 'counter'
   | 'scanner'

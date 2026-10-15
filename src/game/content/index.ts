@@ -3,6 +3,7 @@ import { lagos } from './destinations/lagos';
 import { lagosIsland } from './destinations/lagosIsland';
 import { lekki } from './destinations/lekki';
 import { ikeja } from './destinations/ikeja';
+import { badagry } from './destinations/badagry';
 import { lagosAirport } from './destinations/lagosAirport';
 
 /**
@@ -15,6 +16,7 @@ const PACKS: Record<string, DestinationPack> = {
   [lagosIsland.id]: lagosIsland,
   [lekki.id]: lekki,
   [ikeja.id]: ikeja,
+  [badagry.id]: badagry,
   [lagosAirport.id]: lagosAirport,
 };
 

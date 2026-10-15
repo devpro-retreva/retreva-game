@@ -21,7 +21,7 @@ export interface CityPack {
 }
 
 export const CITY_PACKS: CityPack[] = [
-  { id: 'lagos', builtIn: true, eventIds: ['beach-highlife', 'glover-laughs'], homeIds: ['yaba-room'] },
+  { id: 'lagos', builtIn: true, eventIds: ['beach-highlife', 'glover-laughs', 'heritage-drums'], homeIds: ['yaba-room', 'badagry-room'] },
   {
     id: 'accra',
     builtIn: false,

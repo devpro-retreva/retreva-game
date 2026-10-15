@@ -77,7 +77,9 @@ export function buildCollisionWorld(pack: DestinationPack): CollisionWorld {
   for (const ev of pack.events ?? []) {
     if (!ev.stage) continue;
     const [x, z] = ev.stage.position;
-    const [sx, sz] = ev.stage.size;
+    // the stage is drawn turned to its facing (π/2 = as built); a quarter turn swaps its footprint
+    const quarter = Math.abs(Math.sin(ev.stage.facing - Math.PI / 2)) > 0.5;
+    const [sx, sz] = quarter ? [ev.stage.size[1], ev.stage.size[0]] : ev.stage.size;
     boxes.push({ minX: x - sx / 2, maxX: x + sx / 2, minZ: z - sz / 2, maxZ: z + sz / 2, height: 4 });
   }
   return { boxes, circles, walkable: pack.walkable };
