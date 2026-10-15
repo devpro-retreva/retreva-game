@@ -1946,8 +1946,8 @@ input[type='range'] {
   display: none;
 }
 .touch .hint {
-  bottom: auto;
-  top: calc(var(--edge-top) + 70px);
+  /* flows in the top-left HUD column, under the wallet and needs */
+  position: static;
   max-width: calc(100vw - 150px);
 }
 
@@ -1977,7 +1977,8 @@ input[type='range'] {
   text-transform: uppercase;
   color: var(--danfo);
 }
-.needs { display: flex; gap: 6px; }
+.needs { display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100vw - var(--edge) * 2 - 190px); }
+@media (max-width: 480px) { .need-bar { width: 22px; } }
 .need {
   display: inline-flex;
   align-items: center;

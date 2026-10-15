@@ -3,7 +3,8 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { ColorGeometryBuilder } from './builders/geometryBuilder';
 import { shade } from './builders/painters';
-import { characterMaterial } from './materials';
+import { characterMaterial as matHigh, characterMaterialLow } from './materials';
+import { useTier } from './useTier';
 import { HEIGHT } from '../game/core/avatarPresets';
 import type { Accessory, FacialHair, Gender, HairStyle, Headwear, OutfitStyle } from '../game/persistence/types';
 
@@ -263,6 +264,7 @@ function buildParts(look: CharacterLook, lod: Lod): Parts {
 
 export function Character({ look, anim, castShadow = true, lod = 'near' }: { look: CharacterLook; anim: MutableRefObject<CharacterAnim>; castShadow?: boolean; lod?: Lod }) {
   const parts = useMemo(() => buildParts(look, lod), [look, lod]);
+  const characterMaterial = useTier().lambertCharacters ? characterMaterialLow : matHigh;
   const scale = (look.height ?? HEIGHT[look.gender ?? 'male']) / 1.75;
   const w = buildW(look.build);
   const sx = shoulderX(look);

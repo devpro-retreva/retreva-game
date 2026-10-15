@@ -65,6 +65,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reducedMotion: false,
   textScale: 1,
   shadows: 'auto',
+  graphics: 'auto',
   showFps: false,
   tips: true,
 };

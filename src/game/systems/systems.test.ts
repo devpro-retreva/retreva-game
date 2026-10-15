@@ -14,6 +14,7 @@ import { fareBetween, LAGOS_AREAS } from '../content/regions/lagosState';
 import { ALL_PACKS } from '../content';
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
+import { TIERS, resolveTier } from '../core/quality';
 import { DEFAULT_AVATAR, OPTIONS, defaultLookFor, sanitizeLook, switchGender, upgradeAvatarV1 } from '../core/avatarPresets';
 
 const job = lagos.jobs[0];
@@ -144,7 +145,7 @@ describe('persistence', () => {
       jobs: emptyJobs(),
       world: emptyWorld('lagos-adeniyi'),
       life: emptyLife(),
-      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, showFps: false, tips: true },
+      settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, graphics: 'auto' as const, showFps: false, tips: true },
       player: { position: [1, 2] as [number, number], yaw: 0 },
       stats: { playTimeMs: 0 },
     });
@@ -474,5 +475,27 @@ describe('living city data', () => {
       const skins = new Set([...p.npcs.map((n) => n.look.skin), ...p.walkers.map((w) => w.look.skin)]);
       expect(skins.size, p.id).toBeGreaterThanOrEqual(3);
     }
+  });
+});
+
+describe('graphics tiers', () => {
+  it('auto picks low for low-memory or few-core phones, medium for phones, high for desktops', () => {
+    expect(resolveTier('auto', { coarse: true, deviceMemory: 2 })).toBe('low');
+    expect(resolveTier('auto', { coarse: true, cores: 4 })).toBe('low');
+    expect(resolveTier('auto', { coarse: true, deviceMemory: 6, cores: 8 })).toBe('medium');
+    expect(resolveTier('auto', { coarse: false, deviceMemory: 8, cores: 8 })).toBe('high');
+    expect(resolveTier('high', { coarse: true, deviceMemory: 1 })).toBe('high');
+  });
+  it('lower tiers never cost more than higher ones', () => {
+    const order = ['low', 'medium', 'high'] as const;
+    for (let i = 1; i < order.length; i++) {
+      const a = TIERS[order[i - 1]], b = TIERS[order[i]];
+      expect(a.dpr[1]).toBeLessThanOrEqual(b.dpr[1]);
+      expect(a.maxVehicles).toBeLessThanOrEqual(b.maxVehicles);
+      expect(a.maxWalkers).toBeLessThanOrEqual(b.maxWalkers);
+      expect(a.lodFar).toBeLessThanOrEqual(b.lodFar);
+      expect(a.viewDistance).toBeLessThanOrEqual(b.viewDistance);
+    }
+    expect(TIERS.low.shadows).toBe(false);
   });
 });

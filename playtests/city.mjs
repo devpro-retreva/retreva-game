@@ -27,6 +27,8 @@ await p.click('text=Start my life');
 await p.waitForFunction(() => window.__retreva?.store.getState().phase === 'playing', null, { timeout: 40000 });
 await S(() => window.__retreva.store.getState().updateSettings({ shadows: 'off', tips: false }));
 await place(-9.4, -3.6, 0); // stand off the road while traffic is sampled
+// a settings change can rebuild the canvas; wait for traffic to be back before sampling
+await p.waitForFunction(() => window.__retreva.runtime.traffic.length > 0, null, { timeout: 60000 });
 await sleep(2500);
 
 let c0 = await cars();
@@ -43,7 +45,7 @@ const t = c1[target >= 0 ? target : 0];
 await place(2, t.z + 9, Math.PI);
 let stopped = false;
 let minGap = 99;
-for (let i = 0; i < 40 && !stopped; i++) {
+for (let i = 0; i < 60 && !stopped; i++) {
   await sleep(250);
   const c = (await cars())[target >= 0 ? target : 0];
   const pz = await S(() => window.__retreva.runtime.player.z);

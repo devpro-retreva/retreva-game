@@ -62,6 +62,9 @@ async function play(name, viewport, mobile) {
       const want = cur.orders[cur.index];
       const pick = i === wrongAt ? (want === 'zobo' ? 'jollof' : 'zobo') : want;
       if (i === 1 && wrongAt >= 0) await shot('shift-ticket');
+      // The order timer is wall-clock (5 s); software GL can take longer than that per tap,
+      // so hold the timer here. Late orders are covered by the scoreShift unit tests.
+      await S(() => { const st = window.__retreva.store; const r = st.getState().shift; st.setState({ shift: { ...r, deadline: Date.now() + 60000 } }); });
       await tap(`.dish[data-dish="${pick}"]`);
       await sleep(120);
     }

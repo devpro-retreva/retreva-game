@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city'];
+const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city', 'device'];
 const suites = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT;
 
 for (const s of suites) {

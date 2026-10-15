@@ -187,6 +187,7 @@ export function Hud({ touch }: { touch: boolean }) {
       <div className="hud-tl">
         <MoneyChip />
         <NeedsChips />
+        {touch && <ControlsHint touch />}
         <Objective />
       </div>
       <div className="hud-tr">
@@ -207,7 +208,7 @@ export function Hud({ touch }: { touch: boolean }) {
         </div>
       </div>
       <InteractionPrompt />
-      <ControlsHint touch={touch} />
+      {!touch && <ControlsHint touch={false} />}
     </>
   );
 }

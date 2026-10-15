@@ -11,6 +11,7 @@ import { LagosMap } from '../travel/LagosMap';
 import { GOALS } from '../../game/systems/progress';
 import { LAGOS_AREAS, fareBetween } from '../../game/content/regions/lagosState';
 import { describeLook } from '../avatar/AvatarEditor';
+import { deviceEnv, resolveTier } from '../../game/core/quality';
 import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
 import { formatClock, formatDuration } from '../hooks';
 import {
@@ -520,6 +521,60 @@ function ProfileApp() {
   );
 }
 
+/** Shows whether this device can launch the game without a connection. */
+function OfflineStatus() {
+  const [ready, setReady] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('caches' in window)) return alive && setReady(false);
+        const keys = (await caches.keys()).filter((k) => k.startsWith('retreva-'));
+        alive && setReady(!!navigator.serviceWorker.controller && keys.length > 0);
+      } catch {
+        alive && setReady(false);
+      }
+    };
+    void check();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return (
+    <div className="setting">
+      <div>
+        Offline play
+        <div className="sub">{ready ? 'Ready — this device can open and play the game without internet.' : ready === false ? 'Not ready yet — open the game once online in a regular browser tab.' : 'Checking…'}</div>
+      </div>
+      <b data-offline={ready ? 'ready' : 'no'} style={{ fontSize: 'var(--fs-sm)' }}>{ready ? 'Ready' : ready === false ? 'Not yet' : '…'}</b>
+    </div>
+  );
+}
+
+function GraphicsSetting() {
+  const graphics = useGame((s) => s.settings.graphics ?? 'auto');
+  const update = useGame((s) => s.updateSettings);
+  const tier = resolveTier(graphics, deviceEnv());
+  return (
+    <div className="setting">
+      <div>
+        Graphics
+        <div className="sub">
+          Now: {tier[0].toUpperCase() + tier.slice(1)}
+          {graphics === 'auto' ? ' (picked for this device)' : ''} · Low saves battery on older phones
+        </div>
+      </div>
+      <div className="seg" role="group" aria-label="Graphics quality">
+        {(['auto', 'low', 'medium', 'high'] as const).map((v) => (
+          <button key={v} aria-pressed={graphics === v} onClick={() => update({ graphics: v })}>
+            {v === 'medium' ? 'Med' : v[0].toUpperCase() + v.slice(1)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SettingsApp() {
   const settings = useGame((s) => s.settings);
   const update = useGame((s) => s.updateSettings);
@@ -563,6 +618,7 @@ function SettingsApp() {
           ))}
         </div>
       </div>
+      <GraphicsSetting />
       <div className="setting">
         <div>
           Shadows
@@ -587,6 +643,7 @@ function SettingsApp() {
         <div>Show frame rate</div>
         <input type="checkbox" className="toggle" checked={settings.showFps} onChange={(e) => update({ showFps: e.target.checked })} />
       </label>
+      <OfflineStatus />
       <div className="eyelabel section-title">Progress</div>
       <div className="card-line">
         <div>

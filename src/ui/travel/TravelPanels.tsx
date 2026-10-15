@@ -113,7 +113,9 @@ export function AreaBanner() {
     const id = setTimeout(clear, 3800);
     return () => clearTimeout(id);
   }, [banner, clear]);
-  if (!banner) return null;
+  const ui = useGame((s) => s.ui);
+  // only over live play — never through the phone, shop or dialogue
+  if (!banner || ui !== 'play') return null;
   return (
     <div className="area-banner" key={banner.key} role="status" aria-live="polite">
       <div className="eyelabel">Now in</div>

@@ -42,6 +42,8 @@ export interface Settings {
   reducedMotion: boolean;
   textScale: 1 | 1.15 | 1.3;
   shadows: 'auto' | 'on' | 'off';
+  /** Graphics tier (added after v4; missing in older saves → 'auto'). */
+  graphics: 'auto' | 'low' | 'medium' | 'high';
   showFps: boolean;
   /** Show first-time tip cards. */
   tips: boolean;

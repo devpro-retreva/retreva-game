@@ -8,6 +8,7 @@ import { Character, type CharacterAnim, type Lod } from './Character';
 
 /** Switch to the low-detail body past ~18 m, back to full detail inside ~15 m (hysteresis avoids flicker). */
 function useLod(pos: () => { x: number; z: number }): Lod {
+  const far = useTier().lodFar;
   const [lod, setLod] = useState<Lod>('near');
   const acc = useRef(Math.random() * 0.5);
   useFrame((_, dt) => {
@@ -16,12 +17,13 @@ function useLod(pos: () => { x: number; z: number }): Lod {
     acc.current = 0;
     const p = pos();
     const d = Math.hypot(p.x - runtime.player.x, p.z - runtime.player.z);
-    if (lod === 'near' && d > 18) setLod('far');
-    else if (lod === 'far' && d < 15) setLod('near');
+    if (lod === 'near' && d > far) setLod('far');
+    else if (lod === 'far' && d < far - 3) setLod('near');
   });
   return lod;
 }
 import { groundHeight, lerpAngle, usePack } from './worldContext';
+import { useTier } from './useTier';
 
 function Npc({ def }: { def: NpcDef }) {
   const group = useRef<THREE.Group>(null);
@@ -127,12 +129,15 @@ function Walker({ def }: { def: WalkerDef }) {
 export function Npcs() {
   const pack = usePack();
   const npcs = useMemo(() => pack.npcs, [pack]);
+  const maxWalkers = useTier().maxWalkers;
+  // purposeful walkers first, so a low tier keeps the most lively people
+  const walkers = useMemo(() => [...pack.walkers].sort((a, b) => (b.stops?.length ?? 0) - (a.stops?.length ?? 0)).slice(0, maxWalkers), [pack, maxWalkers]);
   return (
     <>
       {npcs.map((n) => (
         <Npc key={n.id} def={n} />
       ))}
-      {pack.walkers.map((w) => (
+      {walkers.map((w) => (
         <Walker key={w.id} def={w} />
       ))}
     </>

@@ -14,6 +14,7 @@ import { Player } from './Player';
 import { StaticWorld } from './StaticWorld';
 import { GameLoop, InteractionSystem, ReadySignal } from './Systems';
 import { usePack } from './worldContext';
+import { useTier } from './useTier';
 
 export const isCoarsePointer = () => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 
@@ -22,7 +23,8 @@ export function GameCanvas() {
   const shadowSetting = useGame((s) => s.settings.shadows);
   const paused = useGame((s) => s.ui === 'wardrobe' || s.ui === 'transit');
   const coarse = useMemo(isCoarsePointer, []);
-  const shadows = shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse);
+  const t = useTier();
+  const shadows = t.shadows && (shadowSetting === 'on' || (shadowSetting === 'auto' && !coarse));
   const sky = useMemo(makeSkyTexture, []);
   const drag = useRef<{ id: number; x: number; y: number } | null>(null);
 
@@ -53,15 +55,15 @@ export function GameCanvas() {
       onPointerCancel={onPointerUp}
     >
       <Canvas
-        key={`${pack.id}-${shadows ? 'sh' : 'nosh'}`}
+        key={`${pack.id}-${shadows ? 'sh' : 'nosh'}-${t.tier}`}
         frameloop={paused ? 'never' : 'always'}
         shadows={shadows ? { type: THREE.PCFSoftShadowMap } : false}
-        dpr={coarse ? [1, 1.5] : [1, 2]}
-        gl={{ antialias: !coarse, powerPreference: 'high-performance', stencil: false }}
-        camera={{ fov: 55, near: 0.15, far: 150, position: [pack.spawn.position[0], 3, pack.spawn.position[1] + 5] }}
+        dpr={t.dpr}
+        gl={{ antialias: t.antialias, powerPreference: 'high-performance', stencil: false }}
+        camera={{ fov: 55, near: 0.15, far: t.viewDistance + 30, position: [pack.spawn.position[0], 3, pack.spawn.position[1] + 5] }}
         onCreated={({ scene, gl }) => {
           scene.background = sky;
-          scene.fog = new THREE.Fog(pack.palette.fog, 28, 105);
+          scene.fog = new THREE.Fog(pack.palette.fog, Math.min(28, t.viewDistance * 0.35), t.viewDistance);
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
         }}

@@ -5,6 +5,7 @@ import { runtime } from '../game/core/runtime';
 import { worldColorMaterial } from './materials';
 import { vehicleGeometry } from './builders/worldBuilder';
 import { usePack } from './worldContext';
+import { useTier } from './useTier';
 
 /** Shared geometry per vehicle kind/colour — every car of a type is the same mesh. */
 const geoCache = new Map<string, THREE.BufferGeometry>();
@@ -33,7 +34,8 @@ interface Car {
  */
 export function Traffic() {
   const pack = usePack();
-  const def = pack.traffic;
+  const maxVehicles = useTier().maxVehicles;
+  const def = useMemo(() => (pack.traffic ? { ...pack.traffic, vehicles: pack.traffic.vehicles.slice(0, maxVehicles) } : undefined), [pack, maxVehicles]);
   const meshes = useRef<(THREE.Mesh | null)[]>([]);
   const half = pack.road.length / 2 + 6;
 
@@ -80,7 +82,8 @@ export function Traffic() {
       }
       const ahead = (p.z - c.z) * dir;
       if (ahead > 0 && Math.abs(p.x - c.x) < 1.5) gap = Math.min(gap, ahead - c.len / 2 - 0.4);
-      const want = gap < 1.2 ? 0 : gap < 6 ? c.cruise * ((gap - 1.2) / 4.8) : c.cruise;
+      // ease off inside 6 m but keep rolling (≥ 25% cruise) until the stop point, then stop — no endless creep
+      const want = gap < 1.2 ? 0 : gap < 6 ? c.cruise * Math.max(0.25, (gap - 1.2) / 4.8) : c.cruise;
       c.speed += (want - c.speed) * Math.min(1, dt * (want < c.speed ? 5 : 1.2));
       c.z += c.speed * dir * dt;
       if (c.z * dir > half) c.z = -half * dir; // drive off one end, reappear at the other
