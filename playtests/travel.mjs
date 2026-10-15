@@ -59,12 +59,12 @@ const b = await launch();
   // plan: the Travel app shows the trip budget before you can afford it
   await S(() => window.__retreva.store.getState().openPhone('travel'));
   await p.waitForSelector('.flight');
-  const lines = await p.$$eval('.budget li[data-line]', (els) => els.map((e) => e.getAttribute('data-line')));
-  const amounts = await p.$$eval('.budget li', (els) => els.map((e) => Number(e.querySelector('b').textContent.replace(/[^\d]/g, '')) || 0));
+  const lines = await p.$$eval('.flight[data-route="los-acc"] .budget li[data-line]', (els) => els.map((e) => e.getAttribute('data-line')));
+  const amounts = await p.$$eval('.flight[data-route="los-acc"] .budget li', (els) => els.map((e) => Number(e.querySelector('b').textContent.replace(/[^\d]/g, '')) || 0));
   const sumOk = amounts.slice(0, -1).reduce((a, n) => a + n, 0) === amounts[amounts.length - 1];
   log('Travel app shows Accra with a full trip budget (taxi, ticket, stay, getting around) that adds up', lines.join() === 'taxi,ticket,stay,around' && sumOk, `${lines.join(',')} · ${amounts.join(' + ')}`);
-  const shortMsg = await p.textContent('.flight .muted');
-  log('with ₦2,000 the ticket is clearly out of reach (no Book button, how much more is shown)', /need ₦14,000 more/.test(shortMsg) && !(await p.isVisible('.flight button:has-text("Book")')), shortMsg.trim());
+  const shortMsg = await p.textContent('.flight[data-route="los-acc"] .muted');
+  log('with ₦2,000 the ticket is clearly out of reach (no Book button, how much more is shown)', /need ₦14,000 more/.test(shortMsg) && !(await p.isVisible('.flight[data-route="los-acc"] button:has-text("Book")')), shortMsg.trim());
   await shot('01-budget-short');
 
   // top up (test only) and book a return ticket with the confirm step
@@ -229,7 +229,7 @@ const b = await launch();
     st.getState().openPhone('travel');
   });
   await p.waitForSelector('.flight');
-  await p.tap('.flight .seg button:has-text("One-way")');
+  await p.tap('.flight[data-route="los-acc"] .seg button:has-text("One-way")');
   await p.tap('button[aria-label="Book one-way ticket to Accra for ₦9,000"]');
   await p.tap('button:has-text("Confirm · pay ₦9,000")');
   await sleep(400);

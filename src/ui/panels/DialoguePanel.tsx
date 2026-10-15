@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { findNpc } from '../../game/content';
+import { findFlight, flightText, flightsFrom } from '../../game/content/flights';
 import type { DialogueNode, NpcDef } from '../../game/content/types';
 import { regardTier } from '../../game/systems/life';
 import { useGame } from '../../game/store/gameStore';
@@ -39,7 +40,10 @@ export function DialoguePanel() {
   const npc = dialogue ? findNpc(pack, dialogue.npcId) : undefined;
   const regard = useGame((s) => (dialogue ? s.life.regard[dialogue.npcId] ?? 0 : 0));
   const node = useMemo(() => (npc && dialogue ? socialNode(npc, dialogue) : undefined), [npc, dialogue]);
-  const text = node?.text ?? '';
+  // airport staff talk about *your* flight: {flight}, {gate}, {entry} come from your ticket (or the first route from here)
+  const ticketRoute = useGame((s) => s.travel.ticket?.routeId);
+  const route = (ticketRoute ? findFlight(ticketRoute) : undefined) ?? flightsFrom(pack.id)[0];
+  const text = flightText(node?.text ?? '', route);
   // Progress is tied to the exact line, so switching nodes can never briefly
   // report the previous line as "finished".
   const [typed, setTyped] = useState<{ text: string; n: number }>({ text: '', n: 0 });

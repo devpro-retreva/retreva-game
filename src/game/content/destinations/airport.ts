@@ -1,5 +1,4 @@
 import type { BuildingDef, DestinationPack, ItemDef, NpcDef, NpcLook, WalkerDef } from '../types';
-import { flightsFrom } from '../flights';
 
 /**
  * International airport forecourt + concourse, built from one template so every
@@ -46,10 +45,6 @@ const W = -14;
 const D = 8;
 
 export function makeAirport(a: AirportSpec): DestinationPack {
-  const flights = flightsFrom(a.id);
-  const f = flights[0];
-  const dest = f ? `${f.cityName} (${f.code})` : 'your flight';
-  const gate = f?.gate ?? 'A1';
   const glass = (over: Partial<BuildingDef> & Pick<BuildingDef, 'id' | 'position' | 'size'>): BuildingDef => ({
     facing: 'west',
     wall: '#cfd8de',
@@ -83,7 +78,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
         ],
         nodes: {
           checkin: {
-            text: `${a.greeting} Passport, please… ECOWAS — no visa needed. You're on ${dest}. Window or aisle?`,
+            text: `${a.greeting} Passport, please… {entry} You're on {flight}. Window or aisle?`,
             options: [
               { label: 'Window, please', action: { kind: 'checkIn' } },
               { label: 'Aisle is fine', action: { kind: 'checkIn' } },
@@ -91,7 +86,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
             ],
           },
           checked: {
-            text: `You're checked in. Security is just up the concourse, then gate ${gate}. Safe flight!`,
+            text: `You're checked in. Security is just up the concourse, then gate {gate}. Safe flight!`,
             options: [{ label: 'Thank you', action: { kind: 'close' } }],
           },
           elsewhere: {
@@ -154,7 +149,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
             options: [{ label: 'Going', action: { kind: 'close' } }],
           },
           done: {
-            text: `You're cleared. Gate ${gate} is at the end of the concourse.`,
+            text: `You're cleared. Gate {gate} is at the end of the concourse.`,
             options: [{ label: 'Thanks', action: { kind: 'close' } }],
           },
           travellers: {
@@ -183,7 +178,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
         ],
         nodes: {
           board: {
-            text: `Now boarding ${dest}, gate ${gate}. Boarding pass? Lovely — enjoy your flight.`,
+            text: `Now boarding {flight}, gate {gate}. Boarding pass? Lovely — enjoy your flight.`,
             options: [
               { label: 'Board the plane', action: { kind: 'board' } },
               { label: 'One minute', action: { kind: 'close' } },
@@ -198,7 +193,7 @@ export function makeAirport(a: AirportSpec): DestinationPack {
             options: [{ label: 'Okay', action: { kind: 'close' } }],
           },
           none: {
-            text: `Gate ${gate}. Only passengers with a boarding pass, please.`,
+            text: `Gates ${a.gatesSign.replace(/^GATES\s*/, '')}. Only passengers with a boarding pass, please.`,
             options: [{ label: 'Okay', action: { kind: 'close' } }],
           },
         },

@@ -25,6 +25,12 @@ export interface FlightRoute {
     stay: { name: string; cost: number; note: string };
     gettingAround: number;
   };
+  /** What the check-in agent says about entry papers (game simplification: nothing to arrange yourself). */
+  entry: string;
+  /** Shown on the ticket card when the route simplifies something real. */
+  note?: string;
+  /** Which map the flight is drawn on: the Gulf of Guinea coast, or a long-haul overview. */
+  chart?: 'coast' | 'longhaul';
   /** The return route id, used for round-trip tickets. */
   returnId: string;
   /** Text on the in-flight sequence. */
@@ -53,6 +59,7 @@ export const FLIGHTS: FlightRoute[] = [
       stay: { name: 'Osu guesthouse', cost: 3500, note: 'a bed for your stay' },
       gettingAround: 2100,
     },
+    entry: 'ECOWAS — no visa needed.',
     returnId: 'acc-los',
     snack: { name: 'meat pie and juice', fullness: 12 },
     map: { from: [86, 30], to: [16, 27] },
@@ -74,11 +81,65 @@ export const FLIGHTS: FlightRoute[] = [
       stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
       gettingAround: 700,
     },
+    entry: 'ECOWAS — no visa needed.',
     returnId: 'los-acc',
     snack: { name: 'meat pie and sobolo', fullness: 12 },
     map: { from: [16, 27], to: [86, 30] },
   },
+  {
+    id: 'los-dxb',
+    code: 'GC 571',
+    carrier: CARRIER,
+    from: 'lagos-airport',
+    to: 'dubai-airport',
+    arriveAt: 'dubai-creek',
+    cityName: 'Dubai',
+    country: 'United Arab Emirates',
+    minutes: 390,
+    ticket: 95000,
+    roundTrip: 170000,
+    gate: 'A5',
+    budget: {
+      stay: { name: 'Creek studio', cost: 15000, note: 'a furnished studio for your stay' },
+      gettingAround: 8000,
+    },
+    entry: 'Your UAE visa is on file with the booking — all set.',
+    note: 'In the game the visa is handled with your ticket; real trips need one arranged in advance.',
+    chart: 'longhaul',
+    returnId: 'dxb-los',
+    snack: { name: 'chicken biryani and juice', fullness: 30 },
+    map: { from: [16, 44], to: [86, 16] },
+  },
+  {
+    id: 'dxb-los',
+    code: 'GC 572',
+    carrier: CARRIER,
+    from: 'dubai-airport',
+    to: 'lagos-airport',
+    arriveAt: 'ikeja-village',
+    cityName: 'Lagos',
+    country: 'Nigeria',
+    minutes: 420,
+    ticket: 95000,
+    roundTrip: 170000,
+    gate: 'C2',
+    budget: {
+      stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
+      gettingAround: 700,
+    },
+    entry: 'Nigerian passport — welcome home soon.',
+    chart: 'longhaul',
+    returnId: 'los-dxb',
+    snack: { name: 'jollof rice and chicken', fullness: 30 },
+    map: { from: [86, 16], to: [16, 44] },
+  },
 ];
+
+/** Fill a line of airport dialogue for your ticket: {flight}, {gate}, {entry}. */
+export function flightText(text: string, route: FlightRoute | undefined): string {
+  if (!route || !text.includes('{')) return text;
+  return text.replace(/\{flight\}/g, `${route.cityName} (${route.code})`).replace(/\{gate\}/g, route.gate).replace(/\{entry\}/g, route.entry);
+}
 
 export function findFlight(id: string): FlightRoute | undefined {
   return FLIGHTS.find((f) => f.id === id);

@@ -12,7 +12,7 @@ const PHASES = [
 ];
 
 /**
- * A short flight: the plane crosses the Gulf of Guinea coast on a schematic map
+ * A flight: the plane crosses a schematic map (the Gulf of Guinea coast, or a long-haul overview)
  * while the cabin goes through boarding → take-off → cruise (a snack) → landing.
  * Skippable; reduced motion shortens it and holds the plane still.
  */
@@ -86,6 +86,22 @@ export function FlightOverlay() {
         <div className="transit-map cut">
           <svg viewBox="0 0 100 60" className="coast-map" role="img" aria-label={`Flight path from ${fromName} to ${route.cityName}`}>
             <rect width="100" height="60" fill="#2d6f86" />
+            {route.chart === 'longhaul' ? (
+              <>
+                {/* schematic: West Africa (left), the Sahara, the Red Sea and the Arabian Peninsula (right) */}
+                <path d="M0,4 H58 C60,10 61,18 63,26 C64,34 62,44 58,60 H0 Z" fill="#c9a77e" />
+                <path d="M66,0 H100 V30 C96,34 90,36 84,34 C78,30 72,24 68,14 C67,9 66,4 66,0 Z" fill="#cfae84" />
+                <path d="M58,4 C60,10 61,18 63,26 M66,0 C66,4 67,9 68,14" stroke="#f6efe2" strokeOpacity="0.5" strokeWidth="0.5" fill="none" />
+                <g fontSize="3" fontWeight={800} fill="#6b5137" letterSpacing="0.5" opacity="0.8">
+                  <text x="6" y="54">WEST AFRICA</text>
+                  <text x="22" y="20">SAHARA</text>
+                  <text x="74" y="8">ARABIA</text>
+                </g>
+                <text x="60.5" y="34" fontSize="2.6" fill="#d7ecf2" opacity="0.8" fontWeight={650} transform="rotate(70 60.5 34)">RED SEA</text>
+                <text x="84" y="44" fontSize="2.8" fill="#d7ecf2" opacity="0.75" fontWeight={650}>GULF</text>
+              </>
+            ) : (
+              <>
             {/* the coast of Ghana, Togo, Benin and Nigeria, schematic */}
             <path d="M0,0 H100 V28 C94,29 90,30 86,30 C78,31 70,31 60,31 C52,31 46,30.6 40,30 C32,29.2 24,28 16,27 C10,26 5,24 0,23 Z" fill="#c9a77e" />
             <path d="M0,23 C5,24 10,26 16,27 C24,28 32,29.2 40,30 C46,30.6 52,31 60,31 C70,31 78,31 86,30 C90,30 94,29 100,28" stroke="#f6efe2" strokeOpacity="0.5" strokeWidth="0.5" fill="none" />
@@ -105,6 +121,8 @@ export function FlightOverlay() {
               <circle cx="60" cy="31" r="0.8" fill="#15130f" />
               <text x="56.5" y="35.5">Cotonou</text>
             </g>
+              </>
+            )}
             {[route.map.from, route.map.to].map(([x, y], i) => (
               <g key={i} transform={`translate(${x} ${y})`}>
                 <circle r="2.2" fill={i === 0 ? '#f6efe2' : '#f2b705'} stroke="#15130f" strokeWidth="0.6" />

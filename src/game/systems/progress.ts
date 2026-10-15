@@ -21,6 +21,8 @@ export interface ProgressSnapshot {
   flights?: number;
   /** Ticketed shows attended. */
   shows?: number;
+  /** Cities you have been to (Lagos, Accra, Dubai…). */
+  cities?: number;
 }
 
 export interface GoalDef {
@@ -51,6 +53,8 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, new Set(completed(p).map((h) => p.jobArea(h.jobId)).filter(Boolean)).size), 3] },
   { id: 'explorer', title: 'Lagos explorer', description: 'Visit every area of Lagos.', reward: 1500,
     progress: (p) => [Math.min(p.totalAreas, p.visited.length), p.totalAreas] },
+  { id: 'globetrotter', title: 'Globetrotter', description: 'Visit three cities: Lagos, Accra and Dubai.', reward: 2500,
+    progress: (p) => [Math.min(3, p.cities ?? 1), 3] },
   { id: 'night-out', title: 'Night out', description: 'See a show with a ticket — a concert, comedy or a street jam.', reward: 800,
     progress: (p) => [Math.min(1, p.shows ?? 0), 1] },
   { id: 'first-flight', title: 'Wheels up', description: 'Take your first flight abroad.', reward: 1500,

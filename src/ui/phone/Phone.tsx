@@ -643,7 +643,7 @@ function FlightCard({ routeId }: { routeId: string }) {
   const short = budget.dueNow - balance;
   const kind = roundTrip ? 'return' : 'one-way';
   return (
-    <div className="flight cut-sm">
+    <div className="flight cut-sm" data-route={route.id}>
       <div className="flight-head">
         <div>
           <div className="name">
@@ -695,7 +695,7 @@ function FlightCard({ routeId }: { routeId: string }) {
           <button className="btn ghost" onClick={() => setConfirm(false)}>Cancel</button>
         </div>
       )}
-      {!ticket && short <= 0 && <p className="fine">Only the ticket is charged now. Stay and getting around are estimates you pay as you go. Booking also keeps {route.cityName} on this device for offline play (Settings → Cities).</p>}
+      {!ticket && short <= 0 && <p className="fine">Only the ticket is charged now. Stay and getting around are estimates you pay as you go. Booking also keeps {route.cityName} on this device for offline play (Settings → Cities).{route.note ? ` ${route.note}` : ''}</p>}
     </div>
   );
 }

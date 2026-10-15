@@ -104,6 +104,7 @@ const smallRoom = (id: string, name: string, wall: string, floor: string): Inter
 export const INTERIORS: InteriorDef[] = [
   smallRoom('yaba-room', 'Room on Adeniyi Street', '#e9dcc3', '#9b7653'),
   smallRoom('osu-guesthouse', 'Osu Guesthouse room', '#d8e4e0', '#a67c52'),
+  smallRoom('creek-studio', 'Creek studio', '#efe4cf', '#b08d64'),
   {
     id: 'yaba-eatery',
     name: 'Adeniyi Eatery',

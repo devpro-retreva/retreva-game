@@ -29,6 +29,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['osu-guesthouse'],
     load: () => import('./destinations/accraPack').then((m) => m.ACCRA_PACKS),
   },
+  {
+    id: 'dubai',
+    builtIn: false,
+    eventIds: ['creek-lights'],
+    homeIds: ['creek-studio'],
+    load: () => import('./destinations/dubaiPack').then((m) => m.DUBAI_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

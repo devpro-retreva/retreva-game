@@ -18,7 +18,7 @@ Every asset the shipped game uses, where it came from, and its terms. Update thi
 | Bricolage Grotesque (variable) | `@fontsource-variable/bricolage-grotesque` | Google Fonts via Fontsource, self-hosted | SIL Open Font License 1.1 | ~70 KB woff2 |
 | Caveat 700 | `@fontsource/caveat` | Google Fonts via Fontsource, self-hosted | SIL Open Font License 1.1 | ~50 KB woff2 |
 
-No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`, e.g. Accra) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
+No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)
 

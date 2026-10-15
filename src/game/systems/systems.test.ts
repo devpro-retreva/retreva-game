@@ -11,7 +11,7 @@ import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
 import { ALL_AREAS, fareBetween, LAGOS_AREAS, modeBetween, regionOf, REGIONS } from '../content/regions';
-import { FLIGHTS, findFlight } from '../content/flights';
+import { FLIGHTS, findFlight, flightText } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
 import { VEHICLES, findVehicle } from '../content/vehicles';
@@ -30,11 +30,13 @@ import { visitStop } from './jobs';
 import { lagosIsland } from '../content/destinations/lagosIsland';
 import { ikeja } from '../content/destinations/ikeja';
 import { bookFlight, canBoard, checkIn, clearSecurity, completeFlight, emptyTravel, liquidsIn, tripBudget } from './travel';
-import { ALL_PACKS, registerPacks } from '../content';
+import { ALL_PACKS, localPrice as localPriceOf, registerPacks } from '../content';
 import { ACCRA_PACKS } from '../content/destinations/accraPack';
+import { DUBAI_PACKS } from '../content/destinations/dubaiPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
+registerPacks(DUBAI_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1109,5 +1111,33 @@ describe('city packs', () => {
     expect(citiesInSave({ ...base, travel: { ticket: { id: 't', routeId: FLIGHTS[0].id, stage: 'booked', paid: 1, roundTrip: false, bookedAt: 0 }, history: [] } })).toContain('accra');
     const inv = addItem(emptyInv(), { itemId: 'kente-strip', category: 'souvenir', quantity: 1, purchasePrice: 1, destinationId: 'accra-osu', at: 0 });
     expect(citiesInSave({ ...base, inventory: inv })).toContain('accra');
+  });
+});
+
+describe('Dubai', () => {
+  it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['accra-airport', 'dubai-airport']);
+    for (const f of FLIGHTS) {
+      expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
+      expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
+      expect(f.roundTrip).toBeLessThan(f.ticket * 2);
+    }
+  });
+  it('airport staff talk about the flight on your ticket', () => {
+    const line = "Passport, please… {entry} You're on {flight}, gate {gate}.";
+    expect(flightText(line, findFlight('los-dxb'))).toBe("Passport, please… Your UAE visa is on file with the booking — all set. You're on Dubai (GC 571), gate A5.");
+    expect(flightText(line, findFlight('los-acc'))).toContain('ECOWAS — no visa needed');
+    expect(flightText('no tokens', undefined)).toBe('no tokens');
+  });
+  it('Dubai prices show dirhams as a guide; the studio can be rented, bought and furnished', () => {
+    const creek = ALL_PACKS.find((p) => p.id === 'dubai-creek')!;
+    expect(localPriceOf(creek, 4000)).toBe('≈ AED 10');
+    expect(creek.homes![0].buyPrice).toBeGreaterThan(creek.homes![0].moveInCost);
+    expect(findInterior('creek-studio')?.slots.length).toBeGreaterThan(3);
+  });
+  it('Globetrotter counts cities visited', () => {
+    const g = GOALS.find((x) => x.id === 'globetrotter')!;
+    expect(g.progress({ cities: 1 } as never)).toEqual([1, 3]);
+    expect(g.progress({ cities: 3 } as never)).toEqual([3, 3]);
   });
 });

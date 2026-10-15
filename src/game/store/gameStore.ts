@@ -297,6 +297,7 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
     totalAreas: lagosDistricts.length,
     flights: s.travel.history.length,
     shows: (s.world.tickets ?? []).filter((t) => t.status === 'used').length,
+    cities: new Set(s.world.visited.map((a) => regionOf(a)?.id).filter(Boolean)).size,
   };
 }
 

@@ -45,7 +45,8 @@ No account, server, API key or paid service is needed. Progress saves to Indexed
 - **More work:** Tobi's repair bench in Ikeja (put repair steps in order, unlocked by doing his Phone Run), guiding Sophie's tour of Lagos Island (she follows you on foot; unlocked by discovering the Island's sights), and courier ranks (Regular after 5 errands, Pro after 15) that pay more.
 - **Homes:** walk into your room; furnish it with furniture from Okon Home in Yaba (comfort 4+ wakes you well rested); a storage chest; buy the room outright (₦45,000 in Yaba, ₦38,000 in Osu) and sell it later for 85%. Moving out or selling returns your furniture and stored things.
 - **Leisure:** a sit-down restaurant (Adeniyi Eatery, Yaba) with opening hours; ticketed shows — Highlife on the Beach (Lekki, nightly), Glover Laughs (Lagos Island, every other night), Oxford Street Night Jam (Osu) — booked in the Events app or paid at the gate; Bookings lists tickets, your flight and your homes. A **joy** need: low joy tires you faster; shows, meals, chats, gifts, riding and a comfy home lift it.
-- **Cities:** Lagos is built in; Accra is a separate city pack that loads when you need it and can be kept on the device for offline play (Settings → Cities: download, check files, remove).
+- **Dubai:** fly Lagos → Dubai (₦95,000 one-way, ₦170,000 return; the visa is folded into the ticket as a game simplification) to Dubai Creek by Al Fahidi: Rashid's spice house (bargaining), Maryam's karak café shift, Chef Ngozi's Naija kitchen and the Spice Run between them, the Creek Lights night market, and a creek studio to rent or buy. Dirham prices shown as a guide. Globetrotter goal for visiting all three cities.
+- **Cities:** Lagos is built in; Accra and Dubai are separate city packs that loads when you need it and can be kept on the device for offline play (Settings → Cities: download, check files, remove).
 - **Performance:** Settings → Performance shows live fps, draw calls and device facts, and runs a 20-second benchmark (average fps, 1% low, frame-time spikes) with a suggested graphics tier; results can be copied to share.
 
 ## Areas
@@ -58,6 +59,7 @@ No account, server, API key or paid service is needed. Progress saves to Indexed
 | **Ikeja** | Computer Village gadget street | Phone Run | Chuka's Gadget Plug (bargaining) |
 | **Lagos / Accra airports** | Terminal forecourt, glass terminal, airfield | Suitcase Dash | Airport shops |
 | **Osu, Accra** | Oxford Street — chop bars, crafts, forex | Kente Run, waakye shift | Auntie Akos' Chop Bar, Sankofa Crafts (bargaining), guesthouse |
+| **Dubai Creek** | Creekside promenade by Al Fahidi, water taxis | Spice Run, karak café shift | Al Fahidi Spice House (bargaining), Creek Karak Café, Chef Ngozi's Naija Kitchen, creek studio |
 
 ## Architecture
 
@@ -108,6 +110,6 @@ src/
 ## Next milestones (from the V6 architecture, `docs/architecture-v6.md`)
 
 1. Run the in-game benchmark on a real budget Android phone and an iPhone and record the numbers
-2. A third destination as a city pack (e.g. Dubai) — the pack system is ready for it
+2. More destinations as city packs
 3. Airport interiors; more restaurants and venues; weekly event schedules
 4. Optional GLB characters/props through the asset pipeline (Meshy/Blender need the owner's setup and approval)
