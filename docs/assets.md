@@ -24,11 +24,14 @@ No third-party 3D models, textures, photos, music or sound files are shipped. Ci
 
 | Tool | Status in this repo | Notes |
 |---|---|---|
-| Meshy MCP | Not configured | Needs the owner's Meshy API key (kept out of the repo) and uses paid credits. Get approval for one test asset and a budget before any generation. |
-| Blender + community Blender MCP | Not installed | Optional for cleaning/exporting GLB assets. Community project that runs Python inside Blender — local, trusted machine only. |
+| Meshy CLI (`meshy-cli@0.4.0`, via the Meshy plugin) | Signed in by browser device login (credential stays in `~/.config/meshy/`, never the repo) | In cloud sessions run it with `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`. The Meshy free plan can no longer create tasks through the API (402 `NoMorePendingTasks`) — a paid plan is needed before the first test asset (danfo, ~30 credits). Get approval for one test asset and a budget before any generation. |
+| Blender 5.2 LTS, headless (`bpy==5.2.2` from PyPI) | `tools/blender/` — `npm run blender:setup` installs it into `/opt/blender-py` (≈1 GB, Python 3.13) | `optimize_glb.py` fits a GLB to the budget (one mesh/material, decimate, base-colour texture only, JPEG, origin/scale) and prints a pass/fail report; `render_preview.py` renders a PNG with Cycles on the CPU; `npm run blender:selftest` checks both on a throwaway over-budget model. GPL tool used on our own files only — it adds nothing to the shipped game. |
+| Community Blender MCP | Not used | Needs a desktop Blender with its add-on running, so it doesn't fit the cloud sessions; the scripts above cover the pipeline. If used locally: community project that runs Python inside Blender — trusted machine only. |
 | Mixamo | Not used | Website, not an MCP. Check current terms before using animations commercially. |
 | Poly Haven / ambientCG | Not used | CC0 textures/HDRIs; would add download size — measure first. |
 
 ## If a GLB character or prop is added later
+
+Budget for a vehicle prop (proposed for the danfo test): ≤ 3,000 triangles, one mesh, one material, one ≤ 1024² base-colour JPEG, ≤ 300 KB GLB, no Draco/meshopt (no decoder download). Run it through `tools/blender/optimize_glb.py`, which checks all of these, and look at a `render_preview.py` image before integrating. Keep the Meshy master out of `public/`.
 
 The renderer (three.js via @react-three/fiber) can load GLB/glTF. Before integrating one: keep the procedural version as the fallback, record the source/creator/date/licence here, target ≤ 15k triangles and one 1024² texture for a character on the Low tier, test on Low/Medium/High in the `responsive`, `device` and `city` playtests, and measure draw calls/triangles with `runtime.perf`.

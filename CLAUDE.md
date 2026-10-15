@@ -14,6 +14,8 @@ npm test           # vitest unit tests (src/game/systems/systems.test.ts)
 npm run typecheck  # tsc -b --noEmit
 npm run build      # type-check + production build into dist/ (base: './', runs from any folder)
 npm run preview    # serve dist/
+npm run blender:setup     # dev only: headless Blender 5.2 (bpy) into /opt/blender-py for tools/blender/
+npm run blender:selftest  # checks the GLB optimize + preview scripts (no paid generation)
 ```
 
 Before calling work done: `npm run typecheck`, `npm test`, `npm run build` must all pass, and for gameplay or UI changes `npm run playtest` too (see below). Report real results — never claim a test passed that wasn't run.
@@ -115,4 +117,4 @@ Vehicles: `life.riding` is the uid you're on; `InteractionSystem` offers "Ride" 
 
 Known gaps: performance on real phones is unmeasured — the in-game benchmark (Settings → Performance) is ready for it; the playtests use software GL at 2–10 fps. Offline install doesn't work inside the claude.ai artifact sandbox (registration fails silently there; the game still runs). Airports have no interior. Dubai's visa is folded into the ticket (said on the flight card). Interiors are cut-away rooms (the camera looks down over the walls).
 
-Planned (from the blueprint): more destinations as city packs, airport interiors, more venues and weekly event schedules, real-device benchmark results, optional GLB assets via the asset pipeline (needs the owner's Meshy/Blender setup and approval). Making the opening screens global (choose a starting city) and applying the chosen logo ("Orbit R" direction) as app icon/favicon are also open.
+Planned (from the blueprint): more destinations as city packs, airport interiors, more venues and weekly event schedules, real-device benchmark results, optional GLB assets via the asset pipeline (Blender scripts in `tools/blender/` are ready; Meshy is signed in but its free plan can't create tasks via the API — needs the owner's plan upgrade and approval). Making the opening screens global (choose a starting city) and applying the chosen logo ("Orbit R" direction) as app icon/favicon are also open.
