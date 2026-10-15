@@ -10,7 +10,9 @@ import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
-import { fareBetween, LAGOS_AREAS } from '../content/regions/lagosState';
+import { ALL_AREAS, fareBetween, LAGOS_AREAS, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { FLIGHTS, findFlight } from '../content/flights';
+import { bookFlight, canBoard, checkIn, clearSecurity, completeFlight, emptyTravel, liquidsIn, tripBudget } from './travel';
 import { ALL_PACKS } from '../content';
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
@@ -103,7 +105,7 @@ describe('jobs', () => {
 describe('dialogue', () => {
   it('Mama Titi offers the job when available and nags when active', () => {
     const npc = lagos.npcs.find((n) => n.id === 'mama-titi')!;
-    const base = { jobAvailable: () => true, jobActive: () => false, isDropoff: () => false, jobCompletedBefore: () => false };
+    const base = { jobAvailable: () => true, jobActive: () => false, isDropoff: () => false, jobCompletedBefore: () => false, tripStage: () => 'none' as const, carryingLiquids: () => false };
     expect(resolveEntry(npc.dialogue, base)).toBe('offer');
     expect(resolveEntry(npc.dialogue, { ...base, jobActive: () => true, jobAvailable: () => false })).toBe('waiting');
     expect(resolveEntry(npc.dialogue, { ...base, jobAvailable: () => false })).toBe('cooldown');
@@ -145,6 +147,7 @@ describe('persistence', () => {
       jobs: emptyJobs(),
       world: emptyWorld('lagos-adeniyi'),
       life: emptyLife(),
+      travel: emptyTravel(),
       settings: { cameraSensitivity: 1, invertY: false, reducedMotion: false, textScale: 1 as const, shadows: 'auto' as const, graphics: 'auto' as const, showFps: false, tips: true },
       player: { position: [1, 2] as [number, number], yaw: 0 },
       stats: { playTimeMs: 0 },
@@ -312,7 +315,7 @@ describe('collect jobs', () => {
 
 describe('Lagos travel', () => {
   it('every region area has a pack, an arrival point and at least one job and landmark', () => {
-    for (const a of LAGOS_AREAS) {
+    for (const a of ALL_AREAS) {
       const p = ALL_PACKS.find((x) => x.id === a.id);
       expect(p, a.id).toBeDefined();
       expect(p!.jobs.length).toBeGreaterThan(0);
@@ -322,7 +325,8 @@ describe('Lagos travel', () => {
     }
   });
   it('fares are symmetric, positive and rounded to ₦50', () => {
-    for (const a of LAGOS_AREAS) for (const b of LAGOS_AREAS) {
+    const streets = LAGOS_AREAS.filter((a) => !a.hub);
+    for (const a of streets) for (const b of streets) {
       if (a.id === b.id) continue;
       const f = fareBetween(a.id, b.id);
       expect(f).toBe(fareBetween(b.id, a.id));
@@ -354,12 +358,154 @@ describe('Lagos travel', () => {
   });
 });
 
+describe('regions and taxis', () => {
+  it('taxis serve the airports and cost more than the danfo; no fare across regions', () => {
+    const yabaIkeja = fareBetween('lagos-adeniyi', 'ikeja-village');
+    const yabaAirport = fareBetween('lagos-adeniyi', 'lagos-airport');
+    expect(modeBetween('lagos-adeniyi', 'ikeja-village')).toBe('Danfo');
+    expect(modeBetween('lagos-adeniyi', 'lagos-airport')).toBe('Taxi');
+    expect(yabaAirport).toBeGreaterThan(yabaIkeja);
+    expect(yabaAirport % 50).toBe(0);
+    expect(fareBetween('accra-osu', 'accra-airport')).toBeGreaterThan(0);
+    expect(fareBetween('lagos-adeniyi', 'accra-osu')).toBe(0);
+    expect(regionOf('accra-osu')?.country).toBe('Ghana');
+    for (const r of REGIONS) expect(r.areas.filter((a) => a.hub)).toHaveLength(1);
+  });
+  it('every flight connects two airports and lands in a real area of the destination region', () => {
+    for (const f of FLIGHTS) {
+      expect(ALL_AREAS.find((a) => a.id === f.from)?.hub, f.id).toBe('airport');
+      expect(ALL_AREAS.find((a) => a.id === f.to)?.hub, f.id).toBe('airport');
+      expect(regionOf(f.arriveAt), f.id).toBe(regionOf(f.to));
+      expect(findFlight(f.returnId)?.from, f.id).toBe(f.to);
+      expect(f.roundTrip).toBeLessThan(f.ticket * 2);
+      expect(ALL_PACKS.find((p) => p.id === f.arriveAt), f.arriveAt).toBeDefined();
+    }
+  });
+});
+
+describe('flying abroad', () => {
+  const out = findFlight('los-acc')!;
+  it('trip budget lists taxi, ticket, stay and getting around; only the ticket is due now', () => {
+    const b = tripBudget(out, { taxiToAirport: 2300, roundTrip: true, hasStay: false });
+    expect(b.lines.map((l) => l.key)).toEqual(['taxi', 'ticket', 'stay', 'around']);
+    expect(b.dueNow).toBe(out.roundTrip);
+    expect(b.total).toBe(2300 + out.roundTrip + out.budget.stay.cost + out.budget.gettingAround);
+    const there = tripBudget(out, { taxiToAirport: 0, roundTrip: false, hasStay: true });
+    expect(there.lines.map((l) => l.key)).toEqual(['ticket', 'stay', 'around']);
+    expect(there.lines.find((l) => l.key === 'stay')!.amount).toBe(0);
+    expect(there.dueNow).toBe(out.ticket);
+  });
+  it('airport steps run in order: check-in, security, gate — no skipping, no repeats', () => {
+    let t = emptyTravel();
+    expect(checkIn(t, undefined, 'lagos-airport').ok).toBe(false);
+    const booked = bookFlight(t, out, true, 'T1', 0);
+    expect(booked.ok).toBe(true);
+    if (!booked.ok) return;
+    t = booked.state;
+    expect(bookFlight(t, out, false, 'T2', 0).ok).toBe(false); // one ticket at a time
+    expect(clearSecurity(t).ok).toBe(false); // security before check-in
+    expect(canBoard(t, out, 'lagos-airport')).toBe('not-checked-in');
+    const wrong = checkIn(t, out, 'accra-airport');
+    expect(wrong.ok || wrong.reason).toBe('wrong-airport');
+    const ci = checkIn(t, out, 'lagos-airport');
+    if (!ci.ok) throw new Error('check-in failed');
+    t = ci.state;
+    expect(checkIn(t, out, 'lagos-airport').ok).toBe(false);
+    expect(canBoard(t, out, 'lagos-airport')).toBe('not-cleared');
+    const sec = clearSecurity(t);
+    if (!sec.ok) throw new Error('security failed');
+    t = sec.state;
+    expect(canBoard(t, out, 'lagos-airport')).toBe(true);
+  });
+  it('landing uses the ticket once; a round trip leaves the paid return ticket', () => {
+    let t = emptyTravel();
+    for (const step of [
+      (x: typeof t) => bookFlight(x, out, true, 'T1', 0),
+      (x: typeof t) => checkIn(x, out, 'lagos-airport'),
+      (x: typeof t) => clearSecurity(x),
+    ]) {
+      const r = step(t);
+      if (!r.ok) throw new Error('step failed');
+      t = r.state;
+    }
+    const landed = completeFlight(t, out, 5);
+    if (!landed.ok) throw new Error('landing failed');
+    expect(landed.state.history).toEqual([{ routeId: 'los-acc', ticketId: 'T1', at: 5 }]);
+    expect(landed.state.ticket).toMatchObject({ routeId: 'acc-los', stage: 'booked', paid: 0, roundTrip: false });
+    expect(completeFlight(landed.state, out, 6).ok).toBe(false); // can't land twice
+    // one-way: nothing left after landing
+    let o = bookFlight(emptyTravel(), out, false, 'T9', 0);
+    if (!o.ok) throw new Error();
+    o = checkIn(o.state, out, 'lagos-airport') as typeof o;
+    o = clearSecurity((o as { state: typeof t }).state) as typeof o;
+    const l2 = completeFlight((o as { state: typeof t }).state, out, 1);
+    expect(l2.ok && l2.state.ticket).toBe(null);
+  });
+  it('bottled drinks count as liquids at security; food does not', () => {
+    let inv = emptyInv();
+    inv = addItem(inv, { itemId: 'zobo', category: 'drink', quantity: 2, purchasePrice: 300, destinationId: 'x', at: 0 });
+    inv = addItem(inv, { itemId: 'puff-puff', category: 'food', quantity: 1, purchasePrice: 300, destinationId: 'x', at: 0 });
+    expect(liquidsIn(inv).map((e) => e.itemId)).toEqual(['zobo']);
+  });
+  it('v4 saves upgrade to v5: a home becomes a list, travel starts empty, bad tickets are dropped', () => {
+    const v4 = {
+      schemaVersion: 4, revision: 2, updatedAt: 1, deviceId: 'd',
+      profile: { name: 'Ade', avatar: DEFAULT_AVATAR, createdAt: 0 },
+      destinationId: 'lagos-adeniyi', wallet: { balance: 900, ledger: [] }, inventory: { entries: [] }, jobs: emptyJobs(),
+      world: emptyWorld('lagos-adeniyi'), settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 1 },
+      life: { needs: { energy: 50, fullness: 50 }, skills: {}, regard: {}, home: 'yaba-room', shiftsDone: 1 },
+    };
+    const up = migrate(v4)!;
+    expect(up.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
+    expect(up.life.homes).toEqual(['yaba-room']);
+    expect(up.travel).toEqual(emptyTravel());
+    expect(up.wallet.balance).toBe(900);
+    const withTicket = migrate({ ...up, travel: { ticket: { id: 'T', routeId: 'los-acc', stage: 'cleared', paid: 9000, roundTrip: false, bookedAt: 0 }, history: [] } })!;
+    expect(withTicket.travel.ticket?.stage).toBe('cleared');
+    const bogus = migrate({ ...up, travel: { ticket: { id: 'T', routeId: 'nowhere', stage: 'booked' }, history: [{ nope: 1 }] } })!;
+    expect(bogus.travel).toEqual(emptyTravel());
+  });
+  it('airport and Accra content: desks, a porter job and the Osu shift all resolve', () => {
+    for (const id of ['lagos-airport', 'accra-airport']) {
+      const p = ALL_PACKS.find((x) => x.id === id)!;
+      const actions = p.npcs.flatMap((n) => Object.values(n.dialogue.nodes).flatMap((node) => node.options.map((o) => o.action.kind)));
+      for (const k of ['checkIn', 'security', 'board', 'openTravel', 'openFlights']) expect(actions, `${id} ${k}`).toContain(k);
+      expect(p.jobs).toHaveLength(1);
+    }
+    const osu = ALL_PACKS.find((x) => x.id === 'accra-osu')!;
+    expect(osu.localCurrency?.code).toBe('GHS');
+    expect(osu.shifts?.[0].dishes.length).toBe(4);
+    expect(osu.homes?.[0].id).toBe('osu-guesthouse');
+  });
+  it('dialogue routes the airport desks by ticket stage and liquids', () => {
+    const lagosAirportPack = ALL_PACKS.find((x) => x.id === 'lagos-airport')!;
+    const desk = lagosAirportPack.npcs.find((n) => n.id === 'ifeoma')!;
+    const sec = lagosAirportPack.npcs.find((n) => n.id === 'officer-musa')!;
+    const gate = lagosAirportPack.npcs.find((n) => n.id === 'bisola')!;
+    const ctx = (stage: 'none' | 'booked' | 'checked-in' | 'cleared' | 'elsewhere', liquids = false) => ({
+      jobAvailable: () => false, jobActive: () => false, isDropoff: () => false, jobCompletedBefore: () => false,
+      tripStage: () => stage, carryingLiquids: () => liquids,
+    });
+    expect(resolveEntry(desk.dialogue, ctx('none'))).toBe('noticket');
+    expect(resolveEntry(desk.dialogue, ctx('booked'))).toBe('checkin');
+    expect(resolveEntry(desk.dialogue, ctx('elsewhere'))).toBe('elsewhere');
+    expect(resolveEntry(sec.dialogue, ctx('checked-in'))).toBe('scan');
+    expect(resolveEntry(sec.dialogue, ctx('checked-in', true))).toBe('liquids');
+    expect(resolveEntry(sec.dialogue, ctx('cleared', true))).toBe('done');
+    expect(resolveEntry(gate.dialogue, ctx('cleared'))).toBe('board');
+    expect(resolveEntry(gate.dialogue, ctx('checked-in'))).toBe('security-first');
+  });
+});
+
 describe('goals', () => {
   const snap = (over: Partial<Parameters<typeof newlyCompleted>[0]> = {}) => ({
     jobs: emptyJobs(), jobArea: () => undefined, visited: ['lagos-adeniyi'], discovered: [], inventory: emptyInv(), bestBargain: 0, rides: 0, totalAreas: 4, ...over,
   });
   it('nothing is complete at the start', () => {
     expect(newlyCompleted(snap(), [])).toHaveLength(0);
+  });
+  it('the first flight completes "Wheels up"', () => {
+    expect(newlyCompleted(snap({ flights: 1 }), []).map((g) => g.id)).toContain('first-flight');
   });
   it('explorer completes once every area is visited, and is not repeated', () => {
     const s = snap({ visited: ['a', 'b', 'c', 'd'], rides: 3 });
@@ -435,13 +581,13 @@ describe('daily life', () => {
       world: emptyWorld('lagos-adeniyi'), settings: {}, player: { position: [0, 0], yaw: 0 }, stats: { playTimeMs: 9 },
     };
     const up = migrate(v3)!;
-    expect(up.schemaVersion).toBe(4);
+    expect(up.schemaVersion).toBe(SAVE_SCHEMA_VERSION);
     expect(up.wallet.balance).toBe(4321);
     expect(up.destinationId).toBe('lagos-island');
     expect(up.life).toEqual(emptyLife());
     const v4 = migrate({ ...up, life: { needs: { energy: 500, fullness: -3 }, skills: { cooking: 90 }, regard: { 'mama-titi': 12 }, home: 'yaba-room', shiftsDone: 2 } })!;
     expect(v4.life.needs).toEqual({ energy: 100, fullness: 0 });
-    expect(v4.life.home).toBe('yaba-room');
+    expect(v4.life.homes).toEqual(['yaba-room']);
     expect(v4.life.skills.cooking).toBe(90);
   });
   it('every shift, spot and home in every pack is valid', () => {

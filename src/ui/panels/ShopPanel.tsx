@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { findBusiness, findItem, findNpc, formatMoney } from '../../game/content';
+import { findBusiness, findItem, findNpc, formatMoney, localPrice } from '../../game/content';
 import { round50 } from '../../game/systems/negotiation';
 import { countItem } from '../../game/systems/inventory';
 import { useGame } from '../../game/store/gameStore';
@@ -221,6 +221,7 @@ export function ShopPanel() {
                   </div>
                   <div className="side">
                     <span className="price num">{formatMoney(pack, s.price)}</span>
+                    {localPrice(pack, s.price) && <span className="local-price num">{localPrice(pack, s.price)}</span>}
                     {biz.haggle ? (
                       <button className="btn" onClick={() => startHaggle(biz.id, item.id)} aria-label={`Bargain for ${item.name}`}>
                         Bargain
@@ -238,7 +239,7 @@ export function ShopPanel() {
         )}
       </div>
       <footer className="sheet-foot">
-        <span>Your money</span>
+        <span>Your money{pack.localCurrency ? ` · ${pack.localCurrency.code} shown as a guide` : ''}</span>
         <b className="num">{formatMoney(pack, balance)}</b>
       </footer>
     </section>

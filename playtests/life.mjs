@@ -37,7 +37,7 @@ async function play(name, viewport, mobile) {
   await sleep(1500);
 
   let s = await st();
-  log(`${L} new life starts rested and fed`, s.life.needs.energy > 84 && s.life.needs.fullness > 74 && s.life.home === null, `${s.life.needs.energy.toFixed(2)}/${s.life.needs.fullness.toFixed(2)}`);
+  log(`${L} new life starts rested and fed`, s.life.needs.energy > 84 && s.life.needs.fullness > 74 && s.life.homes.length === 0, `${s.life.needs.energy.toFixed(2)}/${s.life.needs.fullness.toFixed(2)}`);
   log(`${L} needs show in the HUD with text, not colour alone`, await p.isVisible('.need[aria-label^="Energy 8"]'));
 
   // time passes → needs fall
@@ -158,7 +158,7 @@ async function play(name, viewport, mobile) {
   await tap('button:has-text("Confirm · pay")');
   await sleep(300);
   s = await st();
-  log(`${L} renting debits ₦6,000 once and gives you a home`, s.life.home === 'yaba-room' && s.bal === preRent.bal - 6000 && s.ledger.filter((id) => id === 'home:yaba-room').length === 1);
+  log(`${L} renting debits ₦6,000 once and gives you a home`, s.life.homes.includes('yaba-room') && s.bal === preRent.bal - 6000 && s.ledger.filter((id) => id === 'home:yaba-room').length === 1);
   await S(() => { const st = window.__retreva.store; st.setState({ life: { ...st.getState().life, needs: { ...st.getState().life.needs, energy: 30 } } }); });
   await tap('button:has-text("Sleep")');
   await p.waitForFunction(() => window.__retreva.store.getState().ui === 'play' && window.__retreva.store.getState().life.needs.energy > 99, null, { timeout: 15000 });
@@ -176,7 +176,7 @@ async function play(name, viewport, mobile) {
   await p.waitForFunction(() => window.__retreva?.store.getState().phase === 'playing', null, { timeout: 40000 });
   s = await st();
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  log(`${L} home, skills, regard and shifts survive reload`, s.life.home === pre.life.home && same(s.life.skills, pre.life.skills) && same(s.life.regard, pre.life.regard) && s.life.shiftsDone === pre.life.shiftsDone);
+  log(`${L} home, skills, regard and shifts survive reload`, same(s.life.homes, pre.life.homes) && same(s.life.skills, pre.life.skills) && same(s.life.regard, pre.life.regard) && s.life.shiftsDone === pre.life.shiftsDone);
   log(`${L} needs survive reload`, Math.abs(s.life.needs.energy - pre.life.needs.energy) < 1.5 && Math.abs(s.life.needs.fullness - pre.life.needs.fullness) < 1.5);
   log(`${L} money and ledger survive reload (no duplicate payouts)`, s.bal === pre.bal && s.ledger.length === pre.ledger.length);
   const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

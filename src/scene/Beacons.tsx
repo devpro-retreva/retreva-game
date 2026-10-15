@@ -7,6 +7,12 @@ import { useGame } from '../game/store/gameStore';
 import { beaconMaterial, ringMaterial, travelBeaconMaterial } from './materials';
 import { usePack } from './worldContext';
 
+/** The airport desk for each ticket stage: check-in, then security, then the gate. */
+const STEP_ACTION = { booked: 'checkIn', 'checked-in': 'security', cleared: 'board' } as const;
+function airportDesk(pack: DestinationPack, action: string): NpcDef | undefined {
+  return pack.npcs.find((n) => Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === action)));
+}
+
 /** NPCs whose dialogue can open travel (danfo conductors, keke riders). */
 function conductors(pack: DestinationPack): NpcDef[] {
   return pack.npcs.filter((n) => Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === 'openTravel')));
@@ -24,12 +30,13 @@ export function Beacons() {
   const diamonds = useRef<(THREE.Mesh | null)[]>([]);
   const travelMarks = useRef<(THREE.Mesh | null)[]>([]);
   const ring = useRef<THREE.Mesh>(null);
+  const stepMark = useRef<THREE.Mesh>(null);
 
   useFrame(({ clock }) => {
     const s = useGame.getState();
     const t = clock.elapsedTime;
     const reduced = s.settings.reducedMotion;
-    const hidden = s.ui === 'dialogue' || s.ui === 'transit';
+    const hidden = s.ui === 'dialogue' || s.ui === 'transit' || s.ui === 'flight';
     const bob = reduced ? 0 : Math.sin(t * 2.4) * 0.08;
     const spin = reduced ? 0 : t * 1.6;
     const now = Date.now();
@@ -63,6 +70,17 @@ export function Beacons() {
       m.rotation.y = -spin * 0.7;
     });
 
+    // next airport step: a yellow diamond over the desk you need now
+    if (stepMark.current) {
+      const t0 = s.travel.ticket;
+      const desk = t0 && !s.jobs.active ? airportDesk(pack, STEP_ACTION[t0.stage]) : undefined;
+      stepMark.current.visible = !!desk && !hidden;
+      if (desk) {
+        stepMark.current.position.set(desk.position[0], 2.35 + bob, desk.position[1]);
+        stepMark.current.rotation.y = spin;
+      }
+    }
+
     if (ring.current) {
       ring.current.visible = !!ringAt && !hidden;
       if (ringAt) {
@@ -87,6 +105,9 @@ export function Beacons() {
           <octahedronGeometry args={[0.16, 0]} />
         </mesh>
       ))}
+      <mesh ref={stepMark} material={beaconMaterial} visible={false} renderOrder={2}>
+        <octahedronGeometry args={[0.2, 0]} />
+      </mesh>
       <mesh ref={ring} rotation-x={-Math.PI / 2} material={ringMaterial} visible={false} renderOrder={2}>
         <ringGeometry args={[1.2, 1.38, 40]} />
       </mesh>

@@ -37,7 +37,7 @@ function building(g: ColorGeometryBuilder, a: TextureAtlas, b: BuildingDef, PPM:
   g.box(pc, [x + d / 2 - 0.12, h + 0.35, z], [0.24, 0.7, w]);
 
   // rooftop water tank on stand (very common on Lagos roofs)
-  if (!b.sign || rnd() > 0.5) {
+  if (b.style !== 'glass' && (!b.sign || rnd() > 0.5)) {
     const tx = x - out * (d * 0.15);
     const tz = z + (rnd() - 0.5) * w * 0.4;
     g.box('#6b6660', [tx, h + 0.55, tz], [1.2, 0.9, 1.2]);
@@ -91,7 +91,20 @@ function building(g: ColorGeometryBuilder, a: TextureAtlas, b: BuildingDef, PPM:
   }
 
   // AC unit or satellite dish for variety
-  if (rnd() > 0.45 && b.storeys >= 2) {
+  // terminal canopy: a long flat roof over the walkway on slim columns
+  if (b.style === 'glass' && !b.awning) {
+    const depth = 3.6;
+    g.box('#e9e6df', [faceX + out * (depth / 2), 4.3, z], [depth, 0.18, w - 0.4]);
+    g.box('#b9b5ad', [faceX + out * (depth - 0.05), 4.12, z], [0.1, 0.22, w - 0.4]);
+    // cantilevered: tie rods from the facade hold the outer edge, so nothing stands in the walkway
+    const rodLen = Math.hypot(depth, 3.0);
+    const rodAng = Math.atan2(3.0, depth);
+    for (let cz = z - w / 2 + 1.2; cz <= z + w / 2 - 1.1; cz += 4.2) {
+      g.boxR('#8e9399', [faceX + out * (depth / 2), 5.85, cz], [rodLen, 0.06, 0.06], [0, 0, out < 0 ? rodAng : -rodAng]);
+    }
+  }
+
+  if (b.style !== 'glass' && rnd() > 0.45 && b.storeys >= 2) {
     g.box('#e8e6e0', [faceX + out * 0.25, STOREY_H + 2.4, z + w * 0.3], [0.5, 0.55, 0.8]);
   }
 }
@@ -101,15 +114,17 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
   const at = placer(p.position[0], p.position[1], r);
   switch (p.kind) {
     case 'danfo': {
-      const Y = '#f2b705';
+      // the yellow Lagos danfo; other cities' minibuses (Accra's tro-tros) pass their own colour
+      const Y = p.color ?? '#f2b705';
       g.box(Y, at(0, 1.3, 0), [2.0, 1.7, 5.0], r);
       g.box(shade(Y, 0.06), at(0, 2.2, -0.1), [1.9, 0.12, 4.6], r);
       // window band
       g.box('#24292c', at(0, 1.72, -0.1), [2.02, 0.62, 4.3], r);
       g.box('#24292c', at(0, 1.62, 2.505), [1.7, 0.7, 0.02], r);
-      // the two black stripes
-      g.box('#151515', at(0, 1.18, 0), [2.03, 0.1, 5.02], r);
-      g.box('#151515', at(0, 0.98, 0), [2.03, 0.1, 5.02], r);
+      // the two black stripes (a blue band on other minibuses)
+      const band = p.color ? '#2c5f9e' : '#151515';
+      g.box(band, at(0, 1.18, 0), [2.03, 0.1, 5.02], r);
+      g.box(band, at(0, 0.98, 0), [2.03, 0.1, 5.02], r);
       // bumpers, lights
       g.box('#3b3b3b', at(0, 0.55, 2.55), [2.0, 0.22, 0.12], r);
       g.box('#3b3b3b', at(0, 0.55, -2.55), [2.0, 0.22, 0.12], r);
@@ -302,6 +317,88 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const [lx, lz] of [[0.6, 0.35], [-0.6, 0.35], [0.6, -0.7], [-0.6, -0.7]]) g.box('#2a2a2a', at(lx, 1.2, lz), [0.04, 0.7, 0.04], r);
       break;
     }
+    case 'counter': {
+      // airline check-in desk (long side along local z) with a backlit panel and screens
+      const c = p.color ?? '#1f6f4a';
+      g.box('#e8e6e0', at(0, 0.55, 0), [0.8, 1.1, 2.9], r);
+      g.box(c, at(-0.41, 0.55, 0), [0.02, 0.9, 2.7], r);
+      g.box('#cfcac0', at(0, 1.12, 0), [0.9, 0.05, 3.0], r);
+      for (const lz of [-0.7, 0.7]) {
+        g.box('#22282c', at(0.1, 1.38, lz), [0.06, 0.32, 0.48], r);
+        g.box('#3b3b3b', at(0.1, 1.18, lz), [0.04, 0.14, 0.04], r);
+      }
+      g.box(c, at(0.3, 2.3, 0), [0.08, 0.7, 2.6], r);
+      g.box('#f6efe2', at(0.25, 2.3, 0), [0.02, 0.18, 1.8], r);
+      // bag scale
+      g.box('#8d8d8d', at(-0.2, 0.15, 1.75), [0.7, 0.3, 0.6], r);
+      break;
+    }
+    case 'scanner': {
+      // walk-through metal detector + X-ray belt beside it (along local z)
+      g.box('#b9bec4', at(0, 1.1, -0.45), [0.12, 2.2, 0.12], r);
+      g.box('#b9bec4', at(0, 1.1, 0.45), [0.12, 2.2, 0.12], r);
+      g.box('#9aa1a8', at(0, 2.25, 0), [0.16, 0.18, 1.04], r);
+      g.box('#2fa36b', at(0.09, 2.25, 0), [0.02, 0.06, 0.3], r);
+      g.box('#5c6670', at(-1.2, 0.45, 0), [0.6, 0.9, 2.6], r);
+      g.box('#22282c', at(-1.2, 0.92, 0), [0.62, 0.04, 2.62], r);
+      g.box('#3b4148', at(-1.2, 1.15, 0.1), [0.66, 0.5, 0.9], r);
+      break;
+    }
+    case 'gatedesk': {
+      const c = p.color ?? '#1f6f4a';
+      g.box('#e8e6e0', at(0, 0.55, 0), [0.7, 1.1, 1.5], r);
+      g.box(c, at(-0.36, 0.55, 0), [0.02, 0.9, 1.4], r);
+      g.box('#22282c', at(0.1, 1.3, 0.3), [0.06, 0.3, 0.44], r);
+      // gate sign on a post
+      g.box('#2a2622', at(0.1, 1.5, -0.95), [0.08, 3.0, 0.08], r);
+      g.box(c, at(0.1, 2.9, -0.95), [0.1, 0.5, 1.1], r);
+      g.box('#f2b705', at(0.06, 2.9, -0.95), [0.02, 0.16, 0.6], r);
+      break;
+    }
+    case 'stanchion': {
+      // two queue posts joined by a retractable belt
+      for (const lz of [-1.2, 1.2]) {
+        g.cylinder('#9aa1a8', at(0, 0.48, lz), 0.03, 0.03, 0.96, 6);
+        g.cylinder('#5c6670', at(0, 0.02, lz), 0.16, 0.16, 0.04, 8);
+      }
+      g.box('#c0392b', at(0, 0.9, 0), [0.02, 0.06, 2.4], r);
+      break;
+    }
+    case 'car': {
+      const c = p.color ?? '#c0392b';
+      g.box(c, at(0, 0.62, 0), [1.7, 0.6, 4.1], r);
+      g.box(c, at(0, 1.12, -0.25), [1.5, 0.5, 2.1], r);
+      g.box('#22282c', at(0, 1.13, -0.25), [1.52, 0.38, 1.9], r);
+      g.box('#3b3b3b', at(0, 0.42, 2.06), [1.7, 0.18, 0.1], r);
+      g.box('#3b3b3b', at(0, 0.42, -2.06), [1.7, 0.18, 0.1], r);
+      for (const [lx, lz] of [[0.8, 1.35], [-0.8, 1.35], [0.8, -1.35], [-0.8, -1.35]]) g.cylinder('#1a1a1a', at(lx, 0.34, lz), 0.34, 0.34, 0.24, 10, [0, r, Math.PI / 2]);
+      break;
+    }
+    case 'plane': {
+      // a twin-engine airliner parked on the apron, nose toward local +z.
+      // Cylinders lie along the plane's axis with rot [±π/2, 0, -r] (Euler XYZ applies Z first, then X).
+      const body = '#f4f2ee';
+      const tail = p.color ?? '#1f6f4a';
+      const along: [number, number, number] = [Math.PI / 2, 0, -r];
+      g.cylinder(body, at(0, 3.2, 0), 1.8, 1.8, 30, 14, along);
+      g.ellipsoid(body, at(0, 3.2, 15), 1.8, [1, 1, 1.7], [12, 8], [0, r, 0]);
+      g.cylinder(body, at(0, 3.6, -17), 0.6, 1.75, 5, 12, [-Math.PI / 2, 0, -r]);
+      g.boxR('#22282c', at(0, 3.85, 16.2), [1.6, 0.42, 0.8], [0, r, 0]);
+      for (let lz = -12; lz < 13; lz += 1.6) for (const side of [-1, 1]) g.boxR('#2a3640', at(side * 1.79, 3.7, lz), [0.04, 0.32, 0.5], [0, r, 0]);
+      g.boxR(tail, at(0, 3.0, 0), [3.64, 0.35, 30.2], [0, r, 0]);
+      // wings, engines, stabilisers, tail fin
+      for (const side of [-1, 1]) {
+        g.boxR('#dcdad5', at(side * 8.5, 2.6, -1.5), [15, 0.35, 4.2], [0, r + side * 0.32, 0]);
+        g.cylinder('#cfcdc8', at(side * 5.4, 1.65, 1.2), 0.95, 0.95, 3.4, 12, along);
+        g.cylinder('#22282c', at(side * 5.4, 1.65, 2.95), 0.75, 0.75, 0.1, 12, along);
+        g.boxR('#dcdad5', at(side * 3.4, 3.9, -16.2), [5.6, 0.2, 2.2], [0, r + side * 0.3, 0]);
+      }
+      g.boxR(tail, at(0, 7.2, -17.2), [0.35, 6.2, 3.6], [0, r, 0]);
+      g.boxR(tail, at(0, 5.0, -15.4), [0.3, 1.8, 2.2], [0, r, 0]);
+      g.box('#2a2622', at(0, 0.9, 12), [0.25, 1.8, 0.25]);
+      for (const side of [-1, 1]) g.box('#2a2622', at(side * 2.6, 0.9, -1.5), [0.3, 1.8, 0.3]);
+      break;
+    }
     case 'pole': {
       g.cylinder('#5b4636', at(0, 4, 0), 0.1, 0.14, 8, 6);
       g.box('#4a3a2c', at(0, 7.6, 0), [1.4, 0.1, 0.1]);
@@ -404,8 +501,11 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, z], [6 + rnd() * 4, h, 5 + rnd() * 3]);
     }
   }
+  const airfield = pack.backdrop === 'airfield';
+  if (airfield) airfieldBeyond(g, pack);
   // street ends: a near row closing the view, and a taller far row for depth
   for (const end of [-1, 1]) {
+    if (airfield && end === -1) continue; // the airfield is open beyond the north fence
     const maxX = seaSide ? 6 : 30;
     for (let x = -30; x < maxX; ) {
       const w = 5 + rnd() * 4;
@@ -429,6 +529,31 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   g.box('#c4b19c', [26, 16, -84], [10, 32, 9]);
 }
 
+/** North of an airport street: a perimeter fence, the apron, parked airliners and the control tower. */
+function airfieldBeyond(g: ColorGeometryBuilder, pack: DestinationPack) {
+  const z0 = -pack.road.length / 2 - 3;
+  // apron concrete
+  g.box('#aba8a0', [0, 0.004, z0 - 45], [140, 0.01, 90]);
+  for (let x = -60; x <= 60; x += 12) g.box('#e8d9b0', [x, 0.012, z0 - 30], [0.25, 0.004, 30]);
+  // fence: posts, rails, wire top
+  for (let x = -40; x <= 40; x += 3) g.box('#7d8288', [x, 1.3, z0], [0.08, 2.6, 0.08]);
+  for (const y of [0.25, 1.3, 2.5]) g.box('#8e9399', [0, y, z0], [80, 0.04, 0.04]);
+  for (let x = -40; x <= 40; x += 0.6) g.box('#9aa0a6', [x, 1.35, z0], [0.015, 2.3, 0.015]);
+  g.box('#5c6670', [0, 2.75, z0], [80, 0.08, 0.08]);
+  // airliners in their gate stands, and one turning in
+  prop(g, { id: 'pl-1', kind: 'plane', position: [6, z0 - 22], rotation: Math.PI / 2, color: '#1f6f4a' });
+  prop(g, { id: 'pl-2', kind: 'plane', position: [-36, z0 - 38], rotation: 0.4, color: '#8d1f2b' });
+  prop(g, { id: 'pl-3', kind: 'plane', position: [44, z0 - 52], rotation: -0.6, color: '#2c5f9e' });
+  // control tower
+  g.cylinder('#d8d4cc', [30, 13, z0 - 64], 1.6, 2.2, 26, 12);
+  g.cylinder('#2a3640', [30, 27.4, z0 - 64], 3.6, 3.0, 2.8, 12);
+  g.cylinder('#e8e6e0', [30, 29.2, z0 - 64], 3.8, 3.8, 0.5, 12);
+  g.cylinder('#c0392b', [30, 31.0, z0 - 64], 0.08, 0.08, 3.2, 6);
+  // a low hangar
+  g.box('#c4c7cb', [-52, 7, z0 - 70], [34, 14, 22]);
+  g.box('#8e9399', [-52, 6, z0 - 58.9], [28, 12, 0.2]);
+}
+
 /** One moving vehicle as its own geometry (front faces +z), reusing the parked-prop builders. */
 export function vehicleGeometry(kind: 'danfo' | 'keke' | 'car', color?: string): THREE.BufferGeometry {
   const g = new ColorGeometryBuilder();
@@ -449,7 +574,7 @@ export function vehicleGeometry(kind: 'danfo' | 'keke' | 'car', color?: string):
       g.cylinder('#9a9a9a', [lx * 1.02, 0.34, lz], 0.16, 0.16, 0.25, 8, [0, 0, Math.PI / 2]);
     }
   } else {
-    prop(g, { id: 'v', kind, position: [0, 0], rotation: 0 });
+    prop(g, { id: 'v', kind, position: [0, 0], rotation: 0, color });
   }
   return g.build();
 }

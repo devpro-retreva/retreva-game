@@ -17,6 +17,8 @@ export interface ProgressSnapshot {
   bestBargain: number; // fraction saved, 0…1
   rides: number;
   totalAreas: number;
+  /** Flights taken (landed). */
+  flights?: number;
 }
 
 export interface GoalDef {
@@ -47,6 +49,8 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, new Set(completed(p).map((h) => p.jobArea(h.jobId)).filter(Boolean)).size), 3] },
   { id: 'explorer', title: 'Lagos explorer', description: 'Visit every area of Lagos.', reward: 1500,
     progress: (p) => [Math.min(p.totalAreas, p.visited.length), p.totalAreas] },
+  { id: 'first-flight', title: 'Wheels up', description: 'Take your first flight abroad.', reward: 1500,
+    progress: (p) => [Math.min(1, p.flights ?? 0), 1] },
 ];
 
 /** Goals newly completed in this snapshot that are not yet marked done. */
@@ -70,7 +74,7 @@ export const TIPS: Record<string, TipDef> = {
   welcome: { id: 'welcome', title: 'Welcome to Lagos', text: 'A yellow diamond floats over anyone with work for you. Walk up to Mama Titi and talk to her to earn your first naira.' },
   'job-started': { id: 'job-started', title: 'Beat the clock', text: 'The timer is top-left. Follow the yellow ring on your minimap — deliver early for a speed bonus.' },
   'first-money': { id: 'first-money', title: 'You got paid', text: 'Open your phone to see your Wallet, Bag and Goals. Goals pay extra naira when you finish them.' },
-  travel: { id: 'travel', title: 'See more of Lagos', text: 'Danfo conductors at the bus stop can take you to Lagos Island, Lekki and Ikeja. In Yaba, talk to Kunle by the yellow bus.' },
+  travel: { id: 'travel', title: 'See more of Lagos', text: 'Danfo conductors at the bus stop can take you to Lagos Island, Lekki, Ikeja — or a taxi to the airport, where flights leave for Accra. In Yaba, talk to Kunle by the yellow bus.' },
   'new-area': { id: 'new-area', title: 'A new part of town', text: 'Every area has its own people, prices and work. Walk around to discover landmarks — they count toward your goals.' },
   haggle: { id: 'haggle', title: 'Price na talk', text: 'Offer less than the asking price. A fair offer gets a counter; an insulting one burns the seller’s patience. Run out, and you get a final price.' },
   collect: { id: 'collect', title: 'Clean-up', text: 'Walk over the glowing bottles to pick them up. Collect six, then report back to Tolu before the timer ends.' },
@@ -79,6 +83,7 @@ export const TIPS: Record<string, TipDef> = {
   'low-money': { id: 'low-money', title: 'Running low', text: 'Short on cash? Mama Titi always needs help in the kitchen — no waiting between shifts, and she feeds her staff. Every area has other work too.' },
   tired: { id: 'tired', title: 'Getting tired', text: 'Energy falls as you move and work. Rest free on the bench at the okada park (to 70), or rent the room to let by the danfo stop and sleep to full.' },
   hungry: { id: 'hungry', title: 'Getting hungry', text: 'Eat or drink from your bag (phone → Bag). On an empty stomach you tire twice as fast.' },
+  flight: { id: 'flight', title: 'Your trip', text: 'Your boarding pass is in the Travel app. Take a taxi to the airport, check in at the desk, go through security (no bottled drinks!) and board at the gate.' },
   shift: { id: 'shift', title: 'Kitchen shift', text: 'Each ticket names a dish — tap it (or press 1–4) before the bar runs out. Better cooking skill means more time and better pay.' },
 };
 

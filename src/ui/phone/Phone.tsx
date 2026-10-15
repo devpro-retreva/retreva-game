@@ -1,15 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ALL_PACKS, areaOfJob, findItem, findNpc, formatMoney, getDestination } from '../../game/content';
+import { ALL_PACKS, findItem, findNpc, formatMoney, getDestination } from '../../game/content';
 import type { ItemCategory } from '../../game/content/types';
 import { completedCount, isAvailable } from '../../game/systems/jobs';
 import { totalItems } from '../../game/systems/inventory';
-import { useGame, type PhoneApp } from '../../game/store/gameStore';
+import { progressSnapshot, useGame, type PhoneApp } from '../../game/store/gameStore';
 import { saves } from '../../game/persistence/instance';
 import { usePack } from '../../scene/worldContext';
 import { MapView } from '../hud/MapView';
 import { LagosMap } from '../travel/LagosMap';
 import { GOALS } from '../../game/systems/progress';
-import { LAGOS_AREAS, fareBetween } from '../../game/content/regions/lagosState';
+import { fareBetween, modeBetween, regionOf } from '../../game/content/regions';
+import { findFlight, flightsFrom } from '../../game/content/flights';
+import { tripBudget } from '../../game/systems/travel';
 import { describeLook } from '../avatar/AvatarEditor';
 import { deviceEnv, resolveTier } from '../../game/core/quality';
 import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
@@ -35,7 +37,6 @@ const APPS: { id: AppId; name: string; Icon: (p: { size?: number }) => JSX.Eleme
 
 const LOCKED_COPY: Record<string, string> = {
   messages: 'Texts from people you meet around town will land here.',
-  travel: 'Plan a trip, compare fares and buy your ticket. Opens with the airport.',
   events: 'Concerts, festivals and owambes near you, with tickets.',
   bookings: 'Hotel rooms and tickets you have booked, ready for check-in.',
 };
@@ -180,16 +181,7 @@ function JobsApp() {
 function GoalsList() {
   const pack = usePack();
   const s = useGame();
-  const snap = {
-    jobs: s.jobs,
-    jobArea: (id: string) => areaOfJob(id)?.id,
-    visited: s.world.visited,
-    discovered: s.world.discovered,
-    inventory: s.inventory,
-    bestBargain: s.world.bestBargain,
-    rides: s.world.rides,
-    totalAreas: LAGOS_AREAS.length,
-  };
+  const snap = progressSnapshot(s);
   const doneCount = s.world.goalsDone.length;
   return (
     <>
@@ -419,13 +411,27 @@ function TravelApp() {
   const current = useGame((s) => s.destinationId);
   const visited = useGame((s) => s.world.visited);
   const discovered = useGame((s) => s.world.discovered);
+  const ticket = useGame((s) => s.travel.ticket);
+  const history = useGame((s) => s.travel.history);
   const pack = usePack();
+  const region = regionOf(current);
+  const airport = region?.areas.find((a) => a.hub);
+  const routes = airport ? flightsFrom(airport.id) : [];
+  const ride = region?.transit ?? 'Danfo';
   return (
     <>
-      <div className="travel-map cut-sm" style={{ marginBottom: 12 }}>
-        <LagosMap current={current} visited={visited} />
-      </div>
-      {LAGOS_AREAS.map((a) => {
+      {ticket && <BoardingPass />}
+      <h3 className="phone-sub">Flights from {region?.name}</h3>
+      {routes.map((r) => (
+        <FlightCard key={r.id} routeId={r.id} />
+      ))}
+      <h3 className="phone-sub">Around {region?.name}</h3>
+      {region?.map === 'lagos' && (
+        <div className="travel-map cut-sm" style={{ marginBottom: 12 }}>
+          <LagosMap current={current} visited={visited} />
+        </div>
+      )}
+      {region?.areas.map((a) => {
         const dest = getDestination(a.id);
         const found = dest.landmarks.filter((l) => discovered.includes(l.id)).length;
         const here = a.id === current;
@@ -435,7 +441,9 @@ function TravelApp() {
               <div>
                 {a.district} {here && <span className="chip live" style={{ marginLeft: 6 }}>You are here</span>}
               </div>
-              <div className="sub">{a.known} · landmarks {found}/{dest.landmarks.length}</div>
+              <div className="sub">
+                {a.known} · {here ? 'here' : modeBetween(current, a.id)} · landmarks {found}/{dest.landmarks.length}
+              </div>
             </div>
             <span className="num" style={{ color: here ? 'var(--muted)' : 'var(--cream)', fontWeight: 750 }}>
               {here ? '—' : formatMoney(pack, fareBetween(current, a.id))}
@@ -445,10 +453,146 @@ function TravelApp() {
       })}
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--muted)', lineHeight: 1.5, marginTop: 12 }}>
         <IconBus size={16} style={{ verticalAlign: '-3px', marginRight: 6 }} />
-        To ride, talk to the conductor at the bus stop (look for the teal marker).
+        To ride, talk to a {ride === 'Taxi' ? 'taxi driver' : `${ride.toLowerCase()} conductor or taxi driver`} (look for the teal marker).
       </p>
-      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--faint)' }}>Flights to Accra, Abuja and beyond open with the airport.</p>
+      {history.length > 0 && (
+        <>
+          <h3 className="phone-sub">Trips</h3>
+          {[...history].reverse().map((h) => {
+            const r = findFlight(h.routeId);
+            return (
+              <div className="card-line" key={h.ticketId}>
+                <div>
+                  <div>
+                    {r?.code} · {regionOf(r?.from ?? '')?.name} → {r?.cityName}
+                  </div>
+                  <div className="sub num">{new Date(h.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
+                </div>
+                <span className="chip done">Flown</span>
+              </div>
+            );
+          })}
+        </>
+      )}
     </>
+  );
+}
+
+const STAGES = ['booked', 'checked-in', 'cleared'] as const;
+
+/** The ticket you hold: where it goes, which gate, and the next airport step. */
+function BoardingPass() {
+  const ticket = useGame((s) => s.travel.ticket)!;
+  const current = useGame((s) => s.destinationId);
+  const route = findFlight(ticket.routeId);
+  if (!route) return null;
+  const from = regionOf(route.from);
+  const atAirport = current === route.from;
+  const step = STAGES.indexOf(ticket.stage);
+  const next =
+    ticket.stage === 'booked'
+      ? atAirport
+        ? 'Next: check in at the Gulf Coast Air desk under the DEPARTURES sign.'
+        : `Next: take a taxi to ${from?.name} airport${regionOf(current) === from ? '' : ' (this ticket leaves from another city)'}.`
+      : ticket.stage === 'checked-in'
+        ? 'Next: security — no bottled drinks past the arch.'
+        : `Next: gate ${route.gate} — board your flight.`;
+  return (
+    <div className="pass cut" data-stage={ticket.stage} aria-label={`Boarding pass ${route.code} to ${route.cityName}, ${ticket.stage}`}>
+      <div className="pass-head">
+        <div>
+          <div className="eyelabel">{route.carrier} · {ticket.roundTrip ? 'return ticket' : ticket.paid === 0 ? 'return half' : 'one-way'}</div>
+          <div className="pass-route">
+            {from?.name} <IconPlane size={16} /> {route.cityName}
+          </div>
+        </div>
+        <div className="pass-code num">
+          {route.code}
+          <span>Gate {route.gate}</span>
+        </div>
+      </div>
+      <ol className="pass-steps">
+        {['Ticket', 'Check-in', 'Security', 'Gate'].map((label, i) => (
+          <li key={label} className={i <= step ? 'done' : i === step + 1 ? 'now' : ''}>
+            {label}
+          </li>
+        ))}
+      </ol>
+      <p className="pass-next">{next}</p>
+    </div>
+  );
+}
+
+/** One route: trip budget (taxi, ticket, stay, getting around), one-way or return, book with a confirm step. */
+function FlightCard({ routeId }: { routeId: string }) {
+  const route = findFlight(routeId)!;
+  const pack = usePack();
+  const current = useGame((s) => s.destinationId);
+  const balance = useGame((s) => s.wallet.balance);
+  const ticket = useGame((s) => s.travel.ticket);
+  const homes = useGame((s) => s.life.homes);
+  const book = useGame((s) => s.bookFlight);
+  const [roundTrip, setRoundTrip] = useState(true);
+  const [confirm, setConfirm] = useState(false);
+  const cityHomes = (regionOf(route.arriveAt)?.areas ?? []).flatMap((a) => getDestination(a.id).homes ?? []).map((h) => h.id);
+  const budget = tripBudget(route, {
+    taxiToAirport: fareBetween(current, route.from),
+    roundTrip,
+    hasStay: cityHomes.some((id) => homes.includes(id)),
+  });
+  const short = budget.dueNow - balance;
+  const kind = roundTrip ? 'return' : 'one-way';
+  return (
+    <div className="flight cut-sm">
+      <div className="flight-head">
+        <div>
+          <div className="name">
+            {route.cityName}, {route.country}
+          </div>
+          <div className="sub">
+            {route.carrier} {route.code} · about {route.minutes} min · gate {route.gate} · ECOWAS, no visa
+          </div>
+        </div>
+      </div>
+      <div className="seg" role="group" aria-label={`Ticket type to ${route.cityName}`}>
+        <button aria-pressed={roundTrip} onClick={() => { setRoundTrip(true); setConfirm(false); }}>Return</button>
+        <button aria-pressed={!roundTrip} onClick={() => { setRoundTrip(false); setConfirm(false); }}>One-way</button>
+      </div>
+      <ul className="budget" aria-label={`Trip budget to ${route.cityName}`}>
+        {budget.lines.map((l) => (
+          <li key={l.key} data-line={l.key}>
+            <span>
+              {l.label}
+              {l.note && <small>{l.note}</small>}
+            </span>
+            <b className="num">{l.amount ? formatMoney(pack, l.amount) : '—'}</b>
+          </li>
+        ))}
+        <li className="total">
+          <span>Trip estimate</span>
+          <b className="num">{formatMoney(pack, budget.total)}</b>
+        </li>
+      </ul>
+      {ticket ? (
+        <p className="muted">You already hold a ticket — use it before booking another.</p>
+      ) : short > 0 ? (
+        <p className="muted">
+          The ticket is {formatMoney(pack, budget.dueNow)} — you need <b className="num">{formatMoney(pack, short)}</b> more. Shifts and jobs pay; every area has work.
+        </p>
+      ) : !confirm ? (
+        <button className="btn block" onClick={() => setConfirm(true)} aria-label={`Book ${kind} ticket to ${route.cityName} for ${formatMoney(pack, budget.dueNow)}`}>
+          Book {kind} · {formatMoney(pack, budget.dueNow)}
+        </button>
+      ) : (
+        <div className="confirm-row">
+          <button className="btn block" onClick={() => { if (book(route.id, roundTrip)) setConfirm(false); }}>
+            Confirm · pay {formatMoney(pack, budget.dueNow)}
+          </button>
+          <button className="btn ghost" onClick={() => setConfirm(false)}>Cancel</button>
+        </div>
+      )}
+      {!ticket && short <= 0 && <p className="fine">Only the ticket is charged now. Stay and getting around are estimates you pay as you go.</p>}
+    </div>
   );
 }
 
@@ -462,16 +606,15 @@ function Stat({ k, v }: { k: string; v: ReactNode }) {
 }
 
 function LifeSection() {
-  const pack = usePack();
   const life = useGame((s) => s.life);
-  const home = life.home ? pack.homes?.find((h) => h.id === life.home) ?? { name: 'Your room' } : null;
+  const homes = life.homes.map((id) => ALL_PACKS.flatMap((p) => p.homes ?? []).find((h) => h.id === id)?.name ?? 'Your room');
   const people = Object.entries(life.regard).sort((a, b) => b[1] - a[1]);
   return (
     <>
       <h3 className="phone-sub">Life</h3>
       <Stat k="Energy" v={`${Math.round(life.needs.energy)} · ${needLabel('energy', life.needs.energy)}`} />
       <Stat k="Fullness" v={`${Math.round(life.needs.fullness)} · ${needLabel('fullness', life.needs.fullness)}`} />
-      <Stat k="Home" v={home ? home.name : 'None yet'} />
+      <Stat k={homes.length > 1 ? 'Homes' : 'Home'} v={homes.length ? homes.join(' · ') : 'None yet'} />
       <Stat k="Shifts worked" v={life.shiftsDone} />
       <h3 className="phone-sub">Skills</h3>
       <Stat k="Cooking" v={`Level ${skillLevel(life.skills.cooking)} · ${life.skills.cooking ?? 0} XP`} />

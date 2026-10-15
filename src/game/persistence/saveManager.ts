@@ -1,4 +1,6 @@
 import { emptyLife, type LifeState } from '../systems/life';
+import { emptyTravel, type Ticket, type TravelState } from '../systems/travel';
+import { findFlight } from '../content/flights';
 import { SAVE_SCHEMA_VERSION, emptyWorld, type SaveAdapter, type SaveData } from './types';
 import { sanitizeLook, upgradeAvatarV1 } from '../core/avatarPresets';
 
@@ -37,10 +39,32 @@ export function migrate(raw: unknown): SaveData | null {
     needs: { energy: num(l.needs?.energy, base4.needs.energy), fullness: num(l.needs?.fullness, base4.needs.fullness) },
     skills: l.skills && typeof l.skills === 'object' ? { ...l.skills } : {},
     regard: l.regard && typeof l.regard === 'object' ? { ...l.regard } : {},
-    home: typeof l.home === 'string' ? l.home : null,
+    // v4 → v5: one rented home became a list (a room in Lagos and a guesthouse in Accra can both be yours)
+    homes: Array.isArray(l.homes)
+      ? l.homes.filter((h): h is string => typeof h === 'string')
+      : typeof (l as { home?: unknown }).home === 'string' ? [(l as { home: string }).home] : [],
     shiftsDone: typeof l.shiftsDone === 'number' ? l.shiftsDone : 0,
   };
-  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar }, world, life };
+  // v4 → v5: flights. Drop a ticket that names an unknown route rather than crash on it.
+  const t = (d.travel ?? {}) as Partial<TravelState>;
+  const rawTicket = t.ticket as Partial<Ticket> | null | undefined;
+  const ticket: Ticket | null =
+    rawTicket && typeof rawTicket.id === 'string' && typeof rawTicket.routeId === 'string' && findFlight(rawTicket.routeId)
+      ? {
+          id: rawTicket.id,
+          routeId: rawTicket.routeId,
+          stage: rawTicket.stage === 'checked-in' || rawTicket.stage === 'cleared' ? rawTicket.stage : 'booked',
+          paid: typeof rawTicket.paid === 'number' ? rawTicket.paid : 0,
+          roundTrip: rawTicket.roundTrip === true,
+          bookedAt: typeof rawTicket.bookedAt === 'number' ? rawTicket.bookedAt : 0,
+        }
+      : null;
+  const travel: TravelState = {
+    ...emptyTravel(),
+    ticket,
+    history: Array.isArray(t.history) ? t.history.filter((h) => h && typeof h.routeId === 'string' && typeof h.ticketId === 'string') : [],
+  };
+  return { ...(d as SaveData), schemaVersion: SAVE_SCHEMA_VERSION, profile: { ...d.profile, avatar }, world, life, travel };
 }
 
 export function getDeviceId(): string {

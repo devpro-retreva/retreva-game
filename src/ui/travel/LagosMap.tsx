@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { LAGOS_AREAS, findArea } from '../../game/content/regions/lagosState';
+import { LAGOS_AREAS, findArea } from '../../game/content/regions';
 
 /**
  * Schematic map of Lagos: mainland, the lagoon, the Island and the Lekki
@@ -76,7 +76,11 @@ export function LagosMap({
             style={{ cursor: onPick && !isCur ? 'pointer' : undefined }}
           >
             {(hl || isCur) && <circle r="5" fill={isCur ? '#f2b705' : '#f6efe2'} opacity="0.25" />}
-            <circle r="2.4" fill={isCur ? '#f2b705' : seen ? '#f6efe2' : '#15130f'} stroke={isCur ? '#15130f' : '#f6efe2'} strokeWidth="0.7" />
+            {area.hub ? (
+              <rect x="-2.4" y="-2.4" width="4.8" height="4.8" rx="1" fill={isCur ? '#f2b705' : seen ? '#f6efe2' : '#15130f'} stroke={isCur ? '#15130f' : '#f6efe2'} strokeWidth="0.7" />
+            ) : (
+              <circle r="2.4" fill={isCur ? '#f2b705' : seen ? '#f6efe2' : '#15130f'} stroke={isCur ? '#15130f' : '#f6efe2'} strokeWidth="0.7" />
+            )}
             <text y={below ? 7 : -4.2} textAnchor="middle" fontSize="4" fontWeight={800} fill="#15130f" stroke="#f6efe2" strokeWidth="1.1" style={{ paintOrder: 'stroke' }}>
               {area.district}
             </text>

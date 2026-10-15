@@ -11,6 +11,8 @@ import { ShopPanel } from './ui/panels/ShopPanel';
 import { PauseMenu } from './ui/panels/PauseMenu';
 import { Wardrobe } from './ui/panels/Wardrobe';
 import { AreaBanner, TipCard, TransitOverlay, TravelPanel } from './ui/travel/TravelPanels';
+import { FlightOverlay } from './ui/travel/FlightOverlay';
+import { getDestination } from './game/content';
 import { Phone } from './ui/phone/Phone';
 import { HomePanel, RestOverlay, ShiftPanel } from './ui/panels/LifePanels';
 import { TouchControls } from './ui/controls/TouchControls';
@@ -48,6 +50,7 @@ function World({ touch }: { touch: boolean }) {
         {ui === 'wardrobe' && <Wardrobe />}
         {ui === 'travel' && <TravelPanel />}
         {ui === 'transit' && <TransitOverlay />}
+        {ui === 'flight' && <FlightOverlay />}
         {ui === 'shift' && <ShiftPanel />}
         {ui === 'home' && <HomePanel />}
         {ui === 'resting' && <RestOverlay />}
@@ -110,13 +113,16 @@ export default function App() {
   };
 
   const inWorld = phase === 'loading' || phase === 'playing';
+  const destinationId = useGame((s) => s.destinationId);
+  const here = getDestination(destinationId);
+  const arrivingAt = here.area === 'Airport' ? `${here.name} airport` : `${here.area}, ${here.name}`;
   return (
     <>
       {phase === 'boot' && <Loading done={false} label="Opening up…" />}
       {phase === 'title' && <TitleScreen save={save} onContinue={onContinue} onNew={() => useGame.getState().setPhase('create')} />}
       {phase === 'create' && <CreateScreen onDone={onCreate} onBack={() => useGame.getState().setPhase('title')} />}
       {inWorld && <World touch={touch} />}
-      {inWorld && <Loading done={phase === 'playing'} label="Arriving at Adeniyi Street…" />}
+      {inWorld && <Loading done={phase === 'playing'} label={`Arriving in ${arrivingAt}…`} />}
     </>
   );
 }

@@ -15,7 +15,7 @@ import {
 } from '../systems/jobs';
 import { resolveEntry, type DialogueContext } from '../systems/dialogue';
 import { acceptAsk, makeOffer, savings, startHaggle as startHaggleFn, walkAway, type HaggleState } from '../systems/negotiation';
-import { GOALS, TIPS, newlyCompleted, type PhoneMessage, type TipDef } from '../systems/progress';
+import { GOALS, TIPS, newlyCompleted, type PhoneMessage, type ProgressSnapshot, type TipDef } from '../systems/progress';
 import {
   addRegard,
   canRun,
@@ -37,12 +37,23 @@ import {
 } from '../systems/life';
 import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings, type WorldProgress } from '../persistence/types';
 import { sanitizeLook } from '../core/avatarPresets';
-import { fareBetween, findArea, LAGOS_AREAS } from '../content/regions/lagosState';
+import { districts, fareBetween, findArea, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { findFlight } from '../content/flights';
+import {
+  bookFlight as bookFlightFn,
+  canBoard,
+  checkIn as checkInFn,
+  clearSecurity,
+  completeFlight,
+  emptyTravel,
+  liquidsIn,
+  type TravelState,
+} from '../systems/travel';
 import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight';
 export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel';
 
 export interface Toast {
@@ -101,6 +112,10 @@ interface GameState {
   resting: { at: 'bench' | 'home'; until: number; to: number } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
+  /** Flight ticket + history (saved). */
+  travel: TravelState;
+  /** The flight in progress (not saved: a reload mid-flight puts you back at the gate with your ticket). */
+  flight: { routeId: string; firstVisit: boolean } | null;
   dirty: number;
   critical: number;
 
@@ -133,6 +148,11 @@ interface GameState {
   openTravel(): void;
   travelTo(areaId: string): void;
   arrive(): void;
+  bookFlight(routeId: string, roundTrip: boolean): boolean;
+  checkIn(): void;
+  passSecurity(liquids?: 'drink' | 'leave'): void;
+  board(): void;
+  land(): void;
 
   // world
   discover(landmarkId: string): void;
@@ -162,6 +182,22 @@ interface GameState {
 }
 
 const pack = (): DestinationPack => getDestination(useGame.getState().destinationId);
+const lagosDistricts = districts(REGIONS[0]).map((a) => a.id);
+
+/** What goals measure. "Visit every area" is about Lagos districts; airports and other cities don't count toward it. */
+export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventory' | 'travel'>): ProgressSnapshot {
+  return {
+    jobs: s.jobs,
+    jobArea: (id) => areaOfJob(id)?.id,
+    visited: s.world.visited.filter((id) => lagosDistricts.includes(id)),
+    discovered: s.world.discovered,
+    inventory: s.inventory,
+    bestBargain: s.world.bestBargain,
+    rides: s.world.rides,
+    totalAreas: lagosDistricts.length,
+    flights: s.travel.history.length,
+  };
+}
 
 export interface ShiftRun {
   shiftId: string;
@@ -232,6 +268,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
     shift: null,
     resting: null,
     homeId: null,
+    travel: emptyTravel(),
+    flight: null,
     dirty: 0,
     critical: 0,
 
@@ -267,6 +305,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
         jobs: emptyJobs(),
         world: emptyWorld(p.id),
         life: emptyLife(),
+        travel: emptyTravel(),
+        flight: null,
         shift: null,
         resting: null,
         homeId: null,
@@ -298,6 +338,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
         jobs: save.jobs,
         world: save.world ?? emptyWorld(p.id),
         life: save.life ?? emptyLife(),
+        travel: save.travel ?? emptyTravel(),
+        flight: null,
         shift: null,
         resting: null,
         homeId: null,
@@ -327,6 +369,8 @@ export const useGame = create<GameState>()((set, get): GameState => {
         jobs: emptyJobs(),
         world: emptyWorld(DEFAULT_DESTINATION),
         life: emptyLife(),
+        travel: emptyTravel(),
+        flight: null,
         shift: null,
         resting: null,
         homeId: null,
@@ -377,6 +421,12 @@ export const useGame = create<GameState>()((set, get): GameState => {
           return j.kind !== 'collect' || (s.jobs.active.collected?.length ?? 0) >= (j.collect?.count ?? 0);
         },
         jobCompletedBefore: (id) => completedCount(s.jobs, id) > 0,
+        tripStage: () => {
+          const t = s.travel.ticket;
+          if (!t) return 'none';
+          return findFlight(t.routeId)?.from === p.id ? t.stage : 'elsewhere';
+        },
+        carryingLiquids: () => liquidsIn(s.inventory).length > 0,
       };
       set({ ui: 'dialogue', dialogue: { npcId, nodeId: resolveEntry(npc.dialogue, ctx) } });
       setUiMode('dialogue');
@@ -410,6 +460,19 @@ export const useGame = create<GameState>()((set, get): GameState => {
         case 'startShift':
           get().startShift(a.shiftId);
           return;
+        case 'checkIn':
+          get().checkIn();
+          return;
+        case 'security':
+          get().passSecurity(a.liquids);
+          return;
+        case 'board':
+          get().board();
+          return;
+        case 'openFlights':
+          get().closePanel();
+          get().openPhone('travel');
+          return;
       }
     },
 
@@ -421,7 +484,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     openPhone(app = 'home') {
       const ui = get().ui;
-      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home') return;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight') return;
       set({ ui: 'phone', phoneApp: app });
       setUiMode('phone');
       if (app === 'messages') get().markMessagesRead();
@@ -434,7 +497,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     togglePause() {
       const ui = get().ui;
-      if (ui === 'transit' || ui === 'shift' || ui === 'resting') return;
+      if (ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'flight') return;
       if (ui === 'pause') {
         set({ ui: 'play' });
         setUiMode('play');
@@ -463,7 +526,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     closePanel() {
       const ui0 = get().ui;
-      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting') return;
+      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight') return;
       set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null });
       setUiMode('play');
     },
@@ -512,12 +575,12 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const s = get();
       const from = s.destinationId;
       const area = findArea(areaId);
-      if (!area || areaId === from || s.jobs.active) return;
+      if (!area || areaId === from || s.jobs.active || regionOf(areaId) !== regionOf(from)) return;
       const fare = fareBetween(from, areaId);
       const p = pack();
-      const r = debit(s.wallet, { id: makeId('ride'), amount: fare, reason: `Danfo · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
+      const r = debit(s.wallet, { id: makeId('ride'), amount: fare, reason: `${modeBetween(from, areaId)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
       if (!r.ok) {
-        get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(p, fare - s.wallet.balance)} more. Every area has work.` });
+        get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(p, fare - s.wallet.balance)} more. Every area has work — ask around.` });
         return;
       }
       set({
@@ -549,6 +612,121 @@ export const useGame = create<GameState>()((set, get): GameState => {
         critical: s.critical + 1,
       });
       setUiMode('play');
+    },
+
+    bookFlight(routeId, roundTrip) {
+      const s = get();
+      const p = pack();
+      const route = findFlight(routeId);
+      if (!route) return false;
+      if (regionOf(route.from) !== regionOf(s.destinationId)) {
+        get().pushToast({ kind: 'warn', title: 'Not from here', detail: `That flight leaves from ${findArea(route.from)?.district ?? 'another airport'}.` });
+        return false;
+      }
+      const id = makeId('trip');
+      const r = bookFlightFn(s.travel, route, roundTrip, id, Date.now());
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: 'You already have a ticket', detail: 'Use it first — your boarding pass is in the Travel app.' });
+        return false;
+      }
+      const price = r.state.ticket!.paid;
+      const pay = debit(s.wallet, {
+        id: `flight:${route.id}:${id}`,
+        amount: price,
+        reason: `${route.carrier} ${route.code} · ${roundTrip ? 'return' : 'one-way'} to ${route.cityName}`,
+        at: Date.now(),
+        destinationId: s.destinationId,
+      });
+      if (!pay.ok) {
+        get().pushToast({ kind: 'warn', title: 'Not enough for the ticket', detail: `You need ${formatMoney(p, price - s.wallet.balance)} more. Shifts and jobs pay — every area has work.` });
+        return false;
+      }
+      set({ wallet: pay.wallet, travel: r.state, critical: s.critical + 1 });
+      get().pushToast({ kind: 'item', title: `Ticket booked · ${route.code}`, detail: `To ${route.cityName}. Get to the airport and check in.` });
+      get().showTip('flight');
+      return true;
+    },
+
+    checkIn() {
+      const s = get();
+      const route = s.travel.ticket ? findFlight(s.travel.ticket.routeId) : undefined;
+      const r = checkInFn(s.travel, route, pack().id);
+      get().closePanel();
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: r.reason === 'wrong-airport' ? 'Wrong airport for this ticket' : r.reason === 'no-ticket' ? 'No ticket' : 'Already checked in' });
+        return;
+      }
+      set({ travel: r.state, critical: s.critical + 1 });
+      get().pushToast({ kind: 'info', title: 'Checked in', detail: `Next: security, then gate ${route!.gate}.` });
+    },
+
+    passSecurity(liquids) {
+      const s = get();
+      const drinks = liquidsIn(s.inventory);
+      get().closePanel();
+      if (drinks.length && !liquids) return; // the officer asks about them first
+      const r = clearSecurity(s.travel);
+      if (!r.ok) {
+        get().pushToast({ kind: 'warn', title: r.reason === 'not-checked-in' ? 'Check in first' : r.reason === 'no-ticket' ? 'No ticket' : 'Already through security' });
+        return;
+      }
+      let inventory = s.inventory;
+      let needs = s.life.needs;
+      let n = 0;
+      for (const e of drinks) {
+        const item = findItem(pack(), e.itemId);
+        for (let i = 0; i < e.quantity; i++) if (liquids === 'drink') needs = eat(needs, item?.nutrition ?? 8);
+        n += e.quantity;
+        const rm = removeFromStack(inventory, e.key, e.quantity);
+        if (rm.ok) inventory = rm.inventory;
+      }
+      const route = findFlight(r.state.ticket!.routeId);
+      set({ travel: r.state, inventory, life: { ...s.life, needs }, critical: s.critical + 1 });
+      const note = n === 0 ? '' : liquids === 'drink' ? ` You finished ${n} drink${n > 1 ? 's' : ''}.` : ` You left ${n} drink${n > 1 ? 's' : ''} behind.`;
+      get().pushToast({ kind: 'info', title: 'Through security', detail: `Gate ${route?.gate} is at the end of the concourse.${note}` });
+    },
+
+    board() {
+      const s = get();
+      const route = s.travel.ticket ? findFlight(s.travel.ticket.routeId) : undefined;
+      const ok = canBoard(s.travel, route, pack().id);
+      if (ok !== true || !route) {
+        get().closePanel();
+        get().pushToast({ kind: 'warn', title: ok === 'not-cleared' ? 'Security first' : ok === 'not-checked-in' ? 'Check in first' : 'No boarding pass' });
+        return;
+      }
+      set({ ui: 'flight', flight: { routeId: route.id, firstVisit: !s.world.visited.includes(route.arriveAt) }, dialogue: null, nearby: null });
+      setUiMode('flight');
+    },
+
+    land() {
+      const s = get();
+      const f = s.flight;
+      const route = f && findFlight(f.routeId);
+      if (!f || !route) return;
+      const r = completeFlight(s.travel, route, Date.now());
+      if (!r.ok) {
+        set({ flight: null, ui: 'play' });
+        setUiMode('play');
+        return;
+      }
+      const dest = getDestination(route.arriveAt);
+      resetRuntime(dest.arrival.position[0], dest.arrival.position[1], dest.arrival.facing);
+      const visited = s.world.visited.includes(dest.id) ? s.world.visited : [...s.world.visited, dest.id];
+      set({
+        destinationId: dest.id,
+        travel: r.state,
+        flight: null,
+        life: { ...s.life, needs: eat(s.life.needs, route.snack.fullness) },
+        world: { ...s.world, visited },
+        arrival: { firstVisit: f.firstVisit },
+        ui: 'play',
+        nearby: null,
+        phase: 'loading',
+        critical: s.critical + 1,
+      });
+      setUiMode('play');
+      if (r.state.ticket) setTimeout(() => get().pushToast({ kind: 'info', title: 'Return ticket ready', detail: `${findFlight(r.state.ticket!.routeId)?.code} home is in your Travel app.` }), 4200);
     },
 
     discover(landmarkId) {
@@ -593,16 +771,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     checkGoals() {
       const s = get();
       const fresh = newlyCompleted(
-        {
-          jobs: s.jobs,
-          jobArea: (id) => areaOfJob(id)?.id,
-          visited: s.world.visited,
-          discovered: s.world.discovered,
-          inventory: s.inventory,
-          bestBargain: s.world.bestBargain,
-          rides: s.world.rides,
-          totalAreas: LAGOS_AREAS.length,
-        },
+        progressSnapshot(s),
         s.world.goalsDone,
       );
       if (!fresh.length) return;
@@ -695,7 +864,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     tick(dtMs) {
       const s = get();
       if (s.phase !== 'playing') return;
-      if (s.ui === 'pause' || s.ui === 'transit' || s.ui === 'wardrobe') return;
+      if (s.ui === 'pause' || s.ui === 'transit' || s.ui === 'wardrobe' || s.ui === 'flight') return;
       const patch: Partial<GameState> = { playTimeMs: s.playTimeMs + dtMs };
       if (s.ui === 'play') {
         const pl = runtime.player;
@@ -808,7 +977,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       }
       if (s.life.needs.energy < def.minEnergy) {
         get().closePanel();
-        get().pushToast({ kind: 'warn', title: 'Too tired to work', detail: 'Rest first — the bench at the okada park is free.' });
+        get().pushToast({ kind: 'warn', title: 'Too tired to work', detail: 'Rest first — benches are free, and a bed at home restores you fully.' });
         return;
       }
       const level = skillLevel(s.life.skills[def.skill]);
@@ -873,7 +1042,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     startRest(at) {
       const s = get();
-      if (at === 'home' && !s.life.home) return;
+      if (at === 'home' && !s.life.homes.length) return;
       const to = at === 'home' ? 100 : 70;
       if (s.life.needs.energy >= to - 1) {
         get().pushToast({ kind: 'info', title: 'You are already rested', detail: at === 'bench' ? 'A bench only gets you so far — a bed at home restores you fully.' : undefined });
@@ -897,13 +1066,13 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const p = pack();
       const home = p.homes?.find((h) => h.id === homeId);
       const s = get();
-      if (!home || s.life.home === homeId) return false;
+      if (!home || s.life.homes.includes(homeId)) return false;
       const r = debit(s.wallet, { id: `home:${homeId}`, amount: home.moveInCost, reason: `Move-in · ${home.name}`, at: Date.now(), destinationId: p.id });
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: 'Not enough money', detail: `You need ${formatMoney(p, home.moveInCost - s.wallet.balance)} more` });
         return false;
       }
-      set({ wallet: r.wallet, life: { ...s.life, home: homeId }, critical: s.critical + 1 });
+      set({ wallet: r.wallet, life: { ...s.life, homes: [...s.life.homes, homeId] }, critical: s.critical + 1 });
       get().pushToast({ kind: 'goal', title: 'You have a home', detail: `${home.name} is yours to rest in.` });
       get().checkGoals();
       return true;
@@ -946,6 +1115,7 @@ export function snapshotForSave() {
     jobs: s.jobs,
     world: s.world,
     life: s.life,
+    travel: s.travel,
     settings: s.settings,
     player: { position: [runtime.player.x, runtime.player.z] as [number, number], yaw: runtime.player.yaw },
     stats: { playTimeMs: s.playTimeMs },

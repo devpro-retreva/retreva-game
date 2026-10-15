@@ -3,8 +3,9 @@ import type { Inventory } from '../systems/inventory';
 import type { JobsState } from '../systems/jobs';
 import type { PhoneMessage } from '../systems/progress';
 import type { LifeState } from '../systems/life';
+import type { TravelState } from '../systems/travel';
 
-export const SAVE_SCHEMA_VERSION = 4;
+export const SAVE_SCHEMA_VERSION = 5;
 
 export type Gender = 'male' | 'female';
 export type HairStyle = 'low' | 'hightop' | 'afro' | 'locs' | 'bald' | 'puff' | 'braids' | 'long' | 'bun' | 'short';
@@ -83,8 +84,10 @@ export interface SaveData {
   inventory: Inventory;
   jobs: JobsState;
   world: WorldProgress;
-  /** Needs, skills, regard, home (v4). */
+  /** Needs, skills, regard, homes (v4; homes became a list in v5). */
   life: LifeState;
+  /** Flight ticket and flight history (v5). */
+  travel: TravelState;
   settings: Settings;
   player: { position: [number, number]; yaw: number };
   stats: { playTimeMs: number };

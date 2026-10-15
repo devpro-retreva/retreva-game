@@ -61,6 +61,8 @@ export interface BuildingDef {
   balcony?: boolean;
   /** Business that operates from this building, if any. */
   businessId?: string;
+  /** 'glass': a curtain-wall facade (airport terminals, malls) instead of render and louvres. */
+  style?: 'glass';
 }
 
 export type PropKind =
@@ -82,7 +84,14 @@ export type PropKind =
   | 'lifeguard'
   | 'lounger'
   | 'busstop'
-  | 'keke';
+  | 'keke'
+  // airports
+  | 'counter'
+  | 'scanner'
+  | 'gatedesk'
+  | 'stanchion'
+  | 'car'
+  | 'plane';
 
 export interface PropDef {
   id: string;
@@ -114,7 +123,11 @@ export type DialogueCondition =
   | { kind: 'jobAvailable'; jobId: string }
   | { kind: 'jobActive'; jobId: string }
   | { kind: 'isDropoff'; jobId: string }
-  | { kind: 'jobCompletedBefore'; jobId: string };
+  | { kind: 'jobCompletedBefore'; jobId: string }
+  /** Where your flight ticket stands at this airport: none, booked, checked-in, cleared, or 'elsewhere' (it departs from another airport). */
+  | { kind: 'trip'; stage: 'none' | 'booked' | 'checked-in' | 'cleared' | 'elsewhere' }
+  /** Bottled drinks in your bag (security won't let them through). */
+  | { kind: 'carryingLiquids' };
 
 export type DialogueAction =
   | { kind: 'goto'; node: string }
@@ -123,7 +136,13 @@ export type DialogueAction =
   | { kind: 'deliverJob'; jobId: string }
   | { kind: 'openShop'; businessId: string }
   | { kind: 'openTravel' }
-  | { kind: 'startShift'; shiftId: string };
+  | { kind: 'startShift'; shiftId: string }
+  /** Airport steps. */
+  | { kind: 'checkIn' }
+  | { kind: 'security'; liquids?: 'drink' | 'leave' }
+  | { kind: 'board' }
+  /** Opens the phone's Travel app on the flights section. */
+  | { kind: 'openFlights' };
 
 export interface DialogueOption {
   label: string;
@@ -263,6 +282,10 @@ export interface DestinationPack {
     sun: string;
   };
   road: { halfWidth: number; sidewalk: number; length: number; style?: 'asphalt' | 'paved' | 'sand' };
+  /** What lies behind the street: city blocks (default), or an airfield with parked planes beyond the north end. */
+  backdrop?: 'city' | 'airfield';
+  /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
+  localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */
   sea?: { fromX: number };
   landmarks: LandmarkDef[];

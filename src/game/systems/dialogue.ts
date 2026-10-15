@@ -5,6 +5,9 @@ export interface DialogueContext {
   jobActive(jobId: string): boolean;
   isDropoff(jobId: string): boolean;
   jobCompletedBefore(jobId: string): boolean;
+  /** Ticket stage relative to the airport you're at. */
+  tripStage(): 'none' | 'booked' | 'checked-in' | 'cleared' | 'elsewhere';
+  carryingLiquids(): boolean;
 }
 
 export function checkCondition(c: DialogueCondition, ctx: DialogueContext): boolean {
@@ -13,6 +16,8 @@ export function checkCondition(c: DialogueCondition, ctx: DialogueContext): bool
     case 'jobActive': return ctx.jobActive(c.jobId);
     case 'isDropoff': return ctx.isDropoff(c.jobId);
     case 'jobCompletedBefore': return ctx.jobCompletedBefore(c.jobId);
+    case 'trip': return ctx.tripStage() === c.stage;
+    case 'carryingLiquids': return ctx.carryingLiquids();
   }
 }
 

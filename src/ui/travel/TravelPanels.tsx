@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { getDestination, formatMoney } from '../../game/content';
-import { LAGOS_AREAS, fareBetween, findArea, minutesBetween } from '../../game/content/regions/lagosState';
+import { fareBetween, findArea, minutesBetween, modeBetween, regionOf } from '../../game/content/regions';
 import { useGame } from '../../game/store/gameStore';
 import { usePack } from '../../scene/worldContext';
 import { IconClose } from '../icons/Icons';
 import { LagosMap } from './LagosMap';
 
-/** Choose where to go: fare, trip time, and whether you have been before. */
+/** Choose where to go within the region: fare, trip time, how you get there, and whether you have been before. */
 export function TravelPanel() {
   const pack = usePack();
   const current = useGame((s) => s.destinationId);
@@ -15,29 +15,34 @@ export function TravelPanel() {
   const travelTo = useGame((s) => s.travelTo);
   const close = useGame((s) => s.closePanel);
   const here = findArea(current);
+  const region = regionOf(current);
+  const others = region?.areas.filter((a) => a.id !== current) ?? [];
 
   return (
     <section className="sheet travel-sheet cut" role="dialog" aria-label="Choose a destination">
       <header className="sheet-head">
         <div>
-          <div className="eyelabel">Danfo · from {here?.district}</div>
+          <div className="eyelabel">{here?.hub ? 'Taxi' : region?.transit} · from {here?.district}</div>
           <h2>Where to?</h2>
-          <p>Pay the fare and ride to another part of Lagos.</p>
+          <p>Pay the fare and ride to another part of {region?.name ?? 'town'}.</p>
         </div>
         <button className="icon-btn" onClick={close} aria-label="Close (Esc)">
           <IconClose size={18} />
         </button>
       </header>
       <div className="sheet-body">
-        <div className="travel-map cut-sm">
-          <LagosMap current={current} visited={visited} />
-        </div>
+        {region?.map === 'lagos' && (
+          <div className="travel-map cut-sm">
+            <LagosMap current={current} visited={visited} />
+          </div>
+        )}
         <ul className="rows">
-          {LAGOS_AREAS.filter((a) => a.id !== current).map((a) => {
+          {others.map((a) => {
             const dest = getDestination(a.id);
             const fare = fareBetween(current, a.id);
             const afford = balance >= fare;
             const seen = visited.includes(a.id);
+            const mode = modeBetween(current, a.id);
             return (
               <li key={a.id} className="row-item travel-row">
                 <div>
@@ -46,13 +51,13 @@ export function TravelPanel() {
                   </div>
                   <div className="desc">{dest.tagline}</div>
                   <div className="desc num" style={{ color: 'var(--cream-2)' }}>
-                    {a.known} · about {minutesBetween(current, a.id)} min
+                    {mode} · {a.known} · about {minutesBetween(current, a.id)} min
                   </div>
                 </div>
                 <div className="side">
                   <span className="price num">{formatMoney(pack, fare)}</span>
-                  <button className="btn" disabled={!afford} onClick={() => travelTo(a.id)} aria-label={`Ride to ${a.district} for ${formatMoney(pack, fare)}`}>
-                    {afford ? 'Ride' : 'Short'}
+                  <button className="btn" disabled={!afford} onClick={() => travelTo(a.id)} aria-label={`${mode === 'Taxi' ? 'Taxi' : 'Ride'} to ${a.district} for ${formatMoney(pack, fare)}`}>
+                    {afford ? (mode === 'Taxi' ? 'Taxi' : 'Ride') : 'Short'}
                   </button>
                 </div>
               </li>
@@ -85,16 +90,20 @@ export function TransitOverlay() {
   const from = findArea(transit.from);
   const to = findArea(transit.to);
   const dest = getDestination(transit.to);
+  const mode = modeBetween(transit.from, transit.to);
+  const region = regionOf(transit.from);
   return (
     <div className="transit" role="status" aria-live="polite">
       <div className="transit-card">
-        <div className="eyelabel">On the danfo</div>
+        <div className="eyelabel">{mode === 'Taxi' ? 'In a taxi' : `On the ${mode.toLowerCase()}`}</div>
         <h2>
           {from?.district} <span aria-hidden="true">→</span> {to?.district}
         </h2>
-        <div className="transit-map cut">
-          <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to }} durationMs={duration} />
-        </div>
+        {region?.map === 'lagos' && (
+          <div className="transit-map cut">
+            <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to }} durationMs={duration} />
+          </div>
+        )}
         <p className="transit-line">{dest.tagline}</p>
         <div className="transit-meta num">
           Fare paid {formatMoney(dest, transit.fare)} · {transit.firstVisit ? 'First visit' : 'Welcome back'}

@@ -16,8 +16,8 @@ export interface LifeState {
   skills: Record<string, number>;
   /** How much each named character likes you, 0–100, keyed by NPC id. */
   regard: Record<string, number>;
-  /** Home the player rents, by home id, or null. */
-  home: string | null;
+  /** Homes the player rents (one per city at most is typical), by home id. */
+  homes: string[];
   shiftsDone: number;
 }
 
@@ -25,7 +25,7 @@ export const emptyLife = (): LifeState => ({
   needs: { energy: 85, fullness: 75 },
   skills: {},
   regard: {},
-  home: null,
+  homes: [],
   shiftsDone: 0,
 });
 

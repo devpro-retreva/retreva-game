@@ -121,9 +121,75 @@ function shopFront(ctx: CanvasRenderingContext2D, x: number, y: number, sw: numb
   for (let i = 0; i < 6; i++) ctx.fillRect(x, y + i * 0.06 * ppm, sw, 1);
 }
 
+/** Curtain-wall glazing (terminals, malls): reflective glass, mullions, sliding doors at ground level. */
+function glassFacade(b: BuildingDef, ppm: number, ctx: CanvasRenderingContext2D, w: number, h: number) {
+  const rnd = seeded(b.id + 'glass');
+  const sky = ctx.createLinearGradient(0, 0, w * 0.3, h);
+  sky.addColorStop(0, '#9fc3d4');
+  sky.addColorStop(0.55, '#5d8296');
+  sky.addColorStop(1, '#3b5566');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  // soft diagonal reflections
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 5; i++) {
+    const x0 = rnd() * w;
+    ctx.beginPath();
+    ctx.moveTo(x0, 0);
+    ctx.lineTo(x0 + 0.8 * ppm, 0);
+    ctx.lineTo(x0 + 0.8 * ppm - h * 0.35, h);
+    ctx.lineTo(x0 - h * 0.35, h);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  const sH = STOREY_H * ppm;
+  // ground floor: lit hall behind the glass, with travellers and their bags as silhouettes
+  const ground = h - sH;
+  const hall = ctx.createLinearGradient(0, ground, 0, h);
+  hall.addColorStop(0, '#dfe8ec');
+  hall.addColorStop(0.7, '#aebfc8');
+  hall.addColorStop(1, '#8a9ba5');
+  ctx.fillStyle = hall;
+  ctx.fillRect(0, ground + 0.15 * ppm, w, sH - 0.15 * ppm);
+  for (let x = 0.6 * ppm; x < w - 0.6 * ppm; x += (1.4 + rnd() * 2.4) * ppm) {
+    const ph = (1.1 + rnd() * 0.3) * ppm;
+    ctx.fillStyle = `rgba(40, 46, 52, ${0.1 + rnd() * 0.12})`;
+    ctx.fillRect(x, h - ph, 0.32 * ppm, ph);
+    ctx.beginPath();
+    ctx.arc(x + 0.16 * ppm, h - ph - 0.14 * ppm, 0.14 * ppm, 0, Math.PI * 2);
+    ctx.fill();
+    if (rnd() > 0.5) ctx.fillRect(x + 0.4 * ppm, h - 0.55 * ppm, 0.36 * ppm, 0.55 * ppm);
+  }
+  // a sheen over the ground-floor glass
+  const sheen = ctx.createLinearGradient(0, ground, 0, h);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.28)');
+  sheen.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+  sheen.addColorStop(1, 'rgba(120,150,170,0.18)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, ground, w, sH);
+  // mullions and transoms
+  ctx.fillStyle = b.trim;
+  const bay = 1.6 * ppm;
+  for (let x = 0; x <= w; x += bay) ctx.fillRect(x - 0.04 * ppm, 0, 0.08 * ppm, h);
+  for (let st = 0; st <= b.storeys; st++) ctx.fillRect(0, h - st * sH - 0.08 * ppm, w, 0.16 * ppm);
+  // sliding doors
+  for (let x = w * 0.18; x < w; x += 6.5 * ppm) {
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(x, ground + 0.6 * ppm, 2.2 * ppm, sH - 0.6 * ppm);
+    ctx.fillStyle = b.trim;
+    ctx.fillRect(x + 1.08 * ppm, ground + 0.6 * ppm, 0.04 * ppm, sH - 0.6 * ppm);
+    ctx.fillRect(x, ground + 0.55 * ppm, 2.2 * ppm, 0.08 * ppm);
+  }
+  // roof cladding band
+  ctx.fillStyle = shade(b.wall, -0.1);
+  ctx.fillRect(0, 0, w, 0.45 * ppm);
+}
+
 /** Paints the street-facing wall of a building. */
 export function paintFacade(b: BuildingDef, ppm: number) {
   return (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+    if (b.style === 'glass') return glassFacade(b, ppm, ctx, w, h);
     const rnd = seeded(b.id);
     ctx.fillStyle = b.wall;
     ctx.fillRect(0, 0, w, h);

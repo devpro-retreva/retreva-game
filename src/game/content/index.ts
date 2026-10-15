@@ -3,6 +3,9 @@ import { lagos } from './destinations/lagos';
 import { lagosIsland } from './destinations/lagosIsland';
 import { lekki } from './destinations/lekki';
 import { ikeja } from './destinations/ikeja';
+import { lagosAirport } from './destinations/lagosAirport';
+import { accra } from './destinations/accra';
+import { accraAirport } from './destinations/accraAirport';
 
 /** Registry of destination packs. Future packs (Accra, Dubai…) register here. */
 const PACKS: Record<string, DestinationPack> = {
@@ -10,6 +13,9 @@ const PACKS: Record<string, DestinationPack> = {
   [lagosIsland.id]: lagosIsland,
   [lekki.id]: lekki,
   [ikeja.id]: ikeja,
+  [lagosAirport.id]: lagosAirport,
+  [accra.id]: accra,
+  [accraAirport.id]: accraAirport,
 };
 
 export const ALL_PACKS: DestinationPack[] = Object.values(PACKS);
@@ -42,6 +48,14 @@ export function findBusiness(pack: DestinationPack, id: string): BusinessDef | u
 export function formatMoney(pack: DestinationPack, amount: number): string {
   const sign = amount < 0 ? '−' : '';
   return `${sign}${pack.currency.symbol}${Math.abs(Math.round(amount)).toLocaleString(pack.currency.locale)}`;
+}
+
+/** "≈ GH₵12" next to a naira price in places with their own currency; null at home. */
+export function localPrice(pack: DestinationPack, amount: number): string | null {
+  const lc = pack.localCurrency;
+  if (!lc) return null;
+  const v = amount / lc.perUnit;
+  return `≈ ${lc.symbol}${v >= 10 ? Math.round(v) : v.toFixed(1)}`;
 }
 
 export type { DestinationPack };

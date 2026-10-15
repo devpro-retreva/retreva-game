@@ -33,7 +33,7 @@ export function InteractionSystem() {
     }
     if (spotHit && (!best || spotHit.d < best.d)) {
       const sp = pack.spots!.find((x) => x.id === spotHit!.id)!;
-      const mine = sp.kind === 'home' && s.life.home === sp.homeId;
+      const mine = sp.kind === 'home' && !!sp.homeId && s.life.homes.includes(sp.homeId);
       s.setNearby({ id: sp.id, kind: 'spot', label: mine ? 'your room' : sp.label, verb: mine ? 'Go into' : sp.verb });
     } else s.setNearby(npc ? { id: npc.id, kind: 'npc', label: npc.name, verb: npc.promptVerb } : null);
     // landmarks discover themselves when you walk close

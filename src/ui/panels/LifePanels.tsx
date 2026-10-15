@@ -161,7 +161,7 @@ export function ShiftPanel() {
 export function HomePanel() {
   const pack = usePack();
   const homeId = useGame((s) => s.homeId);
-  const owned = useGame((s) => s.life.home);
+  const owned = useGame((s) => s.life.homes);
   const balance = useGame((s) => s.wallet.balance);
   const energy = useGame((s) => Math.round(s.life.needs.energy));
   const rentHome = useGame((s) => s.rentHome);
@@ -170,7 +170,7 @@ export function HomePanel() {
   const [confirm, setConfirm] = useState(false);
   const home = pack.homes?.find((h) => h.id === homeId);
   if (!home) return null;
-  const mine = owned === home.id;
+  const mine = owned.includes(home.id);
   const afford = balance >= home.moveInCost;
   return (
     <section className="sheet cut" role="dialog" aria-label={home.name}>
