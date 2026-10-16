@@ -9,7 +9,7 @@ export const dubaiAirport = makeAirport({
   brand: { primary: '#1f5f6f', accent: '#c98a2a' },
   gatesSign: 'GATES C1 – C6',
   greeting: 'Marhaba, good evening.',
-  localCurrency: { code: 'AED', symbol: 'AED ', perUnit: 400 },
+  localCurrency: { code: 'AED', symbol: 'AED ', perUnit: 365 },
   staff: {
     checkIn: { id: 'hessa', name: 'Hessa', look: { gender: 'female', skin: '#c48a62', top: '#1f5f6f', bottom: '#1d1d1f', outfit: 'dress', hair: 'bun', headwear: 'wrap', headColor: '#1d1d1f', height: 1.66 } },
     security: { id: 'officer-salem', name: 'Officer Salem', look: { gender: 'male', skin: '#b07a52', top: '#2b3a4a', bottom: '#1d1d1f', outfit: 'shirt', hair: 'short', facialHair: 'beard', headwear: 'cap', headColor: '#2b3a4a', height: 1.8 } },

@@ -167,7 +167,7 @@ export const badagry: DestinationPack = {
             ],
           },
           pay: {
-            text: '₦3,000 for your time, and ₦1,000 more if we reach the jetty before my boat leaves. Walk, though — I don’t want to rush past any of it.',
+            text: '₦3,750 for your time, and ₦1,250 more if we reach the jetty before my boat leaves. Walk, though — I don’t want to rush past any of it.',
             options: [
               { label: "Let's go", action: { kind: 'acceptJob', jobId: 'heritage-walk' } },
               { label: 'Maybe later', action: { kind: 'close' } },
@@ -230,7 +230,7 @@ export const badagry: DestinationPack = {
             ],
           },
           pay: {
-            text: '₦1,600. Reach her in thirty seconds and she adds ₦600 — fish waits for nobody.',
+            text: '₦2,000. Reach her in thirty seconds and she adds ₦750 — fish waits for nobody.',
             options: [
               { label: "Let's go", action: { kind: 'acceptJob', jobId: 'catch-run' } },
               { label: 'Maybe later', action: { kind: 'close' } },
@@ -442,8 +442,8 @@ export const badagry: DestinationPack = {
       dropoffNpcId: 'marcus',
       cargo: 'Guiding Marcus',
       timeLimitMs: 240_000,
-      reward: 3000,
-      bonus: { underMs: 170_000, amount: 1000 },
+      reward: 3750,
+      bonus: { underMs: 170_000, amount: 1250 },
       cooldownMs: 120_000,
     },
     {
@@ -454,8 +454,8 @@ export const badagry: DestinationPack = {
       dropoffNpcId: 'mama-dossou',
       cargo: 'Basket of fish',
       timeLimitMs: 60_000,
-      reward: 1600,
-      bonus: { underMs: 32_000, amount: 600 },
+      reward: 2000,
+      bonus: { underMs: 32_000, amount: 750 },
       cooldownMs: 25_000,
     },
   ],

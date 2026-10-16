@@ -182,7 +182,7 @@ s = await state();
 const jobPay = await S(() => window.__retreva.store.getState().wallet.ledger.filter((t) => t.id.startsWith('job:')).reduce((n, t) => n + t.amount, 0));
 const goalPay = await S(() => window.__retreva.store.getState().wallet.ledger.filter((t) => t.id.startsWith('goal:')).reduce((n, t) => n + t.amount, 0));
 const hist = s.history.at(-1);
-log('delivery pays out', (jobPay === 1500 || jobPay === 2000) && s.balance - balBefore === jobPay + goalPay, `job +${jobPay} (elapsed ${(hist?.elapsedMs / 1000).toFixed(1)}s, ${jobPay === 2000 ? 'with' : 'without'} speed bonus), goal +${goalPay}`);
+log('delivery pays out', (jobPay === 1900 || jobPay === 2550) && s.balance - balBefore === jobPay + goalPay, `job +${jobPay} (elapsed ${(hist?.elapsedMs / 1000).toFixed(1)}s, ${jobPay === 2550 ? 'with' : 'without'} speed bonus), goal +${goalPay}`);
 await page.screenshot({ path: `${OUT}/08-reward-desktop.png` });
 
 // duplicate attempts

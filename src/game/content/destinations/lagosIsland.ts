@@ -121,7 +121,7 @@ export const lagosIsland: DestinationPack = {
             ],
           },
           pay: {
-            text: '₦2,500 — and ₦1,000 more if we see all three within two and a half minutes. I have a dinner later! Walk, though; I can’t run in these sandals.',
+            text: '₦3,150 — and ₦1,250 more if we see all three within two and a half minutes. I have a dinner later! Walk, though; I can’t run in these sandals.',
             options: [
               { label: "Let's go", action: { kind: 'acceptJob', jobId: 'island-tour' } },
               { label: 'Maybe later', action: { kind: 'close' } },
@@ -210,7 +210,7 @@ export const lagosIsland: DestinationPack = {
             ],
           },
           pay: {
-            text: '₦2,200 from Bayo. Get there in under 35 seconds and he adds ₦800 — his client is very impatient.',
+            text: '₦2,750 from Bayo. Get there in under 35 seconds and he adds ₦1,000 — his client is very impatient.',
             options: [
               { label: 'Deal', action: { kind: 'acceptJob', jobId: 'bale-run' } },
               { label: 'Maybe later', action: { kind: 'close' } },
@@ -347,8 +347,8 @@ export const lagosIsland: DestinationPack = {
       dropoffNpcId: 'sophie',
       cargo: 'Guiding Sophie',
       timeLimitMs: 210_000,
-      reward: 2500,
-      bonus: { underMs: 150_000, amount: 1000 },
+      reward: 3150,
+      bonus: { underMs: 150_000, amount: 1250 },
       cooldownMs: 120_000,
     },
     {
@@ -359,8 +359,8 @@ export const lagosIsland: DestinationPack = {
       dropoffNpcId: 'bayo',
       cargo: 'Fabric bale',
       timeLimitMs: 70_000,
-      reward: 2200,
-      bonus: { underMs: 35_000, amount: 800 },
+      reward: 2750,
+      bonus: { underMs: 35_000, amount: 1000 },
       cooldownMs: 25_000,
     },
   ],

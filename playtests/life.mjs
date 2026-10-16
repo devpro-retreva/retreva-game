@@ -73,8 +73,8 @@ async function play(name, viewport, mobile) {
   await runShift(3);
   s = await st();
   const o1 = s.shift.outcome;
-  log(`${L} shift: 7 of 8 served pays 7 × ₦150, no tip`, o1.served === 7 && o1.pay === 1050 && o1.tip === 0, JSON.stringify({ served: o1.served, pay: o1.pay, tip: o1.tip }));
-  log(`${L} shift pay lands in the wallet once, with its own ledger entry`, s.bal === before.bal + 1050 && s.ledger.filter((id) => id.startsWith('shift:buka-kitchen:')).length === 1, `${before.bal} → ${s.bal}`);
+  log(`${L} shift: 7 of 8 served pays 7 × ₦190, no tip`, o1.served === 7 && o1.pay === 1330 && o1.tip === 0, JSON.stringify({ served: o1.served, pay: o1.pay, tip: o1.tip }));
+  log(`${L} shift pay lands in the wallet once, with its own ledger entry`, s.bal === before.bal + 1330 && s.ledger.filter((id) => id.startsWith('shift:buka-kitchen:')).length === 1, `${before.bal} → ${s.bal}`);
   log(`${L} shift gives cooking XP, Mama Titi's regard and a staff meal`, s.life.skills.cooking === 70 && s.life.regard['mama-titi'] > 0 && s.life.needs.fullness > before.life.needs.fullness, JSON.stringify({ xp: s.life.skills.cooking, regard: s.life.regard }));
   log(`${L} shift costs energy`, s.life.needs.energy < before.life.needs.energy - 15);
   await shot('shift-done');
@@ -85,7 +85,7 @@ async function play(name, viewport, mobile) {
   await runShift(-1);
   s = await st();
   const o2 = s.shift.outcome;
-  log(`${L} perfect shift tips ₦300 and levels cooking up`, o2.served === 8 && o2.tip === 300 && o2.levelUp === true && s.bal === mid.bal + 1200 + 300, JSON.stringify({ pay: o2.pay, tip: o2.tip, lvlUp: o2.levelUp }));
+  log(`${L} perfect shift tips ₦400 and levels cooking up`, o2.served === 8 && o2.tip === 400 && o2.levelUp === true && s.bal === mid.bal + 1520 + 400, JSON.stringify({ pay: o2.pay, tip: o2.tip, lvlUp: o2.levelUp }));
   await tap('.shift-done button:has-text("Done")');
   await sleep(300);
   s = await st();

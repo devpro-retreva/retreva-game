@@ -173,7 +173,7 @@ await talk('bayo');
 await choose('Hand over');
 s = await st();
 const bale = s.ledger.filter(([id]) => id.startsWith('job:bale-run:') && !id.includes('fake'));
-log('a Regular courier earns a 10% rank bonus on errands', bale.length === 1 && bale[0][1] >= 2200 + 220, JSON.stringify(bale));
+log('a Regular courier earns a 10% rank bonus on errands', bale.length === 1 && bale[0][1] >= 2750 + 275, JSON.stringify(bale));
 await S(() => window.__retreva.store.getState().openPhone('jobs'));
 await p.waitForSelector('.careers');
 log('the Jobs app shows the courier rank and skills', await p.isVisible('.careers :text("Courier · Regular")') && (await p.isVisible('.careers :text("Repair · level")')));

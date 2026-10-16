@@ -1,7 +1,7 @@
 // Travel playtest (Architecture V6, milestone 4): plan and budget a trip, buy a ticket, taxi to the
 // airport, check in, security (liquids), board, fly, arrive in Accra (Osu), explore, and fly home.
-// The ticket and taxi money is topped up directly (a "test-topup" ledger entry) — earning ₦16,000 plus real-world
-// taxi fares through jobs is covered by the other suites and would take ~20 minutes under software GL.
+// The ticket and taxi money is topped up directly (a "test-topup" ledger entry) — earning ₦450,000 plus real-world
+// taxi fares through jobs is covered by the other suites and would take hours, even on a phone.
 import { launch, BASE_URL, outDir } from './lib.mjs';
 const OUT = outDir('travel');
 const results = [];
@@ -71,17 +71,17 @@ const b = await launch();
   await S(() => {
     const st = window.__retreva.store;
     const w = st.getState().wallet;
-    st.setState({ wallet: { balance: w.balance + 40000, ledger: [...w.ledger, { id: 'test-topup', amount: 40000, reason: 'Playtest top-up', at: Date.now() }] } });
+    st.setState({ wallet: { balance: w.balance + 480000, ledger: [...w.ledger, { id: 'test-topup', amount: 480000, reason: 'Playtest top-up', at: Date.now() }] } });
   });
   await sleep(300);
   const before = (await st()).bal;
-  await p.click('button[aria-label="Book return ticket to Accra for ₦16,000"]');
-  log('booking asks for confirmation before paying', (await st()).bal === before && (await p.isVisible('button:has-text("Confirm · pay ₦16,000")')));
-  await p.click('button:has-text("Confirm · pay ₦16,000")');
+  await p.click('button[aria-label="Book return ticket to Accra for ₦450,000"]');
+  log('booking asks for confirmation before paying', (await st()).bal === before && (await p.isVisible('button:has-text("Confirm · pay ₦450,000")')));
+  await p.click('button:has-text("Confirm · pay ₦450,000")');
   await sleep(400);
   let s = await st();
   const flightTx = s.ledger.filter(([id]) => id.startsWith('flight:los-acc:'));
-  log('return ticket paid once through the ledger (₦16,000)', s.bal === before - 16000 && flightTx.length === 1 && flightTx[0][1] === -16000, `${before} → ${s.bal}`);
+  log('return ticket paid once through the ledger (₦450,000)', s.bal === before - 450000 && flightTx.length === 1 && flightTx[0][1] === -450000, `${before} → ${s.bal}`);
   log('boarding pass appears at the "booked" step', s.ticket?.stage === 'booked' && (await p.getAttribute('.pass', 'data-stage')) === 'booked');
   await shot('02-boarding-pass');
   await S(() => window.__retreva.store.getState().closePanel());
@@ -225,17 +225,17 @@ const b = await launch();
     const st = window.__retreva.store;
     st.getState().updateSettings({ tips: false });
     const w = st.getState().wallet;
-    st.setState({ wallet: { balance: w.balance + 20000, ledger: [...w.ledger, { id: 'test-topup', amount: 20000, reason: 'Playtest top-up', at: Date.now() }] } });
+    st.setState({ wallet: { balance: w.balance + 260000, ledger: [...w.ledger, { id: 'test-topup', amount: 260000, reason: 'Playtest top-up', at: Date.now() }] } });
     st.getState().openPhone('travel');
   });
   await p.waitForSelector('.flight');
   await p.tap('.flight[data-route="los-acc"] .seg button:has-text("One-way")');
-  await p.tap('button[aria-label="Book one-way ticket to Accra for ₦9,000"]');
-  await p.tap('button:has-text("Confirm · pay ₦9,000")');
+  await p.tap('button[aria-label="Book one-way ticket to Accra for ₦250,000"]');
+  await p.tap('button:has-text("Confirm · pay ₦250,000")');
   await sleep(400);
   const over = await S(() => document.documentElement.scrollWidth > window.innerWidth);
   const t = await S(() => window.__retreva.store.getState().travel.ticket);
-  log('mobile: one-way ticket booked by touch, no sideways scroll', t?.roundTrip === false && t?.paid === 9000 && !over);
+  log('mobile: one-way ticket booked by touch, no sideways scroll', t?.roundTrip === false && t?.paid === 250000 && !over);
   await p.screenshot({ path: `${OUT}/12-mobile-pass.png` });
   // jump through the airport steps with the store (the UI path is covered on desktop) to see the flight on a phone
   await S(() => {

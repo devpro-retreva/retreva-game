@@ -42,6 +42,13 @@ export interface FlightRoute {
 
 const CARRIER = 'Gulf Coast Air';
 
+/*
+ * Prices are real economy fares (October 2026) at the official rate of about ₦1,332 per US dollar:
+ * Lagos–Accra about $190 one-way / $340 return (aggregators list $290–400 returns); Lagos–Dubai about
+ * $470 one-way / $800 return, nonstop (Google Flights from $764, Emirates deals ~$840). A long trip is
+ * something you save up for: a few hours of jobs and shifts for Accra, a good deal more for Dubai.
+ */
+
 export const FLIGHTS: FlightRoute[] = [
   {
     id: 'los-acc',
@@ -53,8 +60,8 @@ export const FLIGHTS: FlightRoute[] = [
     cityName: 'Accra',
     country: 'Ghana',
     minutes: 60,
-    ticket: 9000,
-    roundTrip: 16000,
+    ticket: 250000,
+    roundTrip: 450000,
     gate: 'A3',
     budget: {
       stay: { name: 'Osu guesthouse', cost: 3500, note: 'a bed for your stay' },
@@ -75,8 +82,8 @@ export const FLIGHTS: FlightRoute[] = [
     cityName: 'Lagos',
     country: 'Nigeria',
     minutes: 60,
-    ticket: 9000,
-    roundTrip: 16000,
+    ticket: 250000,
+    roundTrip: 450000,
     gate: 'B1',
     budget: {
       stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
@@ -97,8 +104,8 @@ export const FLIGHTS: FlightRoute[] = [
     cityName: 'Dubai',
     country: 'United Arab Emirates',
     minutes: 390,
-    ticket: 95000,
-    roundTrip: 170000,
+    ticket: 625000,
+    roundTrip: 1065000,
     gate: 'A5',
     budget: {
       stay: { name: 'Creek studio', cost: 15000, note: 'a furnished studio for your stay' },
@@ -121,8 +128,8 @@ export const FLIGHTS: FlightRoute[] = [
     cityName: 'Lagos',
     country: 'Nigeria',
     minutes: 420,
-    ticket: 95000,
-    roundTrip: 170000,
+    ticket: 625000,
+    roundTrip: 1065000,
     gate: 'C2',
     budget: {
       stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },

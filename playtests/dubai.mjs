@@ -1,4 +1,4 @@
-// Dubai playtest: the third destination as a city pack. Book Lagos → Dubai (₦170,000 return, confirm,
+// Dubai playtest: the third destination as a city pack. Book Lagos → Dubai (₦1,065,000 return, confirm,
 // paid once; the pack downloads when the flight card opens), check-in talks about *this* flight,
 // long-haul map, land at Dubai Creek, dirham guide prices, the Spice Run (paid once), the Creek Lights
 // show at the gate, rent and walk into the creek studio, reload in Dubai, and fly home.
@@ -70,7 +70,7 @@ await p.click('text=Start my life');
 await playing();
 await S(() => window.__retreva.store.getState().updateSettings({ tips: false, shadows: 'off' }));
 await setTime(10 * 60);
-await S(() => { const st = window.__retreva.store; const w = st.getState().wallet; st.setState({ wallet: { balance: w.balance + 220000, ledger: [{ id: 'test-topup', amount: 220000, reason: 'Playtest top-up', at: Date.now(), destinationId: 'lagos-adeniyi' }, ...w.ledger] } }); });
+await S(() => { const st = window.__retreva.store; const w = st.getState().wallet; st.setState({ wallet: { balance: w.balance + 1200000, ledger: [{ id: 'test-topup', amount: 1200000, reason: 'Playtest top-up', at: Date.now(), destinationId: 'lagos-adeniyi' }, ...w.ledger] } }); });
 
 // ── book in the Travel app
 log('Dubai is not loaded at the start (it is a city pack)', !(await S(() => window.__retreva.cities.isCityLoaded('dubai'))));
@@ -88,7 +88,7 @@ log('booking asks first', (await st()).bal === pre);
 await p.click('.flight[data-route="los-dxb"] button:has-text("Confirm")');
 await sleep(400);
 s = await st();
-log('a return ticket costs ₦170,000 once', pre - s.bal === 170000 && s.ledger.filter(([id]) => id.startsWith('flight:los-dxb:')).length === 1 && s.ticket?.routeId === 'los-dxb');
+log('a return ticket costs ₦1,065,000 once', pre - s.bal === 1065000 && s.ledger.filter(([id]) => id.startsWith('flight:los-dxb:')).length === 1 && s.ticket?.routeId === 'los-dxb');
 await p.waitForFunction(() => caches.has('retreva-city-dubai'), null, { timeout: 20000 }).catch(() => {});
 log('booking also keeps Dubai on the device for offline play', await S(() => caches.has('retreva-city-dubai')));
 await S(() => window.__retreva.store.getState().closePanel());

@@ -165,7 +165,7 @@ export function TitleScreen({
               <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
             </span>
             <span className="sp-chip-txt">
-              <b>+₦1,500</b>
+              <b>+₦1,900</b>
               <span>Jollof Run complete</span>
             </span>
           </div>

@@ -1156,7 +1156,7 @@ describe('Dubai', () => {
   });
   it('Dubai prices show dirhams as a guide; the studio can be rented, bought and furnished', () => {
     const creek = ALL_PACKS.find((p) => p.id === 'dubai-creek')!;
-    expect(localPriceOf(creek, 4000)).toBe('≈ AED 10');
+    expect(localPriceOf(creek, 3650)).toBe('≈ AED 10'); // ₦365 per dirham (pegged to the dollar)
     expect(creek.homes![0].buyPrice).toBeGreaterThan(creek.homes![0].moveInCost);
     expect(findInterior('creek-studio')?.slots.length).toBeGreaterThan(3);
   });

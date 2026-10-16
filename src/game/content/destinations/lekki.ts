@@ -110,7 +110,7 @@ export const lekki: DestinationPack = {
             ],
           },
           pay: {
-            text: '₦1,800 for six bottles. Back within 55 seconds and I add ₦700 — the faster the better before the next wave.',
+            text: '₦2,250 for six bottles. Back within 55 seconds and I add ₦900 — the faster the better before the next wave.',
             options: [
               { label: "Let's go", action: { kind: 'acceptJob', jobId: 'beach-cleanup' } },
               { label: 'Maybe later', action: { kind: 'close' } },
@@ -293,8 +293,8 @@ export const lekki: DestinationPack = {
         spots: [[4, 26], [-2, 18], [7.5, 15], [1, 4], [-4.5, -2], [6, -12], [-1.5, -20], [8, -26], [3, -36]],
       },
       timeLimitMs: 90_000,
-      reward: 1800,
-      bonus: { underMs: 55_000, amount: 700 },
+      reward: 2250,
+      bonus: { underMs: 55_000, amount: 900 },
       cooldownMs: 30_000,
     },
   ],
