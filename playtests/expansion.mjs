@@ -140,6 +140,9 @@ await shot('08-haggle-deal');
 await p.keyboard.press('Escape');
 
 // ── visit the other areas
+// test setup: three cross-town danfo rides (₦700 + ₦700 + ₦1,900 at real-world fares) cost more than the
+// clean-up job paid, so the fares are topped up directly (a normal ledger credit)
+await S(() => { const st = window.__retreva.store; const w = st.getState().wallet; st.setState({ wallet: { balance: w.balance + 5000, ledger: [{ id: 'test-topup', amount: 5000, reason: 'Playtest top-up', at: Date.now(), destinationId: 'lekki-beach' }, ...w.ledger] } }); });
 for (const [conductor, label, dest, name] of [['emeka', 'Lagos Island', 'lagos-island', '09-island'], ['sade', 'Ikeja', 'ikeja-village', '10-ikeja'], ['wale', 'Badagry', 'badagry-marina', '11-badagry']]) {
   const npc = await S((id) => window.__retreva.store.getState() && null, conductor);
   const pos = { emeka: [-3.4, 35.2], sade: [1.6, 36.2], wale: [-3.4, 34.4] }[conductor];

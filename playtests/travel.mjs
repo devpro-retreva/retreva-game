@@ -1,7 +1,7 @@
 // Travel playtest (Architecture V6, milestone 4): plan and budget a trip, buy a ticket, taxi to the
 // airport, check in, security (liquids), board, fly, arrive in Accra (Osu), explore, and fly home.
-// The ticket money is topped up directly (a "test-topup" ledger entry) — earning ₦16,000 through
-// jobs is covered by the other suites and would take ~20 minutes under software GL.
+// The ticket and taxi money is topped up directly (a "test-topup" ledger entry) — earning ₦16,000 plus real-world
+// taxi fares through jobs is covered by the other suites and would take ~20 minutes under software GL.
 import { launch, BASE_URL, outDir } from './lib.mjs';
 const OUT = outDir('travel');
 const results = [];
@@ -71,7 +71,7 @@ const b = await launch();
   await S(() => {
     const st = window.__retreva.store;
     const w = st.getState().wallet;
-    st.setState({ wallet: { balance: w.balance + 28000, ledger: [...w.ledger, { id: 'test-topup', amount: 28000, reason: 'Playtest top-up', at: Date.now() }] } });
+    st.setState({ wallet: { balance: w.balance + 40000, ledger: [...w.ledger, { id: 'test-topup', amount: 40000, reason: 'Playtest top-up', at: Date.now() }] } });
   });
   await sleep(300);
   const before = (await st()).bal;
