@@ -428,6 +428,15 @@ describe('Lagos travel', () => {
         expect(isBlocked(buildCollisionWorld(p), p.dock!.position[0], p.dock!.position[1]), `${id} dock clear`).toBe(false);
       }
     }
+    // and you can actually walk there: step from the waterfront out to the end of each jetty
+    for (const id of ['badagry-marina', 'lekki-beach']) {
+      const p = ALL_PACKS.find((x) => x.id === id)!;
+      const w = buildCollisionWorld(p);
+      let x = 7.4;
+      const z = p.dock!.position[1];
+      for (let i = 0; i < 80; i++) x = resolveMove(w, x, z, x + 0.1, z).x;
+      expect(x, `${id}: walked out to x=${x.toFixed(2)}`).toBeGreaterThan(14);
+    }
     expect(boatsFrom('badagry-marina').map((a) => a.id)).toEqual(['lekki-beach']);
     expect(boatsFrom('lekki-beach').map((a) => a.id)).toEqual(['badagry-marina']);
     expect(boatsFrom('lagos-adeniyi')).toEqual([]);

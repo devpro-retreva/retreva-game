@@ -20,7 +20,7 @@ export const lekki: DestinationPack = {
   arrival: { position: [-3.6, 35.5], facing: Math.PI },
   // the ferry from Badagry ties up at the boat landing at the north end of the beach
   dock: { position: [10.4, 34], facing: -Math.PI / 2 },
-  walkable: [[-7.2, -42, 9.4, 42], [9.0, 32.9, 16.2, 35.1]],
+  walkable: [[-7.2, -42, 9.4, 42], [6.5, 32.9, 16.2, 35.1]],
   walls: [],
   palette: {
     sky: '#f6d29a',
@@ -179,6 +179,41 @@ export const lekki: DestinationPack = {
             options: [
               { label: 'Let me see', action: { kind: 'openShop', businessId: 'ada' } },
               { label: 'Later', action: { kind: 'close' } },
+            ],
+          },
+        },
+      },
+    },
+    {
+      id: 'captain-tari',
+      name: 'Captain Tari',
+      role: 'Ferry captain',
+      personality: 'Brisk and cheerful, keeps a whistle on a string round her neck.',
+      position: [8.2, 31.6],
+      facing: -Math.PI / 2,
+      look: { gender: 'female', skin: '#4a2c1c', top: '#f2b705', bottom: '#1f3a5f', outfit: 'top-trousers', hair: 'braids', headwear: 'cap', headColor: '#1d7f86', height: 1.7 },
+      promptVerb: 'Talk to',
+      social: {
+        lines: ['Six years on this water and I have never lost a passenger. Not even a hat.', 'Badagry people love their fish. My boat smells of it every evening.', 'When the wind turns, I slow down. The lagoon decides, not me.'],
+        likes: ['coconut', 'beach-suya', 'zobo'],
+      },
+      idle: 'wave',
+      dialogue: {
+        entries: [{ node: 'hello' }],
+        nodes: {
+          hello: {
+            text: 'Ferry to Badagry, by way of CMS! Life jackets for everybody. ₦3,000 — the boat is tied up at the end of the landing.',
+            options: [
+              { label: 'Take the ferry', action: { kind: 'openTravel', by: 'boat' } },
+              { label: 'How long is the crossing?', action: { kind: 'goto', node: 'how' } },
+              { label: 'Not now', action: { kind: 'close' } },
+            ],
+          },
+          how: {
+            text: 'About an hour and fifty minutes on the lagoon, with a stop at CMS. Faster than the road through Mile 2 — and no go-slow on the water.',
+            options: [
+              { label: 'Take the ferry', action: { kind: 'openTravel', by: 'boat' } },
+              { label: 'Maybe later', action: { kind: 'close' } },
             ],
           },
         },

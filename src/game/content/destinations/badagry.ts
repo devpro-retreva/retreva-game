@@ -22,8 +22,9 @@ export const badagry: DestinationPack = {
   arrival: { position: [-3.8, 36], facing: Math.PI },
   // the ferry from Lekki ties up at the jetty
   dock: { position: [10.4, -28], facing: -Math.PI / 2 },
-  // the street and the lagoon-side strip, plus the jetty out over the water
-  walkable: [[-6.9, -42, 9.2, 42], [9.0, -29.1, 16.2, -26.9]],
+  // the street and the lagoon-side strip, plus the jetty out over the water (the strips overlap so you can
+  // walk from one to the other: the player has to fit inside one rectangle at every step)
+  walkable: [[-6.9, -42, 9.2, 42], [6.5, -29.1, 16.2, -26.9]],
   walls: [],
   palette: {
     sky: '#f3d6a4',
@@ -322,6 +323,41 @@ export const badagry: DestinationPack = {
       },
     },
     {
+      id: 'captain-ebi',
+      name: 'Captain Ebi',
+      role: 'Ferry captain',
+      personality: 'Calm, weathered, counts heads twice before casting off.',
+      position: [8.2, -30.2],
+      facing: -Math.PI / 2,
+      look: { gender: 'male', skin: '#3f2516', top: '#1d7f86', bottom: '#2a2a2a', outfit: 'shirt', hair: 'low', facialHair: 'beard', headwear: 'cap', headColor: '#f4f0e6', height: 1.8 },
+      promptVerb: 'Talk to',
+      social: {
+        lines: ['I learnt the creeks from my father in the Delta. This lagoon is easy water.', 'Harmattan morning, the lagoon is like a mirror. Best crossing of the year.', 'Life jackets are not decoration o. Everybody wears one on my boat.'],
+        likes: ['fish-pepper-soup', 'agbon-water', 'zobo'],
+      },
+      idle: 'wave',
+      dialogue: {
+        entries: [{ node: 'hello' }],
+        nodes: {
+          hello: {
+            text: 'Ferry to Lekki, by way of CMS! Life jacket on, sit down, we go. ₦3,000 — the boat leaves from the end of the jetty.',
+            options: [
+              { label: 'Take the ferry', action: { kind: 'openTravel', by: 'boat' } },
+              { label: 'How long is the crossing?', action: { kind: 'goto', node: 'how' } },
+              { label: 'Not now', action: { kind: 'close' } },
+            ],
+          },
+          how: {
+            text: 'About an hour and fifty minutes on the lagoon, with a stop at CMS. Faster than the road through Mile 2 — and no go-slow on the water.',
+            options: [
+              { label: 'Take the ferry', action: { kind: 'openTravel', by: 'boat' } },
+              { label: 'Maybe later', action: { kind: 'close' } },
+            ],
+          },
+        },
+      },
+    },
+    {
       id: 'kayode',
       name: 'Kayode',
       role: 'Danfo conductor',
@@ -354,10 +390,9 @@ export const badagry: DestinationPack = {
     },
   ],
 
-  // two passers-by and light traffic: every person is five draw calls, and the six locals with work come first
+  // no passers-by, light traffic: every person is five draw calls (and the ferry captain's marker one more), and the
+  // seven locals with work come first
   walkers: [
-    { id: 'bw-1', look: { gender: 'female', skin: '#5a3420', top: '#f4f0e6', bottom: '#1d7f86', outfit: 'dress', hair: 'braids', height: 1.64 }, path: [[5.6, 28], [5.6, -26], [5.6, 28]], speed: 0.95, stops: [{ at: 1, activity: 'photo', seconds: 8, face: Math.PI / 2 }] },
-    { id: 'bw-3', look: { gender: 'female', skin: '#6b4026', top: '#f2b705', bottom: '#7a3b72', outfit: 'top-skirt', hair: 'puff', headwear: 'gele', headColor: '#7a3b72' }, path: [[-5.6, -6], [-5.6, 29], [-5.6, -6]], speed: 0.9, stops: [{ at: 1, activity: 'shop', seconds: 9, face: -Math.PI / 2 }] },
   ],
 
   events: [

@@ -151,13 +151,23 @@ log('the buka sells coconut candy for ₦300, into the bag', preShop - s.bal ===
 await p.screenshot({ path: `${OUT}/05-buka.png` });
 await S(() => window.__retreva.store.getState().closePanel());
 
-// ── the ferry: Badagry jetty → Lekki boat landing → back
+// ── the ferry: Badagry jetty → Lekki boat landing → back, boarded like a danfo (talk to the captain)
 await topUp(8000);
-await place(11.0, -28, Math.PI / 2);
-await near('bdg-ferry');
-await p.keyboard.press('KeyE');
+const hold = async (key, ms) => { await p.keyboard.down(key); await sleep(ms); await p.keyboard.up(key); await sleep(300); };
+log('the ferry captain wears the travel marker and shows on the map like a conductor', await S(() => window.__retreva.runtime.actors.has('captain-ebi')));
+// walk from the waterfront out along the jetty with the keys: it holds you up over the water
+await place(7.6, -28, Math.PI / 2);
+await S(() => { window.__retreva.runtime.camera.yaw = Math.PI / 2; });
+await sleep(600);
+await hold('KeyW', 4000);
+let pl = await S(() => ({ x: window.__retreva.runtime.player.x, z: window.__retreva.runtime.player.z }));
+log('you can walk out onto the jetty over the lagoon', pl.x > 10 && Math.abs(pl.z + 28) < 1.2, JSON.stringify(pl));
+await p.screenshot({ path: `${OUT}/05a-on-the-jetty.png` });
+await talk('captain-ebi');
+log('Captain Ebi offers the ferry to Lekki', await p.isVisible('button.choice:has-text("Take the ferry")'));
+await choose('Take the ferry');
 await p.waitForSelector('button[aria-label^="Boat to Lekki"]', { timeout: 10000 }).catch(() => {});
-log('the jetty offers the ferry to Lekki for ₦3,000 (and nothing by road)', await p.isVisible('button[aria-label="Boat to Lekki for ₦3,000"]') && (await p.locator('.travel-row').count()) === 1);
+log('the ferry desk offers Lekki for ₦3,000 (and nothing by road)', await p.isVisible('button[aria-label="Boat to Lekki for ₦3,000"]') && (await p.locator('.travel-row').count()) === 1);
 await p.screenshot({ path: `${OUT}/05b-ferry-picker.png` });
 let preBoat = (await st()).bal;
 await p.click('button[aria-label^="Boat to Lekki"]');
@@ -167,14 +177,21 @@ await p.screenshot({ path: `${OUT}/05c-ferry-crossing.png` });
 await p.waitForFunction(() => { const g = window.__retreva.store.getState(); return g.destinationId === 'lekki-beach' && g.phase === 'playing' && g.ui === 'play'; }, null, { timeout: 60000 });
 await sleep(2500);
 s = await st();
-let pl = await S(() => ({ x: window.__retreva.runtime.player.x, z: window.__retreva.runtime.player.z }));
+pl = await S(() => ({ x: window.__retreva.runtime.player.x, z: window.__retreva.runtime.player.z }));
 let boats = s.ledger.filter(([id]) => id.startsWith('boat'));
 log('the ferry lands you at the Lekki boat landing; ₦3,000 once', s.dest === 'lekki-beach' && Math.hypot(pl.x - 10.4, pl.z - 34) < 1.5 && boats.length === 1 && boats[0][1] === -3000, JSON.stringify({ pl, boats }));
 await p.screenshot({ path: `${OUT}/05d-lekki-landing.png` });
+// in Lekki, board from the landing itself (the other way in)
 await place(11.0, 34, Math.PI / 2);
 await near('lekki-ferry');
 await p.keyboard.press('KeyE');
 await p.waitForSelector('button[aria-label^="Boat to Badagry"]', { timeout: 10000 });
+await p.keyboard.press('Escape');
+await sleep(400);
+await talk('captain-tari');
+await choose('Take the ferry');
+await p.waitForSelector('button[aria-label^="Boat to Badagry"]', { timeout: 10000 });
+log('in Lekki, Captain Tari (or the landing) takes you back to Badagry', await p.isVisible('button[aria-label="Boat to Badagry for ₦3,000"]'));
 await p.click('button[aria-label^="Boat to Badagry"]');
 await p.waitForFunction(() => { const g = window.__retreva.store.getState(); return g.destinationId === 'badagry-marina' && g.phase === 'playing' && g.ui === 'play'; }, null, { timeout: 60000 });
 await sleep(2500);
