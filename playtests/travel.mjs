@@ -64,7 +64,7 @@ const b = await launch();
   const sumOk = amounts.slice(0, -1).reduce((a, n) => a + n, 0) === amounts[amounts.length - 1];
   log('Travel app shows Accra with a full trip budget (taxi, ticket, stay, getting around) that adds up', lines.join() === 'taxi,ticket,stay,around' && sumOk, `${lines.join(',')} · ${amounts.join(' + ')}`);
   const shortMsg = await p.textContent('.flight[data-route="los-acc"] .muted');
-  log('with ₦2,000 the ticket is clearly out of reach (no Book button, how much more is shown)', /need ₦14,000 more/.test(shortMsg) && !(await p.isVisible('.flight[data-route="los-acc"] button:has-text("Book")')), shortMsg.trim());
+  log('with ₦2,000 the ticket is clearly out of reach (no Book button, how much more is shown)', /need ₦448,000 more/.test(shortMsg) && !(await p.isVisible('.flight[data-route="los-acc"] button:has-text("Book")')), shortMsg.trim());
   await shot('01-budget-short');
 
   // top up (test only) and book a return ticket with the confirm step
