@@ -216,7 +216,7 @@ function GoalsList() {
               )}
             </div>
             <div className="goal-side num">
-              {done ? <span className="chip done">Done</span> : target > 1 ? `${cur}/${target}` : ''}
+              {done ? <span className="chip done">Done</span> : g.money ? `${formatMoney(pack, cur)} of ${formatMoney(pack, target)}` : target > 1 ? `${cur}/${target}` : ''}
               <span className="sub">+{formatMoney(pack, g.reward)}</span>
             </div>
           </div>

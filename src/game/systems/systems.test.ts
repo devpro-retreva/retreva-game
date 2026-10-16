@@ -1212,3 +1212,23 @@ describe('stages', () => {
     expect(isBlocked(turned(0), 1.8, 0, 0.01)).toBe(false);
   });
 });
+
+describe('saving for a first flight', () => {
+  const fund = GOALS.find((g) => g.id === 'flight-fund')!;
+  const base = { jobs: emptyJobs(), jobArea: () => undefined, visited: [], discovered: [], inventory: emptyInventory(), bestBargain: 0, rides: 0, totalAreas: 5 };
+  const cheapest = Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip));
+  it('counts the money you hold towards the cheapest return flight from Lagos, and is done once you can afford it', () => {
+    expect(cheapest).toBe(450000);
+    expect(fund.money).toBe(true);
+    expect(fund.progress({ ...base, balance: 5000, flightFund: cheapest })).toEqual([5000, cheapest]);
+    expect(newlyCompleted({ ...base, balance: cheapest - 1, flightFund: cheapest }, []).map((g) => g.id)).not.toContain('flight-fund');
+    expect(newlyCompleted({ ...base, balance: cheapest, flightFund: cheapest }, []).map((g) => g.id)).toContain('flight-fund');
+  });
+  it('is complete for anyone who has already flown, whatever they hold now', () => {
+    expect(newlyCompleted({ ...base, balance: 0, flights: 1, flightFund: cheapest }, []).map((g) => g.id)).toContain('flight-fund');
+  });
+  it('a new life in Lagos starts with ₦5,000 — a few rides and meals, nowhere near a flight', () => {
+    expect(lagos.startingMoney).toBe(5000);
+    expect(lagos.startingMoney).toBeLessThan(cheapest / 50);
+  });
+});

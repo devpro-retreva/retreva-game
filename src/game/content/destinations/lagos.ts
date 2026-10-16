@@ -536,5 +536,5 @@ export const lagos: DestinationPack = {
     vehicles: [{ kind: 'danfo' }, { kind: 'car', color: '#b3261e' }, { kind: 'keke' }, { kind: 'car', color: '#e8e6e0' }, { kind: 'danfo' }, { kind: 'car', color: '#2c5f9e' }],
     speed: [4.5, 7.5],
   },
-  startingMoney: 2000,
+  startingMoney: 5000,
 };

@@ -106,6 +106,14 @@ log('report pays the clean-up', s.bal - preClean >= 1800, `+${s.bal - preClean}`
 await sleep(2500);
 s = await st();
 log('beach guardian goal completes', s.world.goalsDone.includes('beach-clean'));
+log('after the first pay a tip points to saving for a trip', s.tip === 'save-up' || s.queue.includes('save-up') || s.world.seenTips.includes('save-up'), `showing ${s.tip}, queued ${s.queue}`);
+await S(() => window.__retreva.store.getState().openPhone('jobs'));
+await p.click('button[role="tab"]:has-text("Goals")');
+await p.waitForSelector('.goal-row:has-text("First flight fund")');
+const fundRow = (await p.textContent('.goal-row:has-text("First flight fund")')) ?? '';
+log('the First flight fund goal counts savings in naira towards the ₦450,000 Accra return', new RegExp(`₦${s.bal.toLocaleString('en-NG')} of ₦450,000`).test(fundRow), fundRow.trim());
+await shot('08b-flight-fund');
+await S(() => window.__retreva.store.getState().closePanel());
 
 // ── landmark discovery
 await placeNear(7.2, 1.0);

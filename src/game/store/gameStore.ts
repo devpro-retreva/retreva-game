@@ -42,7 +42,7 @@ import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings
 import { sanitizeLook } from '../core/avatarPresets';
 import { districts, fareBetween, findArea, minutesBetween, modeBetween, regionOf, REGIONS, type TravelBy } from '../content/regions';
 import { advance, afterSleep, dayOf, formatClock, hourOf, isOpen, opensAt, START_TIME } from '../systems/clock';
-import { findFlight } from '../content/flights';
+import { FLIGHTS, findFlight } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
 import { meets, type RequirementContext } from '../systems/requirements';
 import { repairQueue, repairSeconds, scoreRepair, shuffledSteps, tapStep, type DeviceResult, type RepairDef } from '../systems/repair';
@@ -287,7 +287,7 @@ function announceTier(npcId: string, before: number, after: number) {
 }
 
 /** What goals measure. "Visit every area" is about Lagos districts; airports and other cities don't count toward it. */
-export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventory' | 'travel'>): ProgressSnapshot {
+export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventory' | 'travel' | 'wallet'>): ProgressSnapshot {
   return {
     jobs: s.jobs,
     jobArea: (id) => areaOfJob(id)?.id,
@@ -300,8 +300,13 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
     flights: s.travel.history.length,
     shows: (s.world.tickets ?? []).filter((t) => t.status === 'used').length,
     cities: new Set(s.world.visited.map((a) => regionOf(a)?.id).filter(Boolean)).size,
+    balance: s.wallet.balance,
+    flightFund: HOME_FLIGHT_FUND,
   };
 }
+
+/** The cheapest return ticket out of the home city's airport. */
+const HOME_FLIGHT_FUND = Math.min(...FLIGHTS.filter((f) => regionOf(f.from)?.id === REGIONS[0].id).map((f) => f.roundTrip));
 
 export interface ShiftRun {
   shiftId: string;
@@ -1497,6 +1502,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         if (courier && courierRank(after).name !== courierRank(runsBefore).name)
           setTimeout(() => get().pushToast({ kind: 'goal', title: `Courier rank: ${courierRank(after).name}`, detail: `Errands now pay ${Math.round(courierRank(after).bonus * 100)}% more.` }), 1200);
         get().showTip('first-money');
+        get().showTip('save-up');
         get().showTip('travel');
         get().checkGoals();
         if (firstTime) {

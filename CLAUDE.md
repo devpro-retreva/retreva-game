@@ -83,7 +83,7 @@ PLAYTEST_URL=http://localhost:5173/ node playtests/run.mjs regression   # agains
 | Suite | Covers |
 |---|---|
 | `regression` (40 checks) | title, character creation, movement, camera, Jollof Run (pay once, no duplicate reward), shop, phone apps, pause, save + continue after refresh, mobile touch layout |
-| `expansion` (32) | danfo travel to all five areas (fare charged once), beach clean-up collect job, landmarks, bargaining, goals paid once, tips, messages, persistence, mobile travel |
+| `expansion` (34) | danfo travel to all five areas (fare charged once), beach clean-up collect job, landmarks, bargaining, goals paid once, tips (incl. the saving tip after the first pay), First flight fund progress in naira, messages, persistence, mobile travel |
 | `life` (47) | needs drain, kitchen shift (pay, perfect tip, cooking XP/level-up, regard, staff meal), too-tired gate, no running when exhausted, bench rest, eating, sell-with-confirm, renting a room, sleeping, persistence of all of it — desktop and mobile |
 | `city` (11) | traffic moves, keeps lanes, stops for a person in its lane, steers around the parked danfo; walkers stop to shop/wait/eat/chat/photo; draw-call and triangle budget; Ikeja traffic, Island/Lekki pedestrian-only |
 | `device` (17) | offline: worker precaches every file, game opens/continues/saves with no network; graphics Low vs High (fewer vehicles, fewer draw calls/triangles, choice saved); A++ text on a 360px phone (no sideways scroll, kitchen buttons ≥ 44px) |
@@ -115,7 +115,7 @@ Graphics tiers (`game/core/quality.ts`, `scene/useTier.ts`): Settings → Graphi
 
 Social: NPCs with `social: { lines, likes }` in pack data get "Chat a while" / "Give a gift" added to the node they open with (`DialoguePanel` → `socialNode`); chat replies use the transient node `'__social'`. Friend discounts apply through `store.priceAt` (shops, haggling start price, dealers).
 
-Travel: fares and trip times are data — `routes` per region (danfo legs summed, ride-hailing to airports, 2025–26 estimates), `boats` between areas whose pack has a `dock` and a `jetty` spot (`openTravel('boat')`; you land at the `dock`). A unit test requires every pair in a region to be priced. Flights are real economy fares at about ₦1,332/$ (Lagos–Accra ₦450,000 return, Lagos–Dubai ₦1,065,000 return, October 2026); job, shift and repair pay was raised 25% at the same time, so a long trip is a real savings goal. Playtests top up ticket money as test setup.
+Travel: fares and trip times are data — `routes` per region (danfo legs summed, ride-hailing to airports, 2025–26 estimates), `boats` between areas whose pack has a `dock` and a `jetty` spot (`openTravel('boat')`; you land at the `dock`). A unit test requires every pair in a region to be priced. Flights are real economy fares at about ₦1,332/$ (Lagos–Accra ₦450,000 return, Lagos–Dubai ₦1,065,000 return, October 2026); job, shift and repair pay was raised 25% at the same time, so a long trip is a real savings goal. New lives start with ₦5,000; the "First flight fund" goal (`money: true`, progress = wallet towards the cheapest return from Lagos, done once you can afford it or have flown) and the `save-up` tip after the first pay point players at it. Playtests top up ticket money as test setup.
 
 Vehicles: `life.riding` is the uid you're on; `InteractionSystem` offers "Ride" near your parked vehicle and "Get off" while riding with nothing else in reach. `parkIfRiding()` runs before travel, boarding, shifts and resting. Animations: `CharacterAnim.pose` ('ride' | 'sit') and `eatUntil`.
 

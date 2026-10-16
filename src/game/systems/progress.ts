@@ -23,6 +23,10 @@ export interface ProgressSnapshot {
   shows?: number;
   /** Cities you have been to (Lagos, Accra, Dubai…). */
   cities?: number;
+  /** Money in the wallet now. */
+  balance?: number;
+  /** The cheapest return flight from home (what "First flight fund" saves towards). */
+  flightFund?: number;
 }
 
 export interface GoalDef {
@@ -32,6 +36,8 @@ export interface GoalDef {
   reward: number;
   /** Returns progress as [current, target]. */
   progress: (p: ProgressSnapshot) => [number, number];
+  /** Progress is an amount of naira (shown as money, not a count). */
+  money?: boolean;
 }
 
 const completed = (p: ProgressSnapshot) => p.jobs.history.filter((h) => h.outcome === 'completed');
@@ -57,6 +63,12 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, p.cities ?? 1), 3] },
   { id: 'night-out', title: 'Night out', description: 'See a show with a ticket — a concert, comedy or a street jam.', reward: 800,
     progress: (p) => [Math.min(1, p.shows ?? 0), 1] },
+  { id: 'flight-fund', title: 'First flight fund', description: 'Save enough for a return flight from Lagos — Accra is the cheapest trip abroad.', reward: 5000, money: true,
+    // counts what you hold now; once you have flown it is done anyway
+    progress: (p) => {
+      const target = p.flightFund ?? 450000;
+      return [(p.flights ?? 0) > 0 ? target : Math.min(target, Math.max(0, p.balance ?? 0)), target];
+    } },
   { id: 'first-flight', title: 'Wheels up', description: 'Take your first flight abroad.', reward: 1500,
     progress: (p) => [Math.min(1, p.flights ?? 0), 1] },
 ];
@@ -82,6 +94,7 @@ export const TIPS: Record<string, TipDef> = {
   welcome: { id: 'welcome', title: 'Welcome to Lagos', text: 'A yellow diamond floats over anyone with work for you. Walk up to Mama Titi and talk to her to earn your first naira.' },
   'job-started': { id: 'job-started', title: 'Beat the clock', text: 'The timer is top-left. Follow the yellow ring on your minimap — deliver early for a speed bonus.' },
   'first-money': { id: 'first-money', title: 'You got paid', text: 'Open your phone to see your Wallet, Bag and Goals. Goals pay extra naira when you finish them.' },
+  'save-up': { id: 'save-up', title: 'Saving for a trip?', text: 'Flights cost what they really cost. Open the Travel app to see a trip to Accra in full — ticket, airport taxi, a bed and getting around. The First flight fund goal keeps count as you save.' },
   travel: { id: 'travel', title: 'See more of Lagos', text: 'Danfo conductors at the bus stop can take you to Lagos Island, Lekki, Ikeja — or a taxi to the airport, where flights leave for Accra. In Yaba, talk to Kunle by the yellow bus.' },
   'new-area': { id: 'new-area', title: 'A new part of town', text: 'Every area has its own people, prices and work. Walk around to discover landmarks — they count toward your goals.' },
   haggle: { id: 'haggle', title: 'Price na talk', text: 'Offer less than the asking price. A fair offer gets a counter; an insulting one burns the seller’s patience. Run out, and you get a final price.' },
