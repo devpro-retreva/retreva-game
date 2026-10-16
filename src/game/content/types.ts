@@ -143,7 +143,8 @@ export type DialogueAction =
   | { kind: 'acceptJob'; jobId: string }
   | { kind: 'deliverJob'; jobId: string }
   | { kind: 'openShop'; businessId: string }
-  | { kind: 'openTravel' }
+  /** The travel picker: by road (default), or the boats from this area's jetty. */
+  | { kind: 'openTravel'; by?: 'road' | 'boat' }
   | { kind: 'startShift'; shiftId: string }
   /** Airport steps. */
   | { kind: 'checkIn' }
@@ -267,8 +268,8 @@ export interface JobDef {
 /** Something in the world you can use: a bench to rest on, the door of a home to rent. */
 export interface SpotDef {
   id: string;
-  /** bench: rest. home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). */
-  kind: 'bench' | 'home' | 'door' | 'event';
+  /** bench: rest. home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). jetty: the boat landing. */
+  kind: 'bench' | 'home' | 'door' | 'event' | 'jetty';
   /** For an 'event': which show this is the gate of. */
   eventId?: string;
   /** For a 'door': the interior it leads into. */
@@ -339,6 +340,8 @@ export interface DestinationPack {
   spawn: { position: Vec2; facing: number };
   /** Where you step off the danfo when travelling here. */
   arrival: { position: Vec2; facing: number };
+  /** Where you step off a boat (areas with a jetty and boats in their region's `boats`). */
+  dock?: { position: Vec2; facing: number };
   /** Union of walkable rectangles: [minX, minZ, maxX, maxZ]. */
   walkable: [number, number, number, number][];
   /** Low boundary walls drawn around open lots: [x0, z0, x1, z1]. */

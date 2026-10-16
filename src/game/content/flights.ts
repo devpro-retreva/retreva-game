@@ -23,6 +23,7 @@ export interface FlightRoute {
   /** Budget helpers shown before you buy (estimates, not charged with the ticket). */
   budget: {
     stay: { name: string; cost: number; note: string };
+    /** A few days of local rides at the other end (taxis, tro-tros, the metro, danfos), in naira. */
     gettingAround: number;
   };
   /** What the check-in agent says about entry papers (game simplification: nothing to arrange yourself). */
@@ -57,7 +58,7 @@ export const FLIGHTS: FlightRoute[] = [
     gate: 'A3',
     budget: {
       stay: { name: 'Osu guesthouse', cost: 3500, note: 'a bed for your stay' },
-      gettingAround: 2100,
+      gettingAround: 8000,
     },
     entry: 'ECOWAS — no visa needed.',
     returnId: 'acc-los',
@@ -79,7 +80,7 @@ export const FLIGHTS: FlightRoute[] = [
     gate: 'B1',
     budget: {
       stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
-      gettingAround: 700,
+      gettingAround: 3000,
     },
     entry: 'ECOWAS — no visa needed.',
     returnId: 'los-acc',
@@ -101,7 +102,7 @@ export const FLIGHTS: FlightRoute[] = [
     gate: 'A5',
     budget: {
       stay: { name: 'Creek studio', cost: 15000, note: 'a furnished studio for your stay' },
-      gettingAround: 8000,
+      gettingAround: 40000,
     },
     entry: 'Your UAE visa is on file with the booking — all set.',
     note: 'In the game the visa is handled with your ticket; real trips need one arranged in advance.',
@@ -125,7 +126,7 @@ export const FLIGHTS: FlightRoute[] = [
     gate: 'C2',
     budget: {
       stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
-      gettingAround: 700,
+      gettingAround: 3000,
     },
     entry: 'Nigerian passport — welcome home soon.',
     chart: 'longhaul',

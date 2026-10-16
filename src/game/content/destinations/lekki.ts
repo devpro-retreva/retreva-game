@@ -18,7 +18,9 @@ export const lekki: DestinationPack = {
   currency: { code: 'NGN', symbol: '₦', locale: 'en-NG' },
   spawn: { position: [-4, 36], facing: Math.PI },
   arrival: { position: [-3.6, 35.5], facing: Math.PI },
-  walkable: [[-7.2, -42, 9.4, 42]],
+  // the ferry from Badagry ties up at the boat landing at the north end of the beach
+  dock: { position: [10.4, 34], facing: -Math.PI / 2 },
+  walkable: [[-7.2, -42, 9.4, 42], [9.0, 32.9, 16.2, 35.1]],
   walls: [],
   palette: {
     sky: '#f6d29a',
@@ -36,6 +38,7 @@ export const lekki: DestinationPack = {
   landmarks: [
     { id: 'lekki-tower', name: 'Lifeguard tower', blurb: 'Tolu keeps watch over the swimmers from here.', position: [8, 0], radius: 4 },
     { id: 'lekki-shore', name: 'Atlantic shoreline', blurb: 'Waves roll in all the way from Brazil.', position: [9, -22], radius: 3 },
+    { id: 'lekki-landing', name: 'Boat landing', blurb: 'Ferries to Badagry leave from here, by way of CMS on the lagoon.', position: [10.5, 34], radius: 3 },
     { id: 'lekki-palms', name: 'Palm grove', blurb: 'The shadiest spot on the beach.', position: [-3, -33], radius: 4 },
   ],
   welcome: { from: 'Tolu', text: 'Welcome to Lekki beach! The tide brought plenty plastic today — come see me at the lifeguard tower if you want to help.' },
@@ -72,6 +75,9 @@ export const lekki: DestinationPack = {
     { id: 'grill-1', kind: 'grill', position: [-5.9, 16], rotation: Math.PI / 2, collide: true },
     { id: 'bus', kind: 'busstop', position: [-6.4, 37.6], rotation: Math.PI / 2, collide: true },
     { id: 'keke-1', kind: 'keke', position: [1.8, 37.5], rotation: -0.3, collide: true },
+    // boat landing
+    { id: 'jetty', kind: 'jetty', position: [9.2, 34], rotation: Math.PI / 2 },
+    { id: 'ferry', kind: 'canoe', position: [14.6, 36.3], rotation: Math.PI / 2, color: '#e9e6df' },
   ],
 
   npcs: [
@@ -231,6 +237,7 @@ export const lekki: DestinationPack = {
     },
   ],
   spots: [
+    { id: 'lekki-ferry', kind: 'jetty', position: [12.2, 34], label: 'ferry', verb: 'Take the' },
     { id: 'beach-highlife-gate', kind: 'event', position: [-1.0, -24], label: 'Highlife on the Beach', verb: 'Go to', eventId: 'beach-highlife' },
   ],
 

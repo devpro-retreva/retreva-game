@@ -20,6 +20,8 @@ export const badagry: DestinationPack = {
   currency: { code: 'NGN', symbol: '₦', locale: 'en-NG' },
   spawn: { position: [-3.8, 36], facing: Math.PI },
   arrival: { position: [-3.8, 36], facing: Math.PI },
+  // the ferry from Lekki ties up at the jetty
+  dock: { position: [10.4, -28], facing: -Math.PI / 2 },
   // the street and the lagoon-side strip, plus the jetty out over the water
   walkable: [[-6.9, -42, 9.2, 42], [9.0, -29.1, 16.2, -26.9]],
   walls: [],
@@ -64,6 +66,7 @@ export const badagry: DestinationPack = {
     { id: 'agia', kind: 'tree', position: [8.3, 3], collide: true },
     { id: 'jetty', kind: 'jetty', position: [9.2, -28], rotation: Math.PI / 2 },
     { id: 'canoe-1', kind: 'canoe', position: [12.6, -30.4], rotation: Math.PI / 2 },
+    { id: 'ferry', kind: 'canoe', position: [14.6, -25.7], rotation: Math.PI / 2, color: '#e9e6df' },
     { id: 'canoe-2', kind: 'canoe', position: [19, -23], rotation: 1.2 },
     { id: 'canoe-3', kind: 'canoe', position: [14.5, -35], rotation: 2.0 },
     { id: 'gberefu', kind: 'arch', position: [44, -27] },
@@ -380,6 +383,7 @@ export const badagry: DestinationPack = {
   ],
   spots: [
     { id: 'heritage-drums-gate', kind: 'event', position: [5.4, 18], label: 'Heritage Drums on the Marina', verb: 'Go to', eventId: 'heritage-drums' },
+    { id: 'bdg-ferry', kind: 'jetty', position: [12.2, -28], label: 'ferry', verb: 'Take the' },
     { id: 'bdg-bench', kind: 'bench', position: [7.2, -9], label: 'Bench by the lagoon', verb: 'Rest on' },
     { id: 'badagry-room-door', kind: 'home', position: [-6.2, 4.5], label: 'Room by the Marina', verb: 'Check', homeId: 'badagry-room' },
   ],

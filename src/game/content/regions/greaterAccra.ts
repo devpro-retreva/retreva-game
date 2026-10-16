@@ -10,4 +10,6 @@ export const ACCRA: Region = {
     { id: 'accra-osu', district: 'Osu', known: 'Oxford Street & chop bars', map: [58, 72] },
     { id: 'accra-airport', district: 'Airport', known: 'Flights home', map: [52, 34], hub: 'airport' },
   ],
+  // a ride-hailing taxi Osu ↔ Kotoka is about GH₵50 (estimate)
+  routes: [{ between: ['accra-osu', 'accra-airport'], fare: 5000, minutes: 25 }],
 };

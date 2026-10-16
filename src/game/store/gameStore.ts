@@ -40,7 +40,7 @@ import {
 } from '../systems/life';
 import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings, type WorldProgress } from '../persistence/types';
 import { sanitizeLook } from '../core/avatarPresets';
-import { districts, fareBetween, findArea, minutesBetween, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { districts, fareBetween, findArea, minutesBetween, modeBetween, regionOf, REGIONS, type TravelBy } from '../content/regions';
 import { advance, afterSleep, dayOf, formatClock, hourOf, isOpen, opensAt, START_TIME } from '../systems/clock';
 import { findFlight } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
@@ -130,7 +130,9 @@ interface GameState {
   tipQueue: string[];
   banner: { key: number; title: string; tagline: string } | null;
   haggle: (HaggleState & { businessId: string }) | null;
-  transit: { from: string; to: string; fare: number; firstVisit: boolean } | null;
+  transit: { from: string; to: string; fare: number; firstVisit: boolean; by: TravelBy } | null;
+  /** How the open travel picker goes: the road (danfo, taxi) or the boat from this area's jetty. */
+  travelBy: TravelBy;
   /** Set during travel; handled once the new area has rendered. */
   arrival: { firstVisit: boolean } | null;
   life: LifeState;
@@ -172,8 +174,8 @@ interface GameState {
   clearBanner(): void;
 
   // travel
-  openTravel(): void;
-  travelTo(areaId: string): void;
+  openTravel(by?: TravelBy): void;
+  travelTo(areaId: string, by?: TravelBy): void;
   arrive(): void;
   bookFlight(routeId: string, roundTrip: boolean): boolean;
   checkIn(): void;
@@ -426,6 +428,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     banner: null,
     haggle: null,
     transit: null,
+    travelBy: 'road',
     arrival: null,
     life: emptyLife(),
     shift: null,
@@ -586,6 +589,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().parkIfRiding();
         const spot = pack().spots?.find((x) => x.id === nearby.id);
         if (spot?.kind === 'bench') get().startRest('bench');
+        else if (spot?.kind === 'jetty') get().openTravel('boat');
         else if (spot?.kind === 'door' && spot.interiorId) get().enterInterior(spot.interiorId);
         else if (spot?.kind === 'event' && spot.eventId) {
           set({ ui: 'event', eventId: spot.eventId });
@@ -653,7 +657,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
           get().openShop(a.businessId);
           return;
         case 'openTravel':
-          get().openTravel();
+          get().openTravel(a.by);
           return;
         case 'startShift':
           get().startShift(a.shiftId);
@@ -771,32 +775,33 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     clearBanner: () => set({ banner: null }),
 
-    openTravel() {
+    openTravel(by = 'road') {
       if (get().jobs.active) {
         get().closePanel();
         get().pushToast({ kind: 'warn', title: 'Finish your job first', detail: 'You can travel once the current job is done.' });
         return;
       }
-      set({ ui: 'travel', dialogue: null });
+      set({ ui: 'travel', dialogue: null, travelBy: by });
       setUiMode('travel');
     },
 
-    travelTo(areaId) {
+    travelTo(areaId, by = 'road') {
       const s = get();
       const from = s.destinationId;
       const area = findArea(areaId);
       if (!area || areaId === from || s.jobs.active || regionOf(areaId) !== regionOf(from)) return;
+      const fare = fareBetween(from, areaId, by);
+      if (by === 'boat' && fare === 0) return; // no boat runs between these two
       get().parkIfRiding();
-      const fare = fareBetween(from, areaId);
       const p = pack();
-      const r = debit(s.wallet, { id: makeId('ride'), amount: fare, reason: `${modeBetween(from, areaId)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
+      const r = debit(s.wallet, { id: makeId(by === 'boat' ? 'boat' : 'ride'), amount: fare, reason: `${modeBetween(from, areaId, by)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(p, fare - s.wallet.balance)} more. Every area has work — ask around.` });
         return;
       }
       set({
         wallet: r.wallet,
-        transit: { from, to: areaId, fare, firstVisit: !s.world.visited.includes(areaId) },
+        transit: { from, to: areaId, fare, firstVisit: !s.world.visited.includes(areaId), by },
         ui: 'transit',
         dialogue: null,
         nearby: null,
@@ -810,11 +815,13 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const t = s.transit;
       if (!t) return;
       const dest = getDestination(t.to);
-      resetRuntime(dest.arrival.position[0], dest.arrival.position[1], dest.arrival.facing);
+      // a boat lands you at the jetty; the road at the bus stop
+      const at = t.by === 'boat' && dest.dock ? dest.dock : dest.arrival;
+      resetRuntime(at.position[0], at.position[1], at.facing);
       const visited = s.world.visited.includes(t.to) ? s.world.visited : [...s.world.visited, t.to];
       set({
         destinationId: dest.id,
-        world: { ...s.world, visited, rides: s.world.rides + 1, time: (s.world.time ?? START_TIME) + minutesBetween(t.from, t.to) },
+        world: { ...s.world, visited, rides: s.world.rides + 1, time: (s.world.time ?? START_TIME) + minutesBetween(t.from, t.to, t.by) },
         transit: null,
         arrival: { firstVisit: t.firstVisit },
         ui: 'play',

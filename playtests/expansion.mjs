@@ -70,7 +70,7 @@ await waitPlaying();
 await sleep(1500);
 s = await st();
 log('arrives in Lekki at the bus stop', s.dest === 'lekki-beach', `dest=${s.dest}`);
-log('fare charged once', balBefore - s.bal === 750 || s.bal - balBefore === 200 - 750, `before ${balBefore}, after ${s.bal}`);
+log('fare charged once', balBefore - s.bal === 1000 || s.bal - balBefore === 200 - 1000, `before ${balBefore}, after ${s.bal}`);
 log('Lekki marked visited and ride counted', s.world.visited.includes('lekki-beach') && s.world.rides === 1);
 log('new-area tip shown or queued', s.tip === 'new-area' || s.queue.includes('new-area'), `showing ${s.tip}, queued ${s.queue}`);
 await shot('04-lekki-arrival');

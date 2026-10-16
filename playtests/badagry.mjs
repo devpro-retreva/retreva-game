@@ -1,7 +1,7 @@
 // Badagry playtest: the new Lagos district on the lagoon. Danfo from Yaba (fare once), the map pin, the
 // explorer goal now counting five areas, landmarks, the Heritage Walk (an escort tour), the Catch Run
 // delivery (paid once, then cooldown), Mama Dossou's buka, renting the room by the marina, the Heritage
-// Drums in the Events app, the jetty, the draw-call budget, reload, and a 360px phone.
+// Drums in the Events app, the jetty and the ferry to Lekki and back, the draw-call budget, reload, and a 360px phone.
 import { launch, BASE_URL, outDir } from './lib.mjs';
 const OUT = outDir('badagry');
 const results = [];
@@ -56,7 +56,7 @@ log('four areas are no longer "every area of Lagos" (Badagry counts too)', !s.wo
 await talk('kunle');
 await choose('Take a danfo');
 await p.waitForSelector('button[aria-label^="Ride to Badagry"]');
-log('the Travel picker offers Badagry for ₦550', await p.isVisible('button[aria-label="Ride to Badagry for ₦550"]'));
+log('the Travel picker offers Badagry for ₦1,800', await p.isVisible('button[aria-label="Ride to Badagry for ₦1,800"]'));
 log('the Lagos map has a Badagry pin', await p.isVisible('svg.lagos-map text:has-text("Badagry")'));
 await p.screenshot({ path: `${OUT}/01-travel-map.png` });
 await p.click('button[aria-label^="Ride to Badagry"]');
@@ -65,7 +65,7 @@ await sleep(3000);
 s = await st();
 // the balance also moves by the goal rewards paid on arrival, so the fare is read from the ledger
 const fares = s.ledger.filter(([, a]) => a < 0);
-log('arrives at Badagry Marina; fare ₦550 charged once', s.dest === 'badagry-marina' && fares.length === 1 && fares[0][1] === -550, JSON.stringify(fares));
+log('arrives at Badagry Marina; fare ₦1,800 charged once', s.dest === 'badagry-marina' && fares.length === 1 && fares[0][1] === -1800, JSON.stringify(fares));
 log('Badagry marked visited; explorer goal paid once', s.world.visited.includes('badagry-marina') && s.world.goalsDone.includes('explorer') && s.ledger.filter(([id]) => id === 'goal:explorer').length === 1);
 log('Mr. Hunpatin’s welcome arrives in Messages', s.world.messages.some((m) => m.from === 'Mr. Hunpatin'));
 await p.screenshot({ path: `${OUT}/02-arrival.png` });
@@ -150,6 +150,40 @@ s = await st();
 log('the buka sells coconut candy for ₦300, into the bag', preShop - s.bal === 300 && s.bag.some(([i]) => i === 'coconut-candy'));
 await p.screenshot({ path: `${OUT}/05-buka.png` });
 await S(() => window.__retreva.store.getState().closePanel());
+
+// ── the ferry: Badagry jetty → Lekki boat landing → back
+await topUp(8000);
+await place(11.0, -28, Math.PI / 2);
+await near('bdg-ferry');
+await p.keyboard.press('KeyE');
+await p.waitForSelector('button[aria-label^="Boat to Lekki"]', { timeout: 10000 }).catch(() => {});
+log('the jetty offers the ferry to Lekki for ₦3,000 (and nothing by road)', await p.isVisible('button[aria-label="Boat to Lekki for ₦3,000"]') && (await p.locator('.travel-row').count()) === 1);
+await p.screenshot({ path: `${OUT}/05b-ferry-picker.png` });
+let preBoat = (await st()).bal;
+await p.click('button[aria-label^="Boat to Lekki"]');
+await sleep(1200);
+log('the trip shows a ferry crossing the lagoon', await p.isVisible('.transit svg [data-boat="yes"]') && (await p.isVisible('.transit :text("On the ferry")')));
+await p.screenshot({ path: `${OUT}/05c-ferry-crossing.png` });
+await p.waitForFunction(() => { const g = window.__retreva.store.getState(); return g.destinationId === 'lekki-beach' && g.phase === 'playing' && g.ui === 'play'; }, null, { timeout: 60000 });
+await sleep(2500);
+s = await st();
+let pl = await S(() => ({ x: window.__retreva.runtime.player.x, z: window.__retreva.runtime.player.z }));
+let boats = s.ledger.filter(([id]) => id.startsWith('boat'));
+log('the ferry lands you at the Lekki boat landing; ₦3,000 once', s.dest === 'lekki-beach' && Math.hypot(pl.x - 10.4, pl.z - 34) < 1.5 && boats.length === 1 && boats[0][1] === -3000, JSON.stringify({ pl, boats }));
+await p.screenshot({ path: `${OUT}/05d-lekki-landing.png` });
+await place(11.0, 34, Math.PI / 2);
+await near('lekki-ferry');
+await p.keyboard.press('KeyE');
+await p.waitForSelector('button[aria-label^="Boat to Badagry"]', { timeout: 10000 });
+await p.click('button[aria-label^="Boat to Badagry"]');
+await p.waitForFunction(() => { const g = window.__retreva.store.getState(); return g.destinationId === 'badagry-marina' && g.phase === 'playing' && g.ui === 'play'; }, null, { timeout: 60000 });
+await sleep(2500);
+s = await st();
+pl = await S(() => ({ x: window.__retreva.runtime.player.x, z: window.__retreva.runtime.player.z }));
+boats = s.ledger.filter(([id]) => id.startsWith('boat'));
+log('and back: the ferry from Lekki ties up at the Badagry jetty (two boat fares in all)', s.dest === 'badagry-marina' && Math.hypot(pl.x - 10.4, pl.z + 28) < 1.5 && boats.length === 2, JSON.stringify(pl));
+// put the clock back to mid-morning (two crossings took most of the day)
+await S(() => { const st = window.__retreva.store; st.setState({ world: { ...st.getState().world, time: 10 * 60 } }); });
 
 // ── the room by the marina
 await topUp(5000);

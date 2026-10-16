@@ -3,8 +3,8 @@ import { LAGOS_AREAS, findArea } from '../../game/content/regions';
 
 /**
  * Schematic map of Lagos: mainland, the lagoon, the Island and the Lekki
- * peninsula along the Atlantic. Areas are pins; an optional route animates
- * a danfo from one area to another.
+ * peninsula along the Atlantic. Areas are pins, boat landings small piers; an optional route animates
+ * a danfo (or a ferry, between landings) from one area to another.
  */
 export function LagosMap({
   current,
@@ -17,15 +17,21 @@ export function LagosMap({
   current: string;
   visited?: string[];
   highlight?: string;
-  route?: { from: string; to: string };
+  route?: { from: string; to: string; by?: 'road' | 'boat' };
   durationMs?: number;
   onPick?: (id: string) => void;
 }) {
   const bus = useRef<SVGGElement>(null);
   const a = route && findArea(route.from);
   const b = route && findArea(route.to);
-  // gentle curve between the two areas
-  const path = a && b ? `M${a.map[0]},${a.map[1]} Q${(a.map[0] + b.map[0]) / 2 + 10},${(a.map[1] + b.map[1]) / 2 - 12} ${b.map[0]},${b.map[1]}` : null;
+  const boat = route?.by === 'boat' && !!a?.dock && !!b?.dock;
+  // by road a gentle curve between the two areas; by boat down to the jetty, across the lagoon (bowing north of
+  // the Island) and up to the other jetty
+  const path = !a || !b
+    ? null
+    : boat
+      ? `M${a.map[0]},${a.map[1]} L${a.dock![0]},${a.dock![1]} Q${(a.dock![0] + b.dock![0]) / 2},${Math.min(a.dock![1], b.dock![1]) - 8} ${b.dock![0]},${b.dock![1]} L${b.map[0]},${b.map[1]}`
+      : `M${a.map[0]},${a.map[1]} Q${(a.map[0] + b.map[0]) / 2 + 10},${(a.map[1] + b.map[1]) / 2 - 12} ${b.map[0]},${b.map[1]}`;
 
   useEffect(() => {
     if (!path || !bus.current) return;
@@ -62,7 +68,13 @@ export function LagosMap({
       <path d="M47,71 L52,78" stroke="#7d7362" strokeWidth="1" />
       <text x="70" y="66" fontSize="3.2" fill="#d7ecf2" opacity="0.7" fontWeight={650} letterSpacing="0.4">LAGOON</text>
       <text x="6" y="97" fontSize="3.2" fill="#d7ecf2" opacity="0.7" fontWeight={650} letterSpacing="0.4">ATLANTIC OCEAN</text>
-      {path && <path d={path} stroke="#f2b705" strokeWidth="1.2" strokeDasharray="0.1 2.4" strokeLinecap="round" fill="none" />}
+      {path && <path d={path} stroke={boat ? '#f6efe2' : '#f2b705'} strokeWidth="1.2" strokeDasharray="0.1 2.4" strokeLinecap="round" fill="none" />}
+      {/* boat landings */}
+      {LAGOS_AREAS.filter((x) => x.dock).map((x) => (
+        <g key={`dock-${x.id}`} transform={`translate(${x.dock![0]} ${x.dock![1]})`}>
+          <rect x="-1.2" y="-0.5" width="2.4" height="1" fill="#8a6a48" />
+        </g>
+      ))}
       {LAGOS_AREAS.map((area) => {
         const isCur = area.id === current;
         const seen = visited.includes(area.id);
@@ -87,12 +99,18 @@ export function LagosMap({
           </g>
         );
       })}
-      {path && (
+      {path && !boat && (
         <g ref={bus}>
           <rect x="-3" y="-2" width="6" height="3.6" rx="0.8" fill="#f2b705" stroke="#15130f" strokeWidth="0.5" />
           <rect x="-3" y="-0.4" width="6" height="0.5" fill="#15130f" />
           <circle cx="-1.6" cy="1.8" r="0.7" fill="#15130f" />
           <circle cx="1.6" cy="1.8" r="0.7" fill="#15130f" />
+        </g>
+      )}
+      {path && boat && (
+        <g ref={bus} data-boat="yes">
+          <path d="M-3.4,-0.4 H3.4 L2.4,1.6 H-2.4 Z" fill="#f6efe2" stroke="#15130f" strokeWidth="0.5" />
+          <rect x="-1.6" y="-2" width="3" height="1.6" rx="0.4" fill="#1d7f86" stroke="#15130f" strokeWidth="0.4" />
         </g>
       )}
     </svg>

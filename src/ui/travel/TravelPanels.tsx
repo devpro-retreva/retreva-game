@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { getDestination, formatMoney } from '../../game/content';
-import { fareBetween, findArea, minutesBetween, modeBetween, regionOf } from '../../game/content/regions';
+import { boatsFrom, fareBetween, findArea, minutesBetween, modeBetween, regionOf, routeBetween } from '../../game/content/regions';
 import { useGame } from '../../game/store/gameStore';
 import { usePack } from '../../scene/worldContext';
 import { IconClose } from '../icons/Icons';
 import { LagosMap } from './LagosMap';
 
-/** Choose where to go within the region: fare, trip time, how you get there, and whether you have been before. */
+/** Choose where to go within the region (by road, or by boat from a jetty): fare, trip time, route, and whether you have been before. */
 export function TravelPanel() {
   const pack = usePack();
   const current = useGame((s) => s.destinationId);
@@ -14,17 +14,19 @@ export function TravelPanel() {
   const balance = useGame((s) => s.wallet.balance);
   const travelTo = useGame((s) => s.travelTo);
   const close = useGame((s) => s.closePanel);
+  const by = useGame((s) => s.travelBy);
   const here = findArea(current);
   const region = regionOf(current);
-  const others = region?.areas.filter((a) => a.id !== current) ?? [];
+  const boat = by === 'boat';
+  const others = boat ? boatsFrom(current) : region?.areas.filter((a) => a.id !== current) ?? [];
 
   return (
     <section className="sheet travel-sheet cut" role="dialog" aria-label="Choose a destination">
       <header className="sheet-head">
         <div>
-          <div className="eyelabel">{here?.hub ? 'Taxi' : region?.transit} · from {here?.district}</div>
-          <h2>Where to?</h2>
-          <p>Pay the fare and ride to another part of {region?.name ?? 'town'}.</p>
+          <div className="eyelabel">{boat ? region?.boatName ?? 'Boat' : here?.hub ? 'Taxi' : region?.transit} · from {here?.district}</div>
+          <h2>{boat ? 'Where by boat?' : 'Where to?'}</h2>
+          <p>{boat ? 'Pay the fare and take the boat across the lagoon — life jackets on.' : `Pay the fare and ride to another part of ${region?.name ?? 'town'}.`}</p>
         </div>
         <button className="icon-btn" onClick={close} aria-label="Close (Esc)">
           <IconClose size={18} />
@@ -39,10 +41,12 @@ export function TravelPanel() {
         <ul className="rows">
           {others.map((a) => {
             const dest = getDestination(a.id);
-            const fare = fareBetween(current, a.id);
+            const fare = fareBetween(current, a.id, by);
             const afford = balance >= fare;
             const seen = visited.includes(a.id);
-            const mode = modeBetween(current, a.id);
+            const mode = modeBetween(current, a.id, by);
+            const via = routeBetween(current, a.id, by)?.via;
+            const verb = boat ? 'Boat' : mode === 'Taxi' ? 'Taxi' : 'Ride';
             return (
               <li key={a.id} className="row-item travel-row">
                 <div>
@@ -51,13 +55,13 @@ export function TravelPanel() {
                   </div>
                   <div className="desc">{dest.tagline}</div>
                   <div className="desc num" style={{ color: 'var(--cream-2)' }}>
-                    {mode} · {a.known} · about {minutesBetween(current, a.id)} min
+                    {mode}{via ? ` ${via}` : ''} · {a.known} · {tripTime(minutesBetween(current, a.id, by))}
                   </div>
                 </div>
                 <div className="side">
                   <span className="price num">{formatMoney(pack, fare)}</span>
-                  <button className="btn" disabled={!afford} onClick={() => travelTo(a.id)} aria-label={`${mode === 'Taxi' ? 'Taxi' : 'Ride'} to ${a.district} for ${formatMoney(pack, fare)}`}>
-                    {afford ? (mode === 'Taxi' ? 'Taxi' : 'Ride') : 'Short'}
+                  <button className="btn" disabled={!afford} onClick={() => travelTo(a.id, by)} aria-label={`${verb} to ${a.district} for ${formatMoney(pack, fare)}`}>
+                    {afford ? verb : 'Short'}
                   </button>
                 </div>
               </li>
@@ -71,6 +75,14 @@ export function TravelPanel() {
       </footer>
     </section>
   );
+}
+
+/** "about 45 min", "about 2 h", "about 1 h 50 min". */
+function tripTime(min: number): string {
+  if (min < 60) return `about ${min} min`;
+  const h = Math.floor(min / 60);
+  const m = Math.round((min % 60) / 5) * 5;
+  return m ? `about ${h} h ${m} min` : `about ${h} h`;
 }
 
 /** The ride itself: a short animated trip across the map, then arrival. */
@@ -90,18 +102,19 @@ export function TransitOverlay() {
   const from = findArea(transit.from);
   const to = findArea(transit.to);
   const dest = getDestination(transit.to);
-  const mode = modeBetween(transit.from, transit.to);
+  const mode = modeBetween(transit.from, transit.to, transit.by);
   const region = regionOf(transit.from);
+  const boat = transit.by === 'boat';
   return (
     <div className="transit" role="status" aria-live="polite">
       <div className="transit-card">
-        <div className="eyelabel">{mode === 'Taxi' ? 'In a taxi' : `On the ${mode.toLowerCase()}`}</div>
+        <div className="eyelabel">{boat ? `On the ${mode.toLowerCase()} · ${tripTime(minutesBetween(transit.from, transit.to, 'boat'))}` : mode === 'Taxi' ? 'In a taxi' : `On the ${mode.toLowerCase()}`}</div>
         <h2>
           {from?.district} <span aria-hidden="true">→</span> {to?.district}
         </h2>
         {region?.map === 'lagos' && (
           <div className="transit-map cut">
-            <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to }} durationMs={duration} />
+            <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to, by: transit.by }} durationMs={duration} />
           </div>
         )}
         <p className="transit-line">{dest.tagline}</p>

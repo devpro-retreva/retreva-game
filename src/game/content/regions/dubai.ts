@@ -10,4 +10,6 @@ export const DUBAI: Region = {
     { id: 'dubai-creek', district: 'Dubai Creek', known: 'Spice souk & water taxis', map: [44, 58] },
     { id: 'dubai-airport', district: 'Airport', known: 'Flights home', map: [66, 36], hub: 'airport' },
   ],
+  // a metered taxi from the creek to DXB is about AED 35 (estimate)
+  routes: [{ between: ['dubai-creek', 'dubai-airport'], fare: 14000, minutes: 20 }],
 };

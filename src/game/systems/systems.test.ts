@@ -10,7 +10,7 @@ import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
-import { ALL_AREAS, fareBetween, LAGOS_AREAS, modeBetween, regionOf, REGIONS } from '../content/regions';
+import { ALL_AREAS, boatsFrom, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
 import { FLIGHTS, findFlight, flightText } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
@@ -401,16 +401,41 @@ describe('Lagos travel', () => {
       expect(isBlocked(w, p!.arrival.position[0], p!.arrival.position[1]), `${a.id} arrival`).toBe(false);
     }
   });
-  it('fares are symmetric, positive and rounded to ₦50', () => {
+  it('every pair of areas in a region has a listed, symmetric fare and time; danfo fares are real-world sized', () => {
+    for (const r of REGIONS) for (const a of r.areas) for (const b of r.areas) {
+      if (a.id === b.id) continue;
+      expect(routeBetween(a.id, b.id), `${a.id} ↔ ${b.id} priced`).toBeDefined();
+      expect(fareBetween(a.id, b.id)).toBe(fareBetween(b.id, a.id));
+      expect(minutesBetween(a.id, b.id)).toBe(minutesBetween(b.id, a.id));
+      expect(fareBetween(a.id, b.id) % 50).toBe(0);
+    }
     const streets = LAGOS_AREAS.filter((a) => !a.hub);
     for (const a of streets) for (const b of streets) {
       if (a.id === b.id) continue;
-      const f = fareBetween(a.id, b.id);
-      expect(f).toBe(fareBetween(b.id, a.id));
-      expect(f % 50).toBe(0);
-      expect(f).toBeGreaterThan(200);
-      expect(f).toBeLessThan(1500);
+      // a short hop is ₦300–500, the longest cross-town trip a few thousand
+      expect(fareBetween(a.id, b.id)).toBeGreaterThanOrEqual(300);
+      expect(fareBetween(a.id, b.id)).toBeLessThanOrEqual(3000);
     }
+    expect(fareBetween('lagos-adeniyi', 'lagos-island')).toBeLessThan(fareBetween('lagos-adeniyi', 'badagry-marina'));
+  });
+  it('boats only run between areas with a jetty: a landing spot and a dock on each end', () => {
+    for (const r of REGIONS) for (const route of r.boats ?? []) {
+      for (const id of route.between) {
+        const p = ALL_PACKS.find((x) => x.id === id)!;
+        expect(p.dock, `${id} dock`).toBeDefined();
+        expect(findArea(id)?.dock, `${id} map dock`).toBeDefined();
+        expect((p.spots ?? []).some((s) => s.kind === 'jetty'), `${id} jetty spot`).toBe(true);
+        expect(isBlocked(buildCollisionWorld(p), p.dock!.position[0], p.dock!.position[1]), `${id} dock clear`).toBe(false);
+      }
+    }
+    expect(boatsFrom('badagry-marina').map((a) => a.id)).toEqual(['lekki-beach']);
+    expect(boatsFrom('lekki-beach').map((a) => a.id)).toEqual(['badagry-marina']);
+    expect(boatsFrom('lagos-adeniyi')).toEqual([]);
+    expect(fareBetween('badagry-marina', 'lekki-beach', 'boat')).toBe(3000);
+    expect(fareBetween('lagos-adeniyi', 'lekki-beach', 'boat')).toBe(0);
+    expect(modeBetween('badagry-marina', 'lekki-beach', 'boat')).toBe('Ferry');
+    // the boat beats the road through Mile 2 and CMS
+    expect(minutesBetween('badagry-marina', 'lekki-beach', 'boat')).toBeLessThan(minutesBetween('badagry-marina', 'lekki-beach'));
   });
   it('every NPC in every area can be reached and every job references real NPCs', () => {
     for (const p of ALL_PACKS) {
@@ -1149,7 +1174,7 @@ describe('Badagry', () => {
     expect(pack).toBeDefined();
     expect(regionOf('badagry-marina')?.id).toBe('lagos');
     expect(modeBetween('lagos-adeniyi', 'badagry-marina')).toBe('Danfo');
-    expect(fareBetween('lagos-adeniyi', 'badagry-marina')).toBe(550);
+    expect(fareBetween('lagos-adeniyi', 'badagry-marina')).toBe(1800);
     expect(LAGOS_AREAS.filter((a) => !a.hub).map((a) => a.id)).toContain('badagry-marina');
     expect(cityAreas('lagos')).toContain('badagry-marina');
   });
