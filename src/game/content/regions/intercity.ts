@@ -15,6 +15,8 @@ export const COACHES: Route[] = [
   { between: ['abeokuta-itoku', 'ibadan-dugbe'], fare: 2500, minutes: 100, via: 'via Odeda' },
   { between: ['ikeja-village', 'ibadan-dugbe'], fare: 6000, minutes: 150, via: 'from Ojota park, Lagos–Ibadan Expressway' },
   { between: ['ibadan-dugbe', 'osogbo-oja-oba'], fare: 3500, minutes: 110, via: 'via Ikire and Ikirun junction' },
+  // the long road east: luxury lines run Lagos–Benin for about ₦25,000–27,000 (GIGM online fares, October 2026)
+  { between: ['ikeja-village', 'benin-kings-square'], fare: 26000, minutes: 360, via: 'from Ojota park, via Ore' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -23,4 +25,10 @@ export const SOUTH_WEST_MAP: Record<string, [number, number]> = {
   abeokuta: [28, 30],
   ibadan: [52, 20],
   osogbo: [88, 10],
+};
+
+/** Cities on the map of Nigeria (same frame as the domestic flight chart), for bus trips beyond the south-west. */
+export const NIGERIA_MAP: Record<string, [number, number]> = {
+  lagos: [14, 47],
+  benin: [36, 44],
 };

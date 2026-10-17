@@ -30,6 +30,8 @@ Abeokuta (`destinations/abeokuta.ts`) names real places in Itoku and Ake — Olu
 
 Osogbo (`destinations/osogbo.ts`) names real places — the Ataoja's palace, Oja Oba market, the town's art tradition and the Osun-Osogbo Sacred Grove (UNESCO World Heritage Site, 2005) — with short factual blurbs. The grove is shown only from its gate, with procedural sculptures written as being "in the spirit of" the New Sacred Art (not copies of any real work); no job goes into it. The festival event is a fictional evening show; its text says the real festival procession is free and held once a year in August. Mama Folake, Iya Iyan, Yinka, Kwame, Bayo and their businesses are fictional.
 
+Benin City (`destinations/benin.ts`) names real places around King’s Square — the National Museum, Igun Street and its guild of bronze casters, the Emotan statue at Oba Market and the old city moat — with short factual blurbs; the statues are procedural (`statue` prop), not copies of real works, and the bronzes on sale are described as new pieces cast in the old style. Pa Osayande, Mama Osas, Eghosa, Mama Ivie, Nosa, Uyi and their businesses are fictional; the Benin Airport terminal uses the generic airport template.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

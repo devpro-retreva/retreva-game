@@ -375,6 +375,18 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const y of [4.5, 8, 11]) g.box('#5a5550', at(0, top + y, 1.82), [0.9, 1.4, 0.04], r);
       break;
     }
+    case 'statue': {
+      // a bronze figure on a stepped plinth (a market heroine with her wrapper and headtie), facing local +z
+      g.box('#d9d2c4', at(0, 0.3, 0), [2.0, 0.6, 2.0], r);
+      g.box('#cfc7b6', at(0, 0.95, 0), [1.4, 0.7, 1.4], r);
+      const b = p.color ?? '#7a5230';
+      g.cylinder(shade(b, -0.1), at(0, 2.0, 0), 0.42, 0.55, 1.5, 10);
+      g.cylinder(b, at(0, 3.0, 0), 0.34, 0.4, 0.6, 10);
+      g.blob(b, at(0, 3.55, 0), 0.24, [1, 1.2, 1]);
+      g.blob(shade(b, 0.08), at(0, 3.85, -0.03), 0.28, [1.15, 0.7, 1.15]);
+      for (const side of [-1, 1]) g.boxR(b, at(side * 0.42, 2.85, 0.12), [0.14, 0.7, 0.14], [0.35, r, side * 0.25]);
+      break;
+    }
     case 'sculpture': {
       // a tall, organic cement sculpture in the spirit of the grove's New Sacred Art: stacked, leaning forms
       const c = p.color ?? '#b8ab94';
@@ -641,6 +653,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
     if (pack.vista === 'north' && end === -1) {
       if (pack.vistaStyle === 'roofs') roofscape(g, rnd);
       else if (pack.vistaStyle === 'forest') forest(g, rnd);
+      else if (pack.vistaStyle === 'moat') moat(g, rnd);
       else openCountry(g, rnd);
       continue;
     }
@@ -722,6 +735,28 @@ function forest(g: ColorGeometryBuilder, rnd: () => number) {
   }
   // the grove wall either side of the gate
   for (const side of [-1, 1]) g.box('#b49a74', [side * 12, 0.9, -47], [16, 1.8, 0.6]);
+}
+
+/** North of a street that ends at an old city moat: a deep red-earth ditch across the view, its high bank beyond, bush on top. */
+function moat(g: ColorGeometryBuilder, rnd: () => number) {
+  const z0 = -50;
+  g.box('#8a5a3a', [0, 0.003, z0 - 30], [150, 0.01, 64]);
+  // the ditch: a dark floor and two sloping red-earth sides
+  g.box('#4a3020', [0, -2.8, z0 - 4], [150, 0.2, 5]);
+  g.boxR('#a0623c', [0, -1.4, z0 - 1.2], [150, 0.3, 3.4], [-0.95, 0, 0]);
+  g.boxR('#94583a', [0, -1.4, z0 - 6.8], [150, 0.3, 3.4], [0.95, 0, 0]);
+  // the old bank beyond: a long, worn earth slope, grassed over in patches, then bush along the top
+  g.boxR('#8f6a4a', [0, 1.6, z0 - 11], [150, 0.4, 7.6], [0.42, 0, 0]);
+  g.box('#86684a', [0, 3.2, z0 - 18], [150, 0.4, 8]);
+  const greens = ['#4f7038', '#5f7f40', '#3f6030', '#6f8a4a'];
+  for (let i = 0; i < 46; i++) {
+    const x = -66 + rnd() * 132;
+    const t = rnd();
+    // grass and shrubs on the slope, bigger bush and trees on the crest
+    const z = t < 0.4 ? z0 - 8.5 - rnd() * 5 : z0 - 15 - rnd() * 26;
+    const y = t < 0.4 ? 0.6 + (z0 - 8.5 - z) * 0.45 : 3.8 + rnd() * 1.5;
+    g.blob(greens[i % 4], [x, y, z], t < 0.4 ? 0.8 + rnd() * 0.9 : 2 + rnd() * 2.5, [1.4, 0.7, 1.2]);
+  }
 }
 
 /** North of a station street: the fence, the platform with its canopy, two tracks and a train waiting to leave. */

@@ -102,6 +102,7 @@ export type PropKind =
   | 'clothline'
   // art
   | 'sculpture'
+  | 'statue'
   // airports
   | 'counter'
   | 'scanner'
@@ -376,8 +377,8 @@ export interface DestinationPack {
   backdrop?: 'city' | 'airfield' | 'railway';
   /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
-  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), or deep forest (a sacred grove). */
-  vistaStyle?: 'savanna' | 'roofs' | 'forest';
+  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), or an old city moat (Benin). */
+  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

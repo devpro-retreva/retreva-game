@@ -67,7 +67,7 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, p.cities ?? 1), 3] },
   { id: 'night-out', title: 'Night out', description: 'See a show with a ticket — a concert, comedy or a street jam.', reward: 800,
     progress: (p) => [Math.min(1, p.shows ?? 0), 1] },
-  { id: 'flight-fund', title: 'First flight fund', description: 'Save enough for a return flight from Lagos — Abuja is the cheapest.', reward: 5000, money: true,
+  { id: 'flight-fund', title: 'First flight fund', description: 'Save enough for a return flight from Lagos — Benin City is the cheapest.', reward: 5000, money: true,
     // counts what you hold now; once you have flown it is done anyway
     progress: (p) => {
       const target = p.flightFund ?? 450000;

@@ -3,7 +3,7 @@ import { findFlight, isRail, nextDeparture, type FlightRoute } from '../../game/
 import { regionOf } from '../../game/content/regions';
 import { useGame } from '../../game/store/gameStore';
 import { IconPlane, IconTrain } from '../icons/Icons';
-import { SouthWestBase } from './SouthWestMap';
+import { NigeriaBase, SouthWestBase } from './SouthWestMap';
 
 const PHASES = [
   { until: 0.15, text: (gate: string) => `Boarding at gate ${gate}` },
@@ -135,25 +135,7 @@ export function FlightOverlay() {
               </>
             ) : route.chart === 'nigeria' ? (
               <>
-                {/* schematic Nigeria: neighbours round the edge, the Niger and the Benue meeting at Lokoja */}
-                <rect width="100" height="60" fill="#d8c3a0" />
-                <path d="M0,52 C20,50 30,57 44,58 C54,58.5 62,55 72,52 L100,50 V60 H0 Z" fill="#2d6f86" />
-                <path d="M11,6 L40,3 L62,7 L80,5 L84,12 L80,24 L74,34 L70,44 L62,51 C54,55 47,57 40,56 C32,55 24,50 14,48 L11,40 L10,26 Z" fill="#c9a77e" stroke="#8a6c4c" strokeWidth="0.5" />
-                <path d="M13,10 C20,18 28,26 36,32 C40,35 42,37 42,40 C42,46 41,51 40,55" stroke="#5c9db4" strokeWidth="1" fill="none" />
-                <path d="M78,26 C70,30 60,33 52,36 C47,37.5 44,38.5 42,39" stroke="#5c9db4" strokeWidth="1" fill="none" />
-                <g fontSize="3" fontWeight={800} fill="#6b5137" letterSpacing="0.5" opacity="0.8">
-                  <text x="56" y="18">NIGERIA</text>
-                  <text x="2" y="30">BENIN</text>
-                  <text x="82" y="42">CAMEROON</text>
-                  <text x="34" y="6.5" opacity="0.7">NIGER</text>
-                </g>
-                <g fontSize="2.4" fill="#2f5f72" fontWeight={650} opacity="0.85">
-                  <text x="20" y="22" transform="rotate(38 20 22)">River Niger</text>
-                  <text x="56" y="33" transform="rotate(-16 56 33)">Benue</text>
-                </g>
-                <circle cx="42" cy="39" r="0.7" fill="#15130f" />
-                <text x="43.5" y="42" fontSize="2.4" fontWeight={700} fill="#15130f">Lokoja</text>
-                <text x="50" y="57.5" fontSize="2.8" fill="#d7ecf2" opacity="0.8" fontWeight={650} letterSpacing="0.4">GULF OF GUINEA</text>
+                <NigeriaBase />
               </>
             ) : route.chart === 'longhaul' ? (
               <>

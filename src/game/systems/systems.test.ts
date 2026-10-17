@@ -38,6 +38,7 @@ import { CALABAR_PACKS } from '../content/destinations/calabarPack';
 import { IBADAN_PACKS } from '../content/destinations/ibadanPack';
 import { ABEOKUTA_PACKS } from '../content/destinations/abeokutaPack';
 import { OSOGBO_PACKS } from '../content/destinations/osogboPack';
+import { BENIN_PACKS } from '../content/destinations/beninPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -47,6 +48,7 @@ registerPacks(CALABAR_PACKS);
 registerPacks(IBADAN_PACKS);
 registerPacks(ABEOKUTA_PACKS);
 registerPacks(OSOGBO_PACKS);
+registerPacks(BENIN_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1165,7 +1167,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'calabar-airport', 'dubai-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport']);
     for (const f of FLIGHTS.filter((r) => !isRail(r))) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1242,7 +1244,7 @@ describe('saving for a first flight', () => {
   const base = { jobs: emptyJobs(), jobArea: () => undefined, visited: [], discovered: [], inventory: emptyInventory(), bestBargain: 0, rides: 0, totalAreas: 5 };
   const cheapest = Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip));
   it('counts the money you hold towards the cheapest return flight from Lagos, and is done once you can afford it', () => {
-    expect(cheapest).toBe(270000); // Lagos–Abuja return, the cheapest flight
+    expect(cheapest).toBe(210000); // Lagos–Benin City return, the cheapest flight
     expect(fund.money).toBe(true);
     expect(fund.progress({ ...base, balance: 5000, flightFund: cheapest })).toEqual([5000, cheapest]);
     expect(newlyCompleted({ ...base, balance: cheapest - 1, flightFund: cheapest }, []).map((g) => g.id)).not.toContain('flight-fund');
@@ -1253,7 +1255,7 @@ describe('saving for a first flight', () => {
   });
   it('a new life in Lagos starts with ₦5,000 — a few rides and meals, nowhere near a flight', () => {
     expect(lagos.startingMoney).toBe(5000);
-    expect(lagos.startingMoney).toBeLessThan(cheapest / 50);
+    expect(lagos.startingMoney).toBeLessThan(cheapest / 40);
   });
 });
 
@@ -1351,7 +1353,7 @@ describe('Ibadan and the train', () => {
     const snap = progressSnapshot({ jobs: emptyJobs(), world: { ...emptyWorld('lagos-adeniyi'), visited: ['lagos-station'] }, inventory: emptyInventory(), wallet: createWallet(0), travel: { ticket: null, history: [{ routeId: 'los-ibd-s', ticketId: 't1', at: 1 }] } } as never);
     expect(snap.flights).toBe(0);
     expect(snap.trains).toBe(1);
-    expect(snap.flightFund).toBe(270000);
+    expect(snap.flightFund).toBe(210000);
     expect(snap.totalAreas).toBe(5);
   });
   it('a rail trip budget shows the ride to the station and the taxi on into town; no return discount', () => {
@@ -1384,7 +1386,7 @@ describe('Abeokuta and the intercity bus', () => {
     expect(fareBetween('ikeja-village', 'ibadan-dugbe', 'coach')).toBe(6000);
     expect(minutesBetween('ikeja-village', 'abeokuta-itoku', 'coach')).toBe(120);
     expect(modeBetween('ikeja-village', 'abeokuta-itoku', 'coach')).toBe('Intercity bus');
-    expect(coachesFrom('ikeja-village').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ibadan-dugbe']);
+    expect(coachesFrom('ikeja-village').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'benin-kings-square', 'ibadan-dugbe']);
     expect(coachesFrom('lagos-adeniyi')).toEqual([]);
     // the danfo still doesn't cross cities, and no bus runs where none is listed
     expect(fareBetween('ikeja-village', 'abeokuta-itoku')).toBe(0);
@@ -1439,5 +1441,28 @@ describe('Osogbo', () => {
     const table = oja.repairs!.find((r) => r.id === 'batik-table')!;
     expect(benchLabels(table).skill).toBe('Batik');
     expect(table.requires?.jobsDone?.jobId).toBe('yam-run');
+  });
+});
+
+describe('Benin City', () => {
+  const sq = ALL_PACKS.find((p) => p.id === 'benin-kings-square')!;
+  it('is reached by a domestic flight (now the cheapest return from Lagos) or the six-hour bus from Ojota', () => {
+    const out = findFlight('los-bni')!;
+    expect([out.ticket, out.roundTrip]).toEqual([110000, 210000]);
+    expect(out.domestic && out.chart === 'nigeria' && out.arriveAt === 'benin-kings-square').toBe(true);
+    expect(findFlight('bni-los')!.arriveAt).toBe('ikeja-village');
+    expect(fareBetween('ikeja-village', 'benin-kings-square', 'coach')).toBe(26000);
+    expect(minutesBetween('ikeja-village', 'benin-kings-square', 'coach')).toBe(360);
+    expect(fareBetween('benin-kings-square', 'benin-airport')).toBe(4000);
+    expect(CITY_PACKS.find((c) => c.id === 'benin')?.builtIn).toBe(false);
+  });
+  it('the casting house works the lost-wax method, unlocked by the Charcoal Run; the tour visits real landmarks in order', () => {
+    const shop = sq.repairs!.find((r) => r.id === 'bronze-workshop')!;
+    expect(benchLabels(shop).skill).toBe('Bronze casting');
+    expect(shop.requires?.jobsDone?.jobId).toBe('charcoal-run');
+    for (const d of shop.devices) expect(d.steps).toContain('Pour the bronze');
+    const walk = sq.jobs.find((j) => j.id === 'kings-square-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(sq.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 });
