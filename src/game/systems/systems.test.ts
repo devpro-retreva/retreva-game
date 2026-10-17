@@ -46,6 +46,7 @@ import { KANO_PACKS } from '../content/destinations/kanoPack';
 import { YANKARI_PACKS } from '../content/destinations/yankariPack';
 import { OBUDU_PACKS } from '../content/destinations/obuduPack';
 import { IFE_PACKS } from '../content/destinations/ifePack';
+import { ERIN_PACKS } from '../content/destinations/erinPack';
 import { SOUTH_WEST_MAP } from '../content/regions/intercity';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 import { distanceToTrack, heightAlong, poseAlong, ridePose, ridePose3, rideSeconds, sightingsBetween, trackLength } from './drive';
@@ -66,6 +67,7 @@ registerPacks(KANO_PACKS);
 registerPacks(YANKARI_PACKS);
 registerPacks(OBUDU_PACKS);
 registerPacks(IFE_PACKS);
+registerPacks(ERIN_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1440,7 +1442,7 @@ describe('Osogbo', () => {
   const oja = ALL_PACKS.find((p) => p.id === 'osogbo-oja-oba')!;
   it('the bus from Ibadan (₦3,500) is the way in; Osogbo is a separate city pack', () => {
     expect(fareBetween('ibadan-dugbe', 'osogbo-oja-oba', 'coach')).toBe(3500);
-    expect(coachesFrom('osogbo-oja-oba').map((a) => a.id).sort()).toEqual(['ibadan-dugbe', 'ife-enuwa']);
+    expect(coachesFrom('osogbo-oja-oba').map((a) => a.id).sort()).toEqual(['erin-olumirin', 'ibadan-dugbe', 'ife-enuwa']);
     expect(coachesFrom('ibadan-dugbe').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ife-enuwa', 'ikeja-village', 'osogbo-oja-oba']);
     expect(CITY_PACKS.find((c) => c.id === 'osogbo')?.builtIn).toBe(false);
   });
@@ -1678,7 +1680,7 @@ describe('Ile-Ife', () => {
   it('is a bus from Osogbo or Ibadan (estimates), on the south-west map; a separate city pack', () => {
     expect([fareBetween('osogbo-oja-oba', 'ife-enuwa', 'coach'), minutesBetween('osogbo-oja-oba', 'ife-enuwa', 'coach')]).toEqual([2500, 60]);
     expect([fareBetween('ibadan-dugbe', 'ife-enuwa', 'coach'), minutesBetween('ibadan-dugbe', 'ife-enuwa', 'coach')]).toEqual([4000, 90]);
-    expect(coachesFrom('ife-enuwa').map((a) => a.id).sort()).toEqual(['ibadan-dugbe', 'osogbo-oja-oba']);
+    expect(coachesFrom('ife-enuwa').map((a) => a.id).sort()).toEqual(['erin-olumirin', 'ibadan-dugbe', 'osogbo-oja-oba']);
     expect(SOUTH_WEST_MAP.ife).toBeDefined();
     expect(CITY_PACKS.find((c) => c.id === 'ife')?.builtIn).toBe(false);
   });
@@ -1692,5 +1694,45 @@ describe('Ile-Ife', () => {
     // Opa Oranmiyan stands at the end of the road, beyond the walkable street, where its landmark looks at it
     const staff = f.props.find((p) => p.kind === 'staff')!;
     expect(staff.position[1]).toBeLessThan(f.walkable[0][1]);
+  });
+});
+
+describe('Erin-Ijesha and the waterfall climb', () => {
+  const e = ALL_PACKS.find((p) => p.id === 'erin-olumirin')!;
+  const climb = e.climbs!.find((c) => c.id === 'olumirin')!;
+  const ride = climb.ride;
+  it('is a bus from Ile-Ife or Osogbo (estimates), on the south-west map; a separate city pack', () => {
+    expect(coachesFrom('erin-olumirin').map((a) => a.id).sort()).toEqual(['ife-enuwa', 'osogbo-oja-oba']);
+    expect([fareBetween('ife-enuwa', 'erin-olumirin', 'coach'), minutesBetween('ife-enuwa', 'erin-olumirin', 'coach')]).toEqual([2500, 70]);
+    expect(SOUTH_WEST_MAP.erin).toBeDefined();
+    expect(CITY_PACKS.find((c) => c.id === 'erin')?.builtIn).toBe(false);
+  });
+  it('the climb starts at the gate on the street and goes up all seven levels, never down', () => {
+    expect(ride.vehicle).toBe('on-foot');
+    const [x0, z0, x1, z1] = e.walkable[0];
+    const [sx, sz] = ride.track[0];
+    expect(sx > x0 && sx < x1 && sz > z0 && sz < z1).toBe(true);
+    const h = ride.heights!;
+    expect(h.length).toBe(ride.track.length);
+    for (let i = 1; i < h.length; i++) expect(h[i]).toBeGreaterThanOrEqual(h[i - 1]);
+    expect(ride.sightings.map((v) => v.name)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', 'Level 6', 'Level 7']);
+    expect(sightingsBetween(ride, 0, trackLength(ride.track))).toEqual(ride.sightings.map((v) => v.id));
+    // the levels are reached in order, one by one
+    const L = trackLength(ride.track);
+    let seen: string[] = [];
+    for (let s = 0; s < L; s += 0.5) {
+      const now = sightingsBetween(ride, s, Math.min(L, s + 0.5), seen);
+      expect(now.length).toBeLessThanOrEqual(1);
+      seen = [...seen, ...now];
+    }
+    expect(seen).toEqual(ride.sightings.map((v) => v.id));
+    const secs = rideSeconds(ride);
+    expect(secs).toBeGreaterThan(40);
+    expect(secs).toBeLessThan(100);
+  });
+  it('the gate is a climb spot; the fee is once a day; the climb needs energy', () => {
+    expect(e.spots!.find((s) => s.kind === 'climb')?.climbId).toBe('olumirin');
+    expect([climb.fee, climb.minEnergy]).toEqual([1500, 30]);
+    expect(climb.energy).toBeLessThan(climb.minEnergy);
   });
 });

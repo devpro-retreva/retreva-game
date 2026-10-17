@@ -134,4 +134,5 @@ export function ridePose3(ride: RideDef, ms: number, reverse = false): { x: numb
 export const SEATS: Record<RideDef['vehicle'], { x: number; z: number; y: number }> = {
   'safari-truck': { x: 0.45, z: -0.9, y: 1.31 },
   'cable-car': { x: 0, z: -0.5, y: -0.05 },
+  'on-foot': { x: 0, z: 0, y: 0 },
 };

@@ -16,6 +16,7 @@ export function DriveRide() {
   const phase = useGame((s) => s.phase);
   const ride = useGame((s) => activeRide(s));
   const geo = useMemo(() => (ride?.vehicle === 'cable-car' ? cableCabinGeometry() : safariTruckGeometry()), [ride?.vehicle]);
+  const onFoot = ride?.vehicle === 'on-foot';
   useEffect(() => () => geo.dispose(), [geo]);
   const mesh = useRef<THREE.Mesh>(null);
   const last = useRef({ startedAt: -1, s: 0 });
@@ -42,5 +43,6 @@ export function DriveRide() {
   });
 
   if (!drive || !ride) return null;
-  return <mesh ref={mesh} geometry={geo} material={worldColorMaterial} />;
+  // on foot there is no vehicle: the mesh stays (it carries the clock and the sightings) but isn't drawn
+  return <mesh ref={mesh} geometry={geo} material={worldColorMaterial} visible={!onFoot} />;
 }

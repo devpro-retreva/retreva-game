@@ -127,6 +127,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['enuwa-room'],
     load: () => import('./destinations/ifePack').then((m) => m.IFE_PACKS),
   },
+  {
+    id: 'erin',
+    builtIn: false,
+    eventIds: [],
+    homeIds: ['erin-guesthouse'],
+    load: () => import('./destinations/erinPack').then((m) => m.ERIN_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

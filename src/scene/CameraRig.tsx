@@ -52,11 +52,13 @@ export function CameraRig() {
       }
     }
 
-    const cable = g.ui === 'drive' && activeRide(g)?.vehicle === 'cable-car';
+    const vehicle = g.ui === 'drive' ? activeRide(g)?.vehicle : undefined;
+    const cable = vehicle === 'cable-car';
+    const foot = vehicle === 'on-foot';
     if (g.ui === 'drive') {
       // ride along: behind the truck and a little to one side as it turns; a cable car is watched from the side, so
       // the climb (and the drop) shows
-      c.yaw = lerpAngle(c.yaw, p.yaw + (cable ? 1.25 : 0.4), Math.min(1, d * 1.6));
+      c.yaw = lerpAngle(c.yaw, p.yaw + (cable ? 1.25 : foot ? 0.55 : 0.4), Math.min(1, d * 1.6));
     }
 
     let yaw = c.yaw;
@@ -75,9 +77,9 @@ export function CameraRig() {
       }
     } else if (g.ui === 'drive') {
       // high enough to see over the canopy to whatever is beside the track
-      dist = cable ? 12 : 9;
-      pitch = cable ? 0.22 : 0.42;
-      target.y = p.y + (cable ? 1.6 : 2.6);
+      dist = cable ? 12 : foot ? 7 : 9;
+      pitch = cable ? 0.22 : foot ? 0.3 : 0.42;
+      target.y = p.y + (cable ? 1.6 : foot ? 1.4 : 2.6);
     } else if (g.ui === 'shop') {
       dist = 4.2;
       pitch = 0.18;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { findEvent } from '../../game/content';
+import { findEvent, getDestination } from '../../game/content';
 import { activeRide, useGame } from '../../game/store/gameStore';
 import { rideSeconds } from '../../game/systems/drive';
 
@@ -13,6 +13,7 @@ export function DriveOverlay() {
   const ev = drive?.eventId ? findEvent(drive.eventId) : undefined;
   const ride = useGame((s) => activeRide(s));
   const cable = drive?.cable;
+  const climb = useGame((s) => (s.drive?.climbId ? getDestination(s.destinationId).climbs?.find((c) => c.id === s.drive?.climbId) : undefined));
   const [k, setK] = useState(0);
 
   useEffect(() => {
@@ -30,6 +31,36 @@ export function DriveOverlay() {
   }, [drive?.startedAt, ride]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!drive || !ride) return null;
+  if (climb) {
+    const reached = drive.spotted.length;
+    const all = ride.sightings.length;
+    return (
+      <div className="drive-hud" role="status" aria-live="polite" data-climb={climb.id} data-reached={reached}>
+        <div className="drive-card cut">
+          <div className="drive-head">
+            <div>
+              <div className="eyelabel">{climb.name} · {reached} of {all}</div>
+              <b>{k < 0.06 ? 'Starting up the path' : reached >= all ? 'At the top — catch your breath' : `On the way to ${ride.sightings[reached]?.name ?? 'the top'}`}</b>
+            </div>
+            <button className="btn ghost" onClick={finish}>
+              Head back down
+            </button>
+          </div>
+          <div className="drive-bar" aria-hidden>
+            <i style={{ width: `${Math.round(k * 100)}%` }} />
+          </div>
+          <ul className="drive-list" aria-label={`Reached ${reached} of ${all}`}>
+            {ride.sightings.map((v) => (
+              <li key={v.id} data-sighting={v.id} className={drive.spotted.includes(v.id) ? 'seen' : ''}>
+                {drive.spotted.includes(v.id) ? '✓ ' : ''}
+                {v.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
   if (cable) {
     return (
       <div className="drive-hud" role="status" aria-live="polite" data-cable={cable.down ? 'down' : 'up'}>

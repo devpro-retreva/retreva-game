@@ -858,9 +858,9 @@ function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
   }
   // centre dashes
   for (let z = -L + 1; z < L; z += 3.2) g.box(pack.palette.roadLine, [0, 0.012, z], [0.12, 0.004, 1.6]);
-  // street-end barriers (not across a cable-car station at the north end)
+  // street-end barriers (not across a cable-car station or a climb's gate at the north end)
   for (const end of [-1, 1]) {
-    if (end === -1 && (pack.cable || pack.cableStation)) continue;
+    if (end === -1 && (pack.cable || pack.cableStation || pack.climbs?.length)) continue;
     const z = end * (L - 1.6);
     for (let x = -hw - sw + 0.6, i = 0; x < hw + sw; x += 1.25, i++) {
       g.box(i % 2 ? '#f4f0e6' : '#d8452b', [x, 0.42, z], [1.15, 0.84, 0.5]);
@@ -885,6 +885,8 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   if (pack.backdrop === 'rainforest' || pack.backdrop === 'highland') {
     countryside(g, pack, rnd);
     if (pack.cable) cableway(g, pack.cable.ride.track, pack.cable.ride.heights ?? [], rnd);
+    const climb = pack.climbs?.[0]?.ride;
+    if (climb) waterfallHill(g, climb, rnd);
     if (pack.backdrop === 'highland') plateauEdge(g, pack, rnd);
     return;
   }
@@ -1102,6 +1104,61 @@ function cableway(g: ColorGeometryBuilder, track: [number, number][], heights: n
     g.box('#c0392b', [x + 1.5, y + 6.55, z], [7.2, 0.3, 6]);
     g.cylinder('#3a3a3a', [x + 1.5, y + 3.4, z + (i === 0 ? 2.2 : -2.2)], 1.6, 1.6, 0.2, 14);
     if (i > 0) g.box('#9a948a', [x + 1.5, y / 2, z - 2], [10, y, 8]);
+  }
+}
+
+/**
+ * A waterfall stepping down a forested hill in levels, with the climbing path beside it: one terrace per level
+ * (the climb's flat stretches), a pool on each, the water falling over each cliff, stone steps up each cliff on
+ * the path, a handrail, a marker at every level, and the last, highest fall at the back.
+ */
+function waterfallHill(g: ColorGeometryBuilder, ride: NonNullable<DestinationPack['climbs']>[number]['ride'], rnd: () => number) {
+  const t = ride.track;
+  const h = ride.heights ?? t.map(() => 0);
+  const px = t[1][0]; // the path runs straight up at this x
+  // flat stretches (same height at both ends) are terraces; the pieces between them are the steps
+  const flats: { z0: number; z1: number; y: number }[] = [];
+  for (let i = 2; i < t.length; i++) if (h[i] === h[i - 1] && t[i][1] < t[i - 1][1]) flats.push({ z0: t[i - 1][1], z1: t[i][1], y: h[i] });
+  const greens = ['#4a7a3c', '#558a44', '#3f7036', '#5e9048'];
+  flats.forEach((f, i) => {
+    const next = flats[i + 1];
+    const zEnd = next ? next.z0 : f.z1 - 6;
+    const depth = f.z0 - zEnd;
+    if (f.y > 0) g.box(shade('#6f6252', (rnd() - 0.5) * 0.12), [0, f.y / 2, (f.z0 + zEnd) / 2], [200, f.y, depth]);
+    // forest on the terrace, kept off the falls and the path
+    for (let x = -96; x < 96; x += 6 + rnd() * 5) {
+      if (x > -6 && x < px + 12) continue; // the falls, the path, and room for the camera beside it
+      g.blob(greens[Math.floor(rnd() * greens.length)], [x, f.y + 3.4, (f.z0 + zEnd) / 2 + (rnd() - 0.5) * depth * 0.6], 2.6 + rnd() * 1.6, [1.1, 1.0, 1.1]);
+    }
+    // the pool, and the water falling into it from the next level
+    g.box('#6aa9b2', [0, f.y + 0.04, (f.z0 + f.z1) / 2], [7, 0.06, Math.abs(f.z1 - f.z0) + 1]);
+    g.box('#d9eeee', [0, f.y + 0.07, f.z1 + 0.3], [3.6, 0.06, 1.2]);
+    const above = next ? next.y : f.y + 9;
+    g.box('#cfe8ea', [0, (f.y + above) / 2, zEnd + 0.15], [2.6, above - f.y, 0.3]);
+    g.box('#f2fafa', [0.5, (f.y + above) / 2, zEnd + 0.32], [0.9, above - f.y, 0.08]);
+    // rocks at the pool's edge
+    for (const sx of [-1, 1]) g.blob('#7a7266', [sx * 3.8, f.y + 0.3, (f.z0 + f.z1) / 2 + (rnd() - 0.5) * 3], 0.9, [1.3, 0.6, 1]);
+    // the path across the terrace, its rail and the level's marker
+    g.box('#a49a88', [px, f.y + 0.05, (f.z0 + f.z1) / 2], [1.8, 0.1, Math.abs(f.z1 - f.z0)]);
+    g.box('#5a4636', [px + 1.05, f.y + 0.95, (f.z0 + f.z1) / 2], [0.06, 0.06, Math.abs(f.z1 - f.z0)]);
+    g.box('#5a4636', [px - 1.4, f.y + 0.7, f.z0 - 1.2], [0.12, 1.4, 0.12]);
+    g.box('#e8dcc0', [px - 1.4, f.y + 1.45, f.z0 - 1.2], [0.7, 0.4, 0.06]);
+    // steps up the cliff to the next level
+    if (next) {
+      const n = Math.max(2, Math.round((next.y - f.y) / 0.6));
+      const run = f.z1 - next.z0; // positive
+      for (let k = 0; k < n; k++) {
+        const top = f.y + ((k + 1) * (next.y - f.y)) / n;
+        g.box(shade('#a49a88', -0.04 * (k % 2)), [px, (f.y + top) / 2, f.z1 - ((k + 0.5) * run) / n], [1.8, top - f.y, run / n]);
+      }
+    }
+  });
+  // behind the last level: the rock face the top fall comes over, and forest above it
+  const last = flats[flats.length - 1];
+  if (last) {
+    const z = last.z1 - 6;
+    g.box('#6f6252', [0, (last.y + 9) / 2, z - 3], [200, last.y + 9, 6]);
+    for (let x = -96; x < 96; x += 7 + rnd() * 5) g.blob(greens[Math.floor(rnd() * greens.length)], [x, last.y + 12, z - 3 + (rnd() - 0.5) * 4], 3 + rnd() * 1.5, [1.1, 1, 1.1]);
   }
 }
 

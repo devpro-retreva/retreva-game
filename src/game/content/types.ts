@@ -299,7 +299,9 @@ export interface JobDef {
 export interface SpotDef {
   id: string;
   /** bench: rest. swim: a swim (joy). home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). jetty: the boat landing. */
-  kind: 'bench' | 'home' | 'door' | 'event' | 'jetty' | 'swim';
+  kind: 'bench' | 'home' | 'door' | 'event' | 'jetty' | 'swim' | 'climb';
+  /** For a 'climb': which of the pack's climbs starts here. */
+  climbId?: string;
   /** For a 'swim': how much it lifts your joy. */
   joy?: number;
   /** For an 'event': which show this is the gate of. */
@@ -357,7 +359,7 @@ export interface EventDef {
 
 /** A ride along a fixed track (the game drive): you sit in the vehicle and watch for what's out there. */
 export interface RideDef {
-  vehicle: 'safari-truck' | 'cable-car';
+  vehicle: 'safari-truck' | 'cable-car' | 'on-foot';
   /** From where you board to where you get off — both on the walkable street; the rest may run out beyond it. */
   track: Vec2[];
   /** Height of the vehicle's floor at each track point (a cable car climbing); flat on the ground if left out. */
@@ -394,6 +396,12 @@ export interface DestinationPack {
    * the region. The ride's track starts at this station and climbs to the top; going down it is ridden in reverse.
    */
   cable?: { to: string; ride: RideDef };
+  /**
+   * Climbs on foot (a waterfall's levels, a hill's steps): a ride with vehicle 'on-foot' whose `heights` follow the
+   * path, and whose sightings are the checkpoints (levels, viewpoints). You pay the fee once a day, need some energy
+   * to start, and can turn back at any point; the joy, the energy and the time scale with how far you got.
+   */
+  climbs?: { id: string; name: string; fee: number; minEnergy: number; energy: number; joy: number; ride: RideDef }[];
   /** Where the ground stops on the north side (the edge of a plateau: beyond it, mist and the valley below). */
   groundEdge?: number;
   /** Where you step off the cable car in an area at the top of one (the upper station). */

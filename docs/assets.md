@@ -46,6 +46,8 @@ Obudu (`destinations/obuduBase.ts`, `obuduRanch.ts`) names real places — the O
 
 Ile-Ife (`destinations/ife.ts`) names real places and traditions — the Ooni’s palace at Enuwa, the National Museum and its Ife heads (about the 12th–15th centuries), Opa Oranmiyan, Ife’s historic glass-bead making, opon Ifa trays and the Olojo festival — with short factual blurbs; the staff, palace and square are procedural, and the “small cast head” on sale is described as a new piece in the old style, not a copy of a museum object. Iya Ronke, Baba Ayinde, Sola, Mama Tinuke, Damilola, Tunde and their businesses are fictional; the bus fares are estimates.
 
+Erin-Ijesha (`destinations/erin.ts`) names the Olumirin Waterfalls, their seven levels and the local tradition of Akinla, with short blurbs; the falls, pools, steps and forest are procedural. The gate fee (₦1,500) and bus fares are estimates (published figures are older blog prices of ₦500–1,000). Kayode, Iya Bose, Baba Femi, Mama Funmi, Ayo and their businesses are fictional.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

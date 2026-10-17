@@ -53,9 +53,11 @@ export function Player() {
       const sn = Math.sin(pose.yaw);
       g.position.set(pose.x + seat.x * c + seat.z * sn, pose.y + seat.y, pose.z - seat.x * sn + seat.z * c);
       g.rotation.y = pose.yaw;
-      anim.current.speed = 0;
+      // on foot (a climb) you walk the path; in a vehicle you sit
+      const walking = drive.vehicle === 'on-foot';
+      anim.current.speed = walking ? drive.speed * 1.4 : 0;
       anim.current.talking = false;
-      anim.current.pose = 'sit';
+      anim.current.pose = walking ? undefined : 'sit';
       if (bike.current) bike.current.visible = false;
       vel.current = { x: 0, z: 0, y: 0 };
       return;

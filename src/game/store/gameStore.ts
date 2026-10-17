@@ -50,7 +50,7 @@ import { benchLabels, repairQueue, repairSeconds, scoreRepair, shuffledSteps, ta
 import { courierRank, courierRuns, rankBonus } from '../systems/careers';
 import { visitStop } from '../systems/jobs';
 import { cityName, cityOfArea, isCityLoaded, loadCity } from '../content/cities';
-import { pointAlong, ridePose3 } from '../systems/drive';
+import { pointAlong, ridePose3, rideSeconds } from '../systems/drive';
 import { gatePrice, nextShowing, onNow, showtime, ticketTxId, type EventTicket } from '../systems/events';
 import { findInterior, WELL_RESTED_COMFORT } from '../content/interiors';
 import { belongings, comfort, emptyProperty, fits, homeValuation, place, store as storeFn, take as takeFn, unplace } from '../systems/home';
@@ -145,7 +145,7 @@ interface GameState {
    * world switches to the lower station first and the clock starts once it's drawn — startedAt 0 until then).
    * Not saved: a reload mid-ride leaves an event ticket unused, and a cable car is only paid for on arrival.
    */
-  drive: { eventId?: string; cable?: { from: string; to: string; fare: number; down: boolean }; startedAt: number; spotted: string[] } | null;
+  drive: { eventId?: string; cable?: { from: string; to: string; fare: number; down: boolean }; climbId?: string; startedAt: number; spotted: string[] } | null;
   resting: { at: 'bench' | 'home' | 'meal' | 'event' | 'swim'; eventId?: string; joy?: number; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
@@ -241,6 +241,8 @@ interface GameState {
   attendEvent(eventId: string): void;
   /** Something seen from the drive (counts once; kept in world.discovered). */
   spotOnDrive(sightingId: string): void;
+  /** Starts a climb on foot (pays the day's fee the first time). */
+  startClimb(climbId: string): void;
   /** Starts the clock of a ride that was waiting for its world to be drawn (a cable car going down). */
   startRideClock(): void;
   /** Back where the drive set off: joy, energy, time, ticket used — or, on a cable car, off at the other station. */
@@ -389,6 +391,7 @@ export function activeRide(s: Pick<GameState, 'drive' | 'destinationId'>): RideD
   const d = s.drive;
   if (!d) return undefined;
   if (d.cable) return getDestination(s.destinationId).cable?.ride;
+  if (d.climbId) return getDestination(s.destinationId).climbs?.find((c) => c.id === d.climbId)?.ride;
   return d.eventId ? findEvent(d.eventId)?.ride : undefined;
 }
 
@@ -639,6 +642,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         const spot = pack().spots?.find((x) => x.id === nearby.id);
         if (spot?.kind === 'bench') get().startRest('bench');
         else if (spot?.kind === 'swim') get().startSwim(spot.id);
+        else if (spot?.kind === 'climb' && spot.climbId) get().startClimb(spot.climbId);
         else if (spot?.kind === 'jetty') get().openTravel('boat');
         else if (spot?.kind === 'door' && spot.interiorId) get().enterInterior(spot.interiorId);
         else if (spot?.kind === 'event' && spot.eventId) {
@@ -1401,7 +1405,38 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (!d || !v || d.spotted.includes(sightingId)) return;
       const discovered = s.world.discovered.includes(sightingId) ? s.world.discovered : [...s.world.discovered, sightingId];
       set({ drive: { ...d, spotted: [...d.spotted, sightingId] }, world: { ...s.world, discovered }, critical: s.critical + 1 });
-      get().pushToast({ kind: 'discover', title: `Spotted: ${v.name}`, detail: v.blurb });
+      get().pushToast({ kind: 'discover', title: `${d.climbId ? 'Reached' : d.cable ? 'Seen' : 'Spotted'}: ${v.name}`, detail: v.blurb });
+    },
+
+    startClimb(climbId) {
+      const s = get();
+      const climb = pack().climbs?.find((c) => c.id === climbId);
+      if (!climb || s.drive) return;
+      if (s.jobs.active) {
+        get().pushToast({ kind: 'warn', title: 'Finish your job first' });
+        return;
+      }
+      if (s.life.needs.energy < climb.minEnergy) {
+        get().pushToast({ kind: 'warn', title: 'Too tired to climb', detail: 'Rest or eat first — the climb takes it out of you.' });
+        return;
+      }
+      // the gate fee is once a day: climb again today for free
+      const day = dayOf(s.world.time ?? START_TIME);
+      const txId = `climb:${climb.id}:d${day}`;
+      let wallet = s.wallet;
+      if (!wallet.ledger.some((x) => x.id === txId)) {
+        const r = debit(wallet, { id: txId, amount: climb.fee, reason: `${climb.name} · gate fee (day ${day})`, at: Date.now(), destinationId: s.destinationId });
+        if (!r.ok) {
+          get().pushToast({ kind: 'warn', title: 'Not enough for the gate fee', detail: `You need ${formatMoney(pack(), climb.fee - s.wallet.balance)} more.` });
+          return;
+        }
+        wallet = r.wallet;
+      }
+      get().parkIfRiding();
+      const start = ridePose3(climb.ride, 0);
+      resetRuntime(start.x, start.z, start.yaw);
+      set({ wallet, ui: 'drive', dialogue: null, nearby: null, drive: { climbId, startedAt: Date.now(), spotted: [] }, critical: s.critical + 1 });
+      setUiMode('drive');
     },
 
     startRideClock() {
@@ -1439,6 +1474,27 @@ export const useGame = create<GameState>()((set, get): GameState => {
         resetRuntime(at.position[0], at.position[1], at.facing);
         set({ drive: null, wallet, destinationId: dest.id, life: { ...s.life, needs }, world: { ...s.world, visited, rides: s.world.rides + 1, time }, arrival: { firstVisit: !s.world.visited.includes(c.to) }, ui: 'play', nearby: null, phase: 'loading', critical: s.critical + 1 });
         setUiMode('play');
+        return;
+      }
+      if (d?.climbId) {
+        // back down at the gate: joy, energy and time by how far you got (all the way: the top's view, and back)
+        const climb = pack().climbs?.find((c) => c.id === d.climbId);
+        const ride = climb?.ride;
+        if (!climb || !ride) return;
+        const k = Math.min(1, rideMs(d) / (rideSeconds(ride) * 1000));
+        const levels = d.spotted.length;
+        const top = levels >= ride.sightings.length;
+        const needs = cheer(spend(s.life.needs, Math.round(climb.energy * Math.max(0.2, k))), top ? climb.joy : Math.round((climb.joy * levels) / (ride.sightings.length + 1)));
+        const start = pointAlong(ride.track, 0);
+        const next = pointAlong(ride.track, 1);
+        runtime.player.x = start.x;
+        runtime.player.z = start.z;
+        runtime.player.yaw = Math.atan2(start.x - next.x, start.z - next.z);
+        runtime.player.y = 0;
+        set({ drive: null, ui: 'play', life: { ...s.life, needs }, world: { ...s.world, time: (s.world.time ?? START_TIME) + Math.max(10, Math.round(ride.minutes * Math.max(k, 0.15))) }, critical: s.critical + 1 });
+        setUiMode('play');
+        get().pushToast({ kind: 'goal', title: top ? `${climb.name}: all the way to the top!` : `${climb.name}: back down`, detail: `${levels} of ${ride.sightings.length} · Joy ${Math.round(needs.joy)}` });
+        get().checkGoals();
         return;
       }
       const ev = d?.eventId ? findEvent(d.eventId) : undefined;
