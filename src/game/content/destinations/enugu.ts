@@ -292,7 +292,7 @@ export const enugu: DestinationPack = {
       promptVerb: 'Talk to',
       social: {
         lines: [
-          'Airport is out east — thirty minutes. Benin by bus is five hours, over the Niger at Onitsha.',
+          'Airport is out east — thirty minutes. Benin by bus is five hours over the Niger; Port Harcourt four and a half, through Aba.',
           'Enugu people are calm. Lagos people come here to rest.',
           'At night, from Milliken Hill, the whole city is lights.',
         ],
@@ -303,10 +303,10 @@ export const enugu: DestinationPack = {
         entries: [{ node: 'hello' }],
         nodes: {
           hello: {
-            text: 'Airport? Thirty minutes. Or I’ll walk you to the Benin bus — five hours, cheaper than flying.',
+            text: 'Airport? Thirty minutes. Or I’ll walk you to the buses — Benin City five hours, Port Harcourt four and a half. Cheaper than flying.',
             options: [
               { label: 'Take a taxi', action: { kind: 'openTravel' } },
-              { label: 'Take the bus to Benin City', action: { kind: 'openTravel', by: 'coach' } },
+              { label: 'Take an intercity bus', action: { kind: 'openTravel', by: 'coach' } },
               { label: 'Not now', action: { kind: 'close' } },
             ],
           },

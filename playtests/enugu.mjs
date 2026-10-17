@@ -227,7 +227,7 @@ log('after a reload you continue in Ogui with your ticket home', s.dest === 'enu
 await S(() => window.__retreva.store.getState().updateSettings({ tips: false }));
 const t0 = await S(() => window.__retreva.store.getState().world.time);
 await talk('driver-chidi');
-await choose('Take the bus to Benin City');
+await choose('Take an intercity bus');
 await p.waitForSelector('button[aria-label="Bus to Benin City for ₦15,000"]:not([disabled])', { timeout: 30000 });
 await p.click('button[aria-label="Bus to Benin City for ₦15,000"]');
 await p.waitForSelector('.coach-transit', { timeout: 10000 }).catch(() => {});

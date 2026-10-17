@@ -85,6 +85,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['ogui-room'],
     load: () => import('./destinations/enuguPack').then((m) => m.ENUGU_PACKS),
   },
+  {
+    id: 'port-harcourt',
+    builtIn: false,
+    eventIds: ['creek-cruise'],
+    homeIds: ['creek-room'],
+    load: () => import('./destinations/portHarcourtPack').then((m) => m.PORT_HARCOURT_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

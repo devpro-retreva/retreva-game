@@ -40,6 +40,7 @@ import { ABEOKUTA_PACKS } from '../content/destinations/abeokutaPack';
 import { OSOGBO_PACKS } from '../content/destinations/osogboPack';
 import { BENIN_PACKS } from '../content/destinations/beninPack';
 import { ENUGU_PACKS } from '../content/destinations/enuguPack';
+import { PORT_HARCOURT_PACKS } from '../content/destinations/portHarcourtPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -51,6 +52,7 @@ registerPacks(ABEOKUTA_PACKS);
 registerPacks(OSOGBO_PACKS);
 registerPacks(BENIN_PACKS);
 registerPacks(ENUGU_PACKS);
+registerPacks(PORT_HARCOURT_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1169,7 +1171,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport', 'enugu-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport', 'enugu-airport', 'ph-airport']);
     for (const f of FLIGHTS.filter((r) => !isRail(r))) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1477,7 +1479,7 @@ describe('Enugu', () => {
     expect(out.domestic && out.chart === 'nigeria' && out.arriveAt === 'enugu-ogui').toBe(true);
     expect(Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip))).toBe(210000);
     expect(fareBetween('benin-kings-square', 'enugu-ogui', 'coach')).toBe(15000);
-    expect(coachesFrom('enugu-ogui').map((a) => a.id)).toEqual(['benin-kings-square']);
+    expect(coachesFrom('enugu-ogui').map((a) => a.id).sort()).toEqual(['benin-kings-square', 'ph-waterfront']);
     expect(fareBetween('enugu-ogui', 'enugu-airport')).toBe(6000);
     expect(CITY_PACKS.find((c) => c.id === 'enugu')?.builtIn).toBe(false);
   });
@@ -1488,5 +1490,34 @@ describe('Enugu', () => {
     const walk = ogui.jobs.find((j) => j.id === 'coal-city-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(ogui.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+});
+
+describe('Port Harcourt', () => {
+  const wf = ALL_PACKS.find((p) => p.id === 'ph-waterfront')!;
+  it('is a domestic flight from Lagos or the bus from Enugu; Benin City stays the cheapest flight', () => {
+    const out = findFlight('los-phc')!;
+    expect([out.ticket, out.roundTrip]).toEqual([135000, 255000]);
+    expect(out.domestic && out.chart === 'nigeria' && out.arriveAt === 'ph-waterfront').toBe(true);
+    expect(Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip))).toBe(210000);
+    expect(fareBetween('enugu-ogui', 'ph-waterfront', 'coach')).toBe(10000);
+    expect(minutesBetween('enugu-ogui', 'ph-waterfront', 'coach')).toBe(270);
+    expect(fareBetween('ph-waterfront', 'ph-airport')).toBe(12000);
+    expect(CITY_PACKS.find((c) => c.id === 'port-harcourt')?.builtIn).toBe(false);
+  });
+  it('the jetty is walkable out over the creek; the cruise leaves from it', () => {
+    const w = buildCollisionWorld(wf);
+    let x = 7.4;
+    for (let i = 0; i < 80; i++) x = resolveMove(w, x, -8, x + 0.1, -8).x;
+    expect(x).toBeGreaterThan(14);
+    expect(wf.spots?.find((s) => s.eventId === 'creek-cruise')).toBeDefined();
+  });
+  it('the smokehouse is unlocked by the catch; the walk visits real landmarks in order', () => {
+    const kiln = wf.repairs!.find((r) => r.id === 'fish-kiln')!;
+    expect(benchLabels(kiln).skill).toBe('Fish smoking');
+    expect(kiln.requires?.jobsDone?.jobId).toBe('catch-to-grill');
+    const walk = wf.jobs.find((j) => j.id === 'garden-city-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(wf.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 });

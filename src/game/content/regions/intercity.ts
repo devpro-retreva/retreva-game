@@ -20,6 +20,8 @@ export const COACHES: Route[] = [
   // Benin → Enugu (about 250 km over the Niger at Onitsha): no 2026 fare was published for this leg, so this is an
   // estimate scaled by distance from the Lagos–Benin fare
   { between: ['benin-kings-square', 'enugu-ogui'], fare: 15000, minutes: 300, via: 'via Asaba and the Niger Bridge' },
+  // Enugu → Port Harcourt: 2026 guides list ₦6,500–11,000 one way and ₦10,000–14,000 the other
+  { between: ['enugu-ogui', 'ph-waterfront'], fare: 10000, minutes: 270, via: 'via Aba' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -35,4 +37,5 @@ export const NIGERIA_MAP: Record<string, [number, number]> = {
   lagos: [14, 47],
   benin: [36, 44],
   enugu: [50, 45],
+  'port-harcourt': [55, 52],
 };
