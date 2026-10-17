@@ -22,6 +22,8 @@ Badagry (`destinations/badagry.ts`) depicts real public monuments by name — th
 
 Abuja (`destinations/abuja.ts`) names Wuse Market and Aso Rock (a stylised granite dome on the horizon, modelled procedurally); its businesses and people are fictional, and the Nnamdi Azikiwe airport terminal uses the same generic template as the other airports.
 
+Calabar (`destinations/calabar.ts`) names real places on the Marina — the Slave History Museum, the Old Residency (National Museum) and the river front — and the carnival tradition, with short factual blurbs; Mma Affiong, Ekaette, Nsa, Tolani, Okokon and their businesses are fictional, and the Margaret Ekpo airport terminal uses the generic airport template. Everything is modelled procedurally.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

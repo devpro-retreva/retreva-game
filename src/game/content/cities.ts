@@ -43,6 +43,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['wuse-studio'],
     load: () => import('./destinations/abujaPack').then((m) => m.ABUJA_PACKS),
   },
+  {
+    id: 'calabar',
+    builtIn: false,
+    eventIds: ['carnival-night'],
+    homeIds: ['marina-flat'],
+    load: () => import('./destinations/calabarPack').then((m) => m.CALABAR_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

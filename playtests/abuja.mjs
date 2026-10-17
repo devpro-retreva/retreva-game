@@ -57,7 +57,8 @@ const fly = async (to) => {
   await sleep(1500);
   const nigeriaMap = (await p.isVisible('.flight-overlay text:has-text("NIGERIA")')) && (await p.isVisible('.flight-overlay text:has-text("Lokoja")'));
   await p.screenshot({ path: `${OUT}/flight-${to}.png` });
-  await p.click('.flight-overlay button:has-text("Skip to landing")');
+  // clicked in the page: the overlay re-renders as the flight progresses (and may already have landed on a slow run)
+  await p.evaluate(() => [...document.querySelectorAll('.flight-overlay button')].find((b) => b.textContent.includes('Skip to landing'))?.click());
   await p.waitForFunction((a) => { const g = window.__retreva.store.getState(); return g.destinationId === a && g.phase === 'playing'; }, to, { timeout: 60000 });
   await sleep(1500);
   return { line, boardLine, nigeriaMap };

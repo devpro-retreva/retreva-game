@@ -34,11 +34,13 @@ import { ALL_PACKS, localPrice as localPriceOf, registerPacks } from '../content
 import { ACCRA_PACKS } from '../content/destinations/accraPack';
 import { DUBAI_PACKS } from '../content/destinations/dubaiPack';
 import { ABUJA_PACKS } from '../content/destinations/abujaPack';
+import { CALABAR_PACKS } from '../content/destinations/calabarPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
 registerPacks(DUBAI_PACKS);
 registerPacks(ABUJA_PACKS);
+registerPacks(CALABAR_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1152,7 +1154,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'dubai-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'calabar-airport', 'dubai-airport']);
     for (const f of FLIGHTS) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1276,5 +1278,28 @@ describe('Abuja and domestic flights', () => {
     const airport = ALL_PACKS.find((p) => p.id === 'abuja-airport')!;
     const desk = airport.npcs.find((n) => n.role === 'Check-in agent')!;
     expect(flightText(desk.dialogue.nodes.checkin.text, back)).toContain('ID card, please');
+  });
+});
+
+describe('Calabar', () => {
+  const out = findFlight('los-cbq')!;
+  const marina = ALL_PACKS.find((p) => p.id === 'calabar-marina')!;
+  it('Lagos ↔ Calabar is domestic at real fares, on the Nigeria map, landing on the Marina', () => {
+    expect(out.domestic && findFlight('cbq-los')!.domestic).toBe(true);
+    expect([out.ticket, out.roundTrip]).toEqual([150000, 285000]);
+    expect(out.chart).toBe('nigeria');
+    expect(out.arriveAt).toBe('calabar-marina');
+    expect(flightText('{papers}, please…', out)).toBe('ID card, please…');
+    expect(fareBetween('calabar-marina', 'calabar-airport')).toBe(5000);
+    expect(CITY_PACKS.find((c) => c.id === 'calabar')?.builtIn).toBe(false);
+  });
+  it('the Marina Walk visits real landmarks in order; the boardwalk is walkable out over the river', () => {
+    const walk = marina.jobs.find((j) => j.id === 'marina-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(marina.landmarks.some((l) => l.id === id), id).toBe(true);
+    const w = buildCollisionWorld(marina);
+    let x = 7.4;
+    for (let i = 0; i < 80; i++) x = resolveMove(w, x, -20, x + 0.1, -20).x;
+    expect(x).toBeGreaterThan(14);
   });
 });

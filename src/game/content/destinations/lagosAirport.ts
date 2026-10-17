@@ -1,11 +1,11 @@
 import { makeAirport } from './airport';
 
-/** Lagos International — departures for Accra, Dubai and Abuja (fictional terminal, generic signage). */
+/** Lagos International — departures for Accra, Dubai, Abuja and Calabar (fictional terminal, generic signage). */
 export const lagosAirport = makeAirport({
   id: 'lagos-airport',
   city: 'Lagos',
   country: 'Nigeria',
-  tagline: 'Departures — check in, clear security, and Abuja or the world is a gate away.',
+  tagline: 'Departures — check in, clear security, and Nigeria or the world is a gate away.',
   brand: { primary: '#1f6f4a', accent: '#f2b705' },
   gatesSign: 'GATES A1 – A6',
   greeting: 'Good afternoon!',

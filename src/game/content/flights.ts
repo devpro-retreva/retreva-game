@@ -53,6 +53,8 @@ const CARRIER = 'Gulf Coast Air';
  * something you save up for: a few hours of jobs and shifts for Accra, a good deal more for Dubai.
  * Lagos–Abuja (domestic) about ₦140,000 one-way / ₦270,000 return: aggregators in September 2026 list
  * ₦124,000 one-way on the cheapest carrier, ₦225,000 on the biggest, returns from about ₦390,000.
+ * Lagos–Calabar (domestic) about ₦150,000 one-way / ₦285,000 return: airline and guide pages list
+ * ₦110,000–135,000 budget fares and ₦135,000–185,000 for standard economy (2026).
  */
 
 export const FLIGHTS: FlightRoute[] = [
@@ -201,6 +203,57 @@ export const FLIGHTS: FlightRoute[] = [
     returnId: 'los-abv',
     snack: { name: 'meat pie and a cold malt', fullness: 12 },
     map: { from: [47, 28], to: [14, 47] },
+  },
+  {
+    id: 'los-cbq',
+    code: 'GC 306',
+    carrier: CARRIER,
+    from: 'lagos-airport',
+    to: 'calabar-airport',
+    arriveAt: 'calabar-marina',
+    cityName: 'Calabar',
+    country: 'Nigeria',
+    minutes: 80,
+    ticket: 150000,
+    roundTrip: 285000,
+    gate: 'A4',
+    budget: {
+      stay: { name: 'Marina flat', cost: 10000, note: 'a room for your stay' },
+      gettingAround: 12000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    note: 'In the game domestic flights leave from the same hall; in Lagos they use the domestic terminal.',
+    chart: 'nigeria',
+    returnId: 'cbq-los',
+    snack: { name: 'plantain chips and a cold malt', fullness: 12 },
+    map: { from: [14, 47], to: [65, 49] },
+  },
+  {
+    id: 'cbq-los',
+    code: 'GC 307',
+    carrier: CARRIER,
+    from: 'calabar-airport',
+    to: 'lagos-airport',
+    arriveAt: 'ikeja-village',
+    cityName: 'Lagos',
+    country: 'Nigeria',
+    minutes: 80,
+    ticket: 150000,
+    roundTrip: 285000,
+    gate: 'E2',
+    budget: {
+      stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
+      gettingAround: 3000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    chart: 'nigeria',
+    returnId: 'los-cbq',
+    snack: { name: 'plantain chips and a cold malt', fullness: 12 },
+    map: { from: [65, 49], to: [14, 47] },
   },
 ];
 
