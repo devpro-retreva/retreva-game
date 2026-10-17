@@ -38,6 +38,8 @@ Port Harcourt (`destinations/portHarcourt.ts`) names real places — the Tourist
 
 Jos (`destinations/jos.ts`) names real places — the National Museum (with its Nok terracottas), the Museum of Traditional Nigerian Architecture and the Shere Hills — with short factual blurbs; the granite tors and hills are procedural. The Nok-style terracotta on sale is described as a new piece in the old style. Pa Gyang, Mama Rifkatu, Nanret, Ladi, Dauda and their businesses are fictional.
 
+Kano (`destinations/kano.ts`, `kanoAirport.ts`) names real places — Kurmi Market, the Kofar Mata dye pits, Gidan Rumfa (the Emir’s palace), the old city walls and Mallam Aminu Kano International Airport — with short factual blurbs; the mud buildings, pinnacles and wall are procedural. The Durbar's card says the real parade rides at the two Sallah festivals. Baba Audu, Malam Bashir, Hajiya Binta, Mama Hadiza, Yetunde, Musa, the airport staff and their businesses are fictional; airport signage is generic.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

@@ -37,7 +37,11 @@ function building(g: ColorGeometryBuilder, a: TextureAtlas, b: BuildingDef, PPM:
   g.box(pc, [x + d / 2 - 0.12, h + 0.35, z], [0.24, 0.7, w]);
 
   // rooftop water tank on stand (very common on Lagos roofs)
-  if (b.style !== 'glass' && (!b.sign || rnd() > 0.5)) {
+  if (b.style === 'adobe') {
+    // zanko: pointed mud pinnacles at the corners of the parapet
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.cylinder(shade(b.wall, -0.1), [x + sx * (d / 2 - 0.2), h + 1.15, z + sz * (w / 2 - 0.2)], 0.06, 0.28, 1.0, 6);
+  }
+  if (b.style !== 'glass' && b.style !== 'adobe' && (!b.sign || rnd() > 0.5)) {
     const tx = x - out * (d * 0.15);
     const tz = z + (rnd() - 0.5) * w * 0.4;
     g.box('#6b6660', [tx, h + 0.55, tz], [1.2, 0.9, 1.2]);
@@ -656,6 +660,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       else if (pack.vistaStyle === 'moat') moat(g, rnd);
       else if (pack.vistaStyle === 'escarpment') escarpment(g, rnd);
       else if (pack.vistaStyle === 'boulders') boulders(g, rnd);
+      else if (pack.vistaStyle === 'citywall') cityWall(g, rnd);
       else openCountry(g, rnd);
       continue;
     }
@@ -809,6 +814,37 @@ function boulders(g: ColorGeometryBuilder, rnd: () => number) {
     if (Math.abs(x) < 6) continue;
     g.blob('#5f7a3c', [x, 1.6, -54 - rnd() * 30], 1.4 + rnd(), [1.3, 0.8, 1.3]);
   }
+}
+
+/** North of a street in an old walled city (Kano): the earthen wall across the view, a gate where the street meets it,
+ *  and the old city's pinnacled roofs and neem trees beyond. */
+function cityWall(g: ColorGeometryBuilder, rnd: () => number) {
+  const z = -50;
+  const mud = '#b07a4e';
+  g.box('#b39468', [0, 0.003, z - 30], [150, 0.01, 64]);
+  // the wall, broken by the gateway in the middle
+  for (const side of [-1, 1]) {
+    g.box(mud, [side * 39, 3.2, z], [70, 6.4, 3]);
+    for (let x = 5; x < 74; x += 2.4) g.box(shade(mud, -0.06), [side * x, 6.75, z], [1.2, 0.7, 3.1]);
+  }
+  // the gate: two towers and an arch
+  for (const side of [-1, 1]) {
+    g.box(shade(mud, 0.04), [side * 4.4, 4.5, z], [2.8, 9, 4]);
+    for (const sz of [-1, 1]) g.cylinder(shade(mud, -0.1), [side * 4.4 + sz * 1.1, 9.5, z + 1.6], 0.06, 0.3, 1.1, 6);
+  }
+  g.box(shade(mud, 0.04), [0, 7.6, z], [6, 2.8, 4]);
+  g.box('#5b3a24', [0, 2.8, z + 2.05], [5.2, 5.6, 0.08]);
+  // the old city beyond: flat mud roofs with pinnacles, and neem trees
+  for (let i = 0; i < 26; i++) {
+    const x = -60 + rnd() * 120;
+    const zz = z - 8 - rnd() * 30;
+    const h = 3 + rnd() * 3;
+    const w = 4 + rnd() * 4;
+    g.box(i % 2 ? '#c08a58' : '#a8744a', [x, h / 2, zz], [w, h, 4 + rnd() * 2]);
+    g.cylinder('#94643e', [x - w / 2 + 0.3, h + 0.5, zz], 0.05, 0.25, 1, 6);
+    g.cylinder('#94643e', [x + w / 2 - 0.3, h + 0.5, zz], 0.05, 0.25, 1, 6);
+  }
+  for (let i = 0; i < 12; i++) g.blob('#5f7a3c', [-60 + rnd() * 120, 6 + rnd() * 2, z - 10 - rnd() * 30], 2.5 + rnd() * 1.5, [1.3, 0.85, 1.3]);
 }
 
 /** North of a station street: the fence, the platform with its canopy, two tracks and a train waiting to leave. */

@@ -42,6 +42,7 @@ import { BENIN_PACKS } from '../content/destinations/beninPack';
 import { ENUGU_PACKS } from '../content/destinations/enuguPack';
 import { PORT_HARCOURT_PACKS } from '../content/destinations/portHarcourtPack';
 import { JOS_PACKS } from '../content/destinations/josPack';
+import { KANO_PACKS } from '../content/destinations/kanoPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -55,6 +56,7 @@ registerPacks(BENIN_PACKS);
 registerPacks(ENUGU_PACKS);
 registerPacks(PORT_HARCOURT_PACKS);
 registerPacks(JOS_PACKS);
+registerPacks(KANO_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1173,7 +1175,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport', 'enugu-airport', 'ph-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport', 'enugu-airport', 'kano-airport', 'ph-airport']);
     for (const f of FLIGHTS.filter((r) => !isRail(r))) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1539,5 +1541,28 @@ describe('Jos', () => {
     const walk = j.jobs.find((x) => x.id === 'plateau-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(j.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+});
+
+describe('Kano', () => {
+  const k = ALL_PACKS.find((p) => p.id === 'kano-kurmi')!;
+  it('is a domestic flight from Lagos; Benin City stays the cheapest; Kano is a separate city pack', () => {
+    const out = findFlight('los-kan')!;
+    expect([out.ticket, out.roundTrip]).toEqual([140000, 265000]);
+    expect(out.domestic && out.chart === 'nigeria' && out.arriveAt === 'kano-kurmi').toBe(true);
+    expect(findFlight('kan-los')!.arriveAt).toBe('ikeja-village');
+    expect(Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip))).toBe(210000);
+    expect(fareBetween('kano-kurmi', 'kano-airport')).toBe(5000);
+    expect(CITY_PACKS.find((c) => c.id === 'kano')?.builtIn).toBe(false);
+  });
+  it('the leather workshop is unlocked by the Hide Run; the Durbar card is honest about Sallah; the walk is real', () => {
+    const shop = k.repairs!.find((r) => r.id === 'leather-workshop')!;
+    expect(benchLabels(shop).skill).toBe('Leatherwork');
+    expect(shop.requires?.jobsDone?.jobId).toBe('hide-run');
+    expect(k.events!.find((e) => e.id === 'kano-durbar')!.description).toMatch(/real Durbar rides out at the two Sallah festivals/);
+    const walk = k.jobs.find((j) => j.id === 'old-city-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(k.landmarks.some((l) => l.id === id), id).toBe(true);
+    expect(k.buildings.filter((b) => b.style === 'adobe').length).toBeGreaterThan(5);
   });
 });

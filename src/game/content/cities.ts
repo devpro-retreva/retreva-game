@@ -99,6 +99,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['terminus-room'],
     load: () => import('./destinations/josPack').then((m) => m.JOS_PACKS),
   },
+  {
+    id: 'kano',
+    builtIn: false,
+    eventIds: ['kano-durbar'],
+    homeIds: ['kurmi-room'],
+    load: () => import('./destinations/kanoPack').then((m) => m.KANO_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

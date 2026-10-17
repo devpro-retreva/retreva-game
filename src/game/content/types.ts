@@ -63,8 +63,9 @@ export interface BuildingDef {
   balcony?: boolean;
   /** Business that operates from this building, if any. */
   businessId?: string;
-  /** 'glass': a curtain-wall facade (airport terminals, malls) instead of render and louvres. */
-  style?: 'glass';
+  /** 'glass': a curtain-wall facade (airport terminals, malls) instead of render and louvres. 'adobe': a Hausa mud
+   *  building, with pointed pinnacles (zanko) at the corners of the roof and no water tank. */
+  style?: 'glass' | 'adobe';
 }
 
 export type PropKind =
@@ -377,8 +378,8 @@ export interface DestinationPack {
   backdrop?: 'city' | 'airfield' | 'railway';
   /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
-  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), a pine-topped escarpment (Enugu's Milliken Hill), or granite boulder hills (the Jos Plateau). */
-  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment' | 'boulders';
+  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), a pine-topped escarpment (Enugu's Milliken Hill), granite boulder hills (the Jos Plateau), or an old earthen city wall with a gate (Kano). */
+  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment' | 'boulders' | 'citywall';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

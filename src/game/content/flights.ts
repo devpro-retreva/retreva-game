@@ -70,6 +70,8 @@ const CARRIER = 'Gulf Coast Air';
  * from ₦108,000 to ₦214,000 for late-2026 dates; Google Flights and Trip.com one-way fares from $66–85.
  * Lagos–Port Harcourt (domestic, about 70 min, a busy oil-city route) about ₦135,000 one-way / ₦255,000 return:
  * Expedia and Trip.com list one-way fares from $64–126 (2026), Flightpadi from ₦177,733 at busy times.
+ * Lagos–Kano (domestic, about 1 h 25) about ₦140,000 one-way / ₦265,000 return: Google Flights and Trip.com list one-way
+ * fares from $71–81, Flightpadi from ₦150,040 on the cheapest carrier (September 2026).
  */
 
 export const FLIGHTS: FlightRoute[] = [
@@ -422,6 +424,57 @@ export const FLIGHTS: FlightRoute[] = [
     returnId: 'los-phc',
     snack: { name: 'plantain chips and a cold malt', fullness: 12 },
     map: { from: [55, 52], to: [14, 47] },
+  },
+  {
+    id: 'los-kan',
+    code: 'GC 314',
+    carrier: CARRIER,
+    from: 'lagos-airport',
+    to: 'kano-airport',
+    arriveAt: 'kano-kurmi',
+    cityName: 'Kano',
+    country: 'Nigeria',
+    minutes: 85,
+    ticket: 140000,
+    roundTrip: 265000,
+    gate: 'A3',
+    budget: {
+      stay: { name: 'Room by Kurmi Market', cost: 6500, note: 'a room for your stay' },
+      gettingAround: 8000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    note: 'In the game domestic flights leave from the same hall; in Lagos they use the domestic terminal.',
+    chart: 'nigeria',
+    returnId: 'kan-los',
+    snack: { name: 'dates, groundnuts and a cold malt', fullness: 10 },
+    map: { from: [14, 47], to: [52, 10] },
+  },
+  {
+    id: 'kan-los',
+    code: 'GC 315',
+    carrier: CARRIER,
+    from: 'kano-airport',
+    to: 'lagos-airport',
+    arriveAt: 'ikeja-village',
+    cityName: 'Lagos',
+    country: 'Nigeria',
+    minutes: 85,
+    ticket: 140000,
+    roundTrip: 265000,
+    gate: 'F2',
+    budget: {
+      stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
+      gettingAround: 3000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    chart: 'nigeria',
+    returnId: 'los-kan',
+    snack: { name: 'dates, groundnuts and a cold malt', fullness: 10 },
+    map: { from: [52, 10], to: [14, 47] },
   },
 ];
 
