@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatMoney } from '../../game/content';
 import { findShift, useGame } from '../../game/store/gameStore';
-import { LOW, needLabel, skillLevel, levelProgress } from '../../game/systems/life';
+import { LOW, needLabel, shiftLabels, skillLevel, levelProgress } from '../../game/systems/life';
 import { usePack } from '../../scene/worldContext';
 import { findInterior } from '../../game/content/interiors';
 import { TenurePanel } from './HomePanels';
@@ -86,10 +86,10 @@ export function ShiftPanel() {
       <header className="sheet-head">
         <div>
           <div className="eyelabel">
-            Shift · {owner?.name} · Cooking level {run.level}
+            Shift · {owner?.name} · {shiftLabels(def).skill} level {run.level}
           </div>
           <h2>{def.title}</h2>
-          {!run.outcome && <p>Read the ticket, serve the right dish before time runs out.</p>}
+          {!run.outcome && <p>{shiftLabels(def).hint}</p>}
         </div>
       </header>
       <div className="stripes" style={{ margin: '0 16px 4px' }} />
@@ -137,7 +137,7 @@ export function ShiftPanel() {
             </p>
             <ul className="shift-lines">
               <li>
-                <IconStar size={16} /> Cooking +{run.outcome.xp} XP{run.outcome.levelUp ? ' — level up!' : ''}
+                <IconStar size={16} /> {shiftLabels(def).skill} +{run.outcome.xp} XP{run.outcome.levelUp ? ' — level up!' : ''}
                 <span className="xpbar" aria-hidden="true">
                   <i style={{ width: `${levelProgress(xp) * 100}%` }} />
                 </span>

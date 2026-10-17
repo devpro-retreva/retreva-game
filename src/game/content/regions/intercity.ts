@@ -22,6 +22,8 @@ export const COACHES: Route[] = [
   { between: ['benin-kings-square', 'enugu-ogui'], fare: 15000, minutes: 300, via: 'via Asaba and the Niger Bridge' },
   // Enugu → Port Harcourt: 2026 guides list ₦6,500–11,000 one way and ₦10,000–14,000 the other
   { between: ['enugu-ogui', 'ph-waterfront'], fare: 10000, minutes: 270, via: 'via Aba' },
+  // Abuja → Jos (about 250 km, up onto the plateau): guides list ₦4,000–8,500, the Plateau State fare list about ₦6,000
+  { between: ['abuja-wuse', 'jos-terminus'], fare: 6000, minutes: 270, via: 'via Keffi and Akwanga' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -38,4 +40,6 @@ export const NIGERIA_MAP: Record<string, [number, number]> = {
   benin: [36, 44],
   enugu: [50, 45],
   'port-harcourt': [55, 52],
+  abuja: [47, 28],
+  jos: [58, 23],
 };

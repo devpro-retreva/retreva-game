@@ -41,6 +41,7 @@ import { OSOGBO_PACKS } from '../content/destinations/osogboPack';
 import { BENIN_PACKS } from '../content/destinations/beninPack';
 import { ENUGU_PACKS } from '../content/destinations/enuguPack';
 import { PORT_HARCOURT_PACKS } from '../content/destinations/portHarcourtPack';
+import { JOS_PACKS } from '../content/destinations/josPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -53,8 +54,9 @@ registerPacks(OSOGBO_PACKS);
 registerPacks(BENIN_PACKS);
 registerPacks(ENUGU_PACKS);
 registerPacks(PORT_HARCOURT_PACKS);
+registerPacks(JOS_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
-import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
+import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
 import { DEFAULT_AVATAR, OPTIONS, defaultLookFor, sanitizeLook, switchGender, upgradeAvatarV1 } from '../core/avatarPresets';
 
@@ -1519,5 +1521,23 @@ describe('Port Harcourt', () => {
     const walk = wf.jobs.find((j) => j.id === 'garden-city-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(wf.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+});
+
+describe('Jos', () => {
+  const j = ALL_PACKS.find((p) => p.id === 'jos-terminus')!;
+  it('is the bus from Abuja (₦6,000, 4 h 30); Mallam Garba in Wuse offers it; Jos is a separate city pack', () => {
+    expect(fareBetween('abuja-wuse', 'jos-terminus', 'coach')).toBe(6000);
+    expect(minutesBetween('abuja-wuse', 'jos-terminus', 'coach')).toBe(270);
+    expect(coachesFrom('jos-terminus').map((a) => a.id)).toEqual(['abuja-wuse']);
+    expect(CITY_PACKS.find((c) => c.id === 'jos')?.builtIn).toBe(false);
+  });
+  it('the produce stall is a trading shift in its own words; the walk visits real landmarks in order', () => {
+    const stall = j.shifts!.find((x) => x.id === 'produce-stall')!;
+    expect(shiftLabels(stall).skill).toBe('Market trading');
+    expect(shiftLabels({}).skill).toBe('Cooking');
+    const walk = j.jobs.find((x) => x.id === 'plateau-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(j.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 });

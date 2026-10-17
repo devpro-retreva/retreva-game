@@ -146,6 +146,13 @@ export interface ShiftDef {
   minEnergy: number;
   /** Fullness from the staff meal at the end of any shift. */
   staffMeal: number;
+  /** Words for the work when it isn't cooking (e.g. a produce stall: skill "Market trading", hint "Read the order…"). */
+  labels?: { skill: string; hint: string };
+}
+
+/** The words a shift uses (a kitchen unless the shift says otherwise). */
+export function shiftLabels(def: Pick<ShiftDef, 'labels'> | undefined | null): { skill: string; hint: string } {
+  return def?.labels ?? { skill: 'Cooking', hint: 'Read the ticket, serve the right dish before time runs out.' };
 }
 
 export type OrderResult = 'served' | 'wrong' | 'missed';

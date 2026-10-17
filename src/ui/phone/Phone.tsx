@@ -19,7 +19,7 @@ import { dayOf as gameDay, formatClock as formatGameClock, isOpen, opensAt } fro
 import { findVehicle } from '../../game/content/vehicles';
 import { describeLook } from '../avatar/AvatarEditor';
 import { deviceEnv, resolveTier } from '../../game/core/quality';
-import { needLabel, regardTier, skillLevel } from '../../game/systems/life';
+import { needLabel, regardTier, shiftLabels, skillLevel } from '../../game/systems/life';
 import { formatClock, formatDuration } from '../hooks';
 import { BookingsApp, EventsApp } from '../panels/EventPanels';
 import { PerformanceSection } from '../panels/PerfPanels';
@@ -790,12 +790,14 @@ function LifeSection() {
       />
       <h3 className="phone-sub">Skills</h3>
       <Stat k="Cooking" v={`Level ${skillLevel(life.skills.cooking)} · ${life.skills.cooking ?? 0} XP`} />
-      {/* bench skills you've started (repair, adire dyeing…), named by the bench that teaches them */}
+      {/* other skills you've started (repair, adire dyeing, market trading…), named by the bench or shift that teaches them */}
       {Object.entries(life.skills)
         .filter(([id]) => id !== 'cooking')
         .map(([id, xp]) => {
           const bench = ALL_PACKS.flatMap((p) => p.repairs ?? []).find((r) => r.skill === id);
-          return <Stat key={id} k={bench ? benchLabels(bench).skill : id} v={`Level ${skillLevel(xp)} · ${xp} XP`} />;
+          const shift = ALL_PACKS.flatMap((p) => p.shifts ?? []).find((x) => x.skill === id);
+          const name = bench ? benchLabels(bench).skill : shift ? shiftLabels(shift).skill : id;
+          return <Stat key={id} k={name} v={`Level ${skillLevel(xp)} · ${xp} XP`} />;
         })}
       <h3 className="phone-sub">People</h3>
       {people.length === 0 ? (

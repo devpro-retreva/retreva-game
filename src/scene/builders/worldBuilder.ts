@@ -655,6 +655,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       else if (pack.vistaStyle === 'forest') forest(g, rnd);
       else if (pack.vistaStyle === 'moat') moat(g, rnd);
       else if (pack.vistaStyle === 'escarpment') escarpment(g, rnd);
+      else if (pack.vistaStyle === 'boulders') boulders(g, rnd);
       else openCountry(g, rnd);
       continue;
     }
@@ -785,6 +786,28 @@ function escarpment(g: ColorGeometryBuilder, rnd: () => number) {
     const z = -92 - (k % 3) * 4 + 15 * Math.sqrt(1 - (y / 21) ** 2) - 2.5 - rnd() * 2;
     g.cylinder('#3f2c1e', [x, y + 1.4, z], 0.22, 0.3, 2.8, 5);
     g.cylinder('#2c4a2a', [x, y + 4.4, z], 0.05, 1.5, 4.8, 7);
+  }
+}
+
+/** North of a street on the Jos Plateau: grassland with piles of rounded granite boulders and a granite range behind. */
+function boulders(g: ColorGeometryBuilder, rnd: () => number) {
+  g.box('#7d8a56', [0, 0.003, -78], [150, 0.01, 64]);
+  const greys = ['#9a958a', '#8c877c', '#a7a296', '#7f7a70'];
+  // the range behind (the Shere Hills): long granite humps
+  for (let i = 0; i < 6; i++) g.blob(greys[i % 4], [-70 + i * 28, 0, -104 - (i % 2) * 6], 18 + (i % 3) * 3, [1.5, 0.75, 0.8]);
+  // tors in front: rounded boulders stacked in piles, some balanced on others
+  for (let t = 0; t < 9; t++) {
+    const x = (t % 2 ? 1 : -1) * (10 + rnd() * 50);
+    const z = -56 - rnd() * 30;
+    const big = 2.5 + rnd() * 3;
+    g.blob(greys[t % 4], [x, big * 0.7, z], big, [1.2, 0.85, 1]);
+    g.blob(greys[(t + 1) % 4], [x + big * 0.6, big * 0.5, z + big * 0.5], big * 0.7, [1.1, 0.8, 1]);
+    g.blob(greys[(t + 2) % 4], [x + big * 0.2, big * 1.55, z + 0.2], big * 0.55, [1.15, 0.85, 1]);
+  }
+  for (let i = 0; i < 14; i++) {
+    const x = -60 + rnd() * 120;
+    if (Math.abs(x) < 6) continue;
+    g.blob('#5f7a3c', [x, 1.6, -54 - rnd() * 30], 1.4 + rnd(), [1.3, 0.8, 1.3]);
   }
 }
 

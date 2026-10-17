@@ -377,8 +377,8 @@ export interface DestinationPack {
   backdrop?: 'city' | 'airfield' | 'railway';
   /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
-  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), or a pine-topped escarpment (Enugu's Milliken Hill). */
-  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment';
+  /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), a pine-topped escarpment (Enugu's Milliken Hill), or granite boulder hills (the Jos Plateau). */
+  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment' | 'boulders';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

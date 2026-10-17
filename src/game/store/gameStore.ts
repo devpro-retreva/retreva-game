@@ -32,6 +32,7 @@ import {
   skillLevel,
   spend,
   cheer,
+  shiftLabels,
   type LifeState,
   type OrderResult,
   type Property,
@@ -1748,7 +1749,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const o = run?.outcome;
       if (o?.levelUp) {
         const def = findShift(pack(), run!.shiftId);
-        get().pushToast({ kind: 'goal', title: `Cooking skill up: level ${skillLevel(get().life.skills[def?.skill ?? 'cooking'])}`, detail: 'More time per order and better pay per plate.' });
+        get().pushToast({ kind: 'goal', title: `${shiftLabels(def).skill} skill up: level ${skillLevel(get().life.skills[def?.skill ?? 'cooking'])}`, detail: 'More time per order and better pay.' });
       }
     },
 

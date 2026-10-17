@@ -36,6 +36,8 @@ Enugu (`destinations/enugu.ts`) names real places in Ogui — Ogbete Main Market
 
 Port Harcourt (`destinations/portHarcourt.ts`) names real places — the Tourist Beach on Kolabi Creek, Mile One Market and Isaac Boro Park — with short factual blurbs, and real Kalabari cloth traditions (pelete bite, injiri). Boma, Mama Bole, Pa Ebiye, Ibinabo, Bisi, Ibim and their businesses are fictional, as is the sunset cruise; the Omagwa airport terminal uses the generic airport template.
 
+Jos (`destinations/jos.ts`) names real places — the National Museum (with its Nok terracottas), the Museum of Traditional Nigerian Architecture and the Shere Hills — with short factual blurbs; the granite tors and hills are procedural. The Nok-style terracotta on sale is described as a new piece in the old style. Pa Gyang, Mama Rifkatu, Nanret, Ladi, Dauda and their businesses are fictional.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

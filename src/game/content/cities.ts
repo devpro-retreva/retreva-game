@@ -92,6 +92,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['creek-room'],
     load: () => import('./destinations/portHarcourtPack').then((m) => m.PORT_HARCOURT_PACKS),
   },
+  {
+    id: 'jos',
+    builtIn: false,
+    eventIds: ['jos-unplugged'],
+    homeIds: ['terminus-room'],
+    load: () => import('./destinations/josPack').then((m) => m.JOS_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

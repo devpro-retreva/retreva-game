@@ -305,9 +305,10 @@ export const abuja: DestinationPack = {
         entries: [{ node: 'hello' }],
         nodes: {
           hello: {
-            text: 'Airport? Nnamdi Azikiwe, forty minutes on the airport road. Enter, my friend.',
+            text: 'Airport? Nnamdi Azikiwe, forty minutes on the airport road. Or the Jos bus loads at the park round the corner. Enter, my friend.',
             options: [
               { label: 'Take a taxi', action: { kind: 'openTravel' } },
+              { label: 'Take the bus to Jos', action: { kind: 'openTravel', by: 'coach' } },
               { label: 'Not now', action: { kind: 'close' } },
             ],
           },
