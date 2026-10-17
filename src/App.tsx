@@ -13,6 +13,7 @@ import { PauseMenu } from './ui/panels/PauseMenu';
 import { Wardrobe } from './ui/panels/Wardrobe';
 import { AreaBanner, TipCard, TransitOverlay, TravelPanel } from './ui/travel/TravelPanels';
 import { FlightOverlay } from './ui/travel/FlightOverlay';
+import { DriveOverlay } from './ui/travel/DriveOverlay';
 import { useGameAudio } from './audio/useGameAudio';
 import { audio } from './audio/ambience';
 import { DealerPanel, GiftPanel } from './ui/panels/SocialPanels';
@@ -64,6 +65,7 @@ function World({ touch }: { touch: boolean }) {
         {ui === 'travel' && <TravelPanel />}
         {ui === 'transit' && <TransitOverlay />}
         {ui === 'flight' && <FlightOverlay />}
+        {ui === 'drive' && <DriveOverlay />}
         {ui === 'shift' && <ShiftPanel />}
         {ui === 'home' && <HomePanel />}
         {ui === 'resting' && <RestOverlay />}

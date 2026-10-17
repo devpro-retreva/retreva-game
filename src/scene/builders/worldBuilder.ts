@@ -551,6 +551,169 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       g.box('#4a3a2c', at(0, 7.6, 0), [1.4, 0.1, 0.1]);
       break;
     }
+    case 'safaritruck':
+      safariTruck(g, at, r, p.color);
+      break;
+    // wildlife: each prop is a small group, spread around its position
+    case 'elephant': {
+      const herd: [number, number, number, number][] = [[0, 0, 1, 0], [3.2, -1.4, 0.95, 0.5], [1.4, 1.6, 0.55, 0.2]];
+      for (const [ox, oz, k, turn] of herd) elephant(g, scaled(at, ox, oz, k), r + turn);
+      break;
+    }
+    case 'antelope': {
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 5; i++) antelope(g, scaled(at, (rnd() - 0.5) * 7, (rnd() - 0.5) * 6, 0.85 + rnd() * 0.25), r + (rnd() - 0.5) * 1.6, p.color);
+      break;
+    }
+    case 'baboon': {
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 5; i++) baboon(g, scaled(at, (rnd() - 0.5) * 5, (rnd() - 0.5) * 4, i === 4 ? 0.6 : 0.9 + rnd() * 0.2), r + (rnd() - 0.5) * 3, i % 2 === 0);
+      break;
+    }
+    case 'warthog': {
+      for (const [ox, oz, k] of [[0, 0, 1], [1.3, -0.9, 0.6], [-1.1, -1.2, 0.55]] as const) warthog(g, scaled(at, ox, oz, k), r);
+      break;
+    }
+    case 'buffalo': {
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 4; i++) buffalo(g, scaled(at, (rnd() - 0.5) * 7, (rnd() - 0.5) * 5, 0.9 + rnd() * 0.2), r + (rnd() - 0.5) * 1.2);
+      break;
+    }
+    case 'hippo': {
+      for (const [ox, oz, k, turn] of [[0, 0, 1, 0], [2.6, 1.2, 0.9, 0.8], [-2.2, 1.6, 0.7, -0.6]] as const) hippo(g, scaled(at, ox, oz, k), r + turn);
+      break;
+    }
+    case 'acacia': {
+      const rnd = seeded(p.id);
+      g.cylinder('#5b4a3a', at(0, 1.6, 0), 0.12, 0.2, 3.2, 6);
+      for (const sx of [-1, 1]) g.cylinder('#5b4a3a', at(sx * 0.6, 3.3, 0), 0.07, 0.1, 1.4, 5);
+      g.blob(rnd() > 0.5 ? '#6f8a3a' : '#7a9145', at(0, 4.1, 0), 2.6, [1.4, 0.28, 1.2]);
+      g.blob('#62803a', at(0.9, 3.9, 0.4), 1.6, [1.3, 0.3, 1.1]);
+      break;
+    }
+    case 'baobab': {
+      g.cylinder('#8d7b68', at(0, 3, 0), 1.0, 1.35, 6, 9);
+      for (const [bx, bz] of [[1, 0], [-0.8, 0.6], [0.2, -1], [-0.4, -0.7]]) {
+        g.cylinder('#857262', at(bx * 1.3, 6.6, bz * 1.3), 0.18, 0.32, 1.8, 6);
+        g.blob('#6f8a4a', at(bx * 1.8, 7.6, bz * 1.8), 0.9, [1.3, 0.6, 1.3]);
+      }
+      break;
+    }
+    case 'spring': {
+      // a clear warm pool fed from under the rocks: sandy rim, turquoise water, a few steps down from the path
+      g.box('#d8c9a2', at(0, 0.04, 0), [7.4, 0.08, 14.4], r);
+      g.box('#5fc2bc', at(0, 0.09, 0), [6.2, 0.04, 13.2], r);
+      g.box('#8fd8d0', at(0.6, 0.1, -2), [3.2, 0.03, 5], r);
+      for (let i = 0; i < 3; i++) g.box('#c9b98f', at(-3.4 + i * 0.35, 0.2 - i * 0.05, 4.5), [0.35, 0.12, 2.4], r);
+      for (const [rx, rz] of [[2.9, -6.6], [-2.8, -6.2], [3.2, 2.4], [-3.3, -1.5]]) g.blob('#8a8379', at(rx, 0.3, rz), 0.7, [1.3, 0.6, 1]);
+      break;
+    }
+  }
+}
+
+/** Wraps a placer so a group member at (ox, oz) can be drawn at scale k with its own local coordinates. */
+function scaled(at: ReturnType<typeof placer>, ox: number, oz: number, k: number) {
+  const f = (lx: number, ly: number, lz: number) => at(ox + lx * k, ly * k, oz + lz * k);
+  f.k = k;
+  f.ox = ox;
+  f.oz = oz;
+  return f;
+}
+type Scaled = ReturnType<typeof scaled>;
+
+/** An open game-viewing truck: cab in front (+z), three raised benches under a canvas roof. */
+function safariTruck(g: ColorGeometryBuilder, at: (x: number, y: number, z: number) => [number, number, number], r: number, color = '#8c9a5a') {
+  g.box('#2a2a2a', at(0, 0.78, 0), [1.9, 0.3, 6.0], r);
+  g.box(color, at(0, 1.25, 2.55), [2.1, 0.75, 1.2], r); // bonnet
+  g.box(color, at(0, 1.6, 1.6), [2.2, 1.45, 0.9], r); // cab
+  g.box('#22282c', at(0, 1.95, 2.06), [1.9, 0.6, 0.04], r); // windscreen
+  g.box('#22282c', at(0, 1.25, 3.16), [1.4, 0.4, 0.04], r); // grille
+  for (const lx of [0.75, -0.75]) g.box('#fff6d0', at(lx, 1.3, 3.17), [0.26, 0.2, 0.03], r);
+  g.box(color, at(0, 1.12, -1.3), [2.3, 0.22, 4.6], r); // bed
+  for (const sx of [-1, 1]) g.box(shade(color, -0.12), at(sx * 1.13, 1.42, -1.3), [0.06, 0.4, 4.6], r);
+  g.box(shade(color, -0.12), at(0, 1.42, -3.58), [2.3, 0.4, 0.06], r);
+  for (const [bz, by] of [[0.6, 1.62], [-0.9, 1.76], [-2.4, 1.9]]) {
+    g.box('#7a5a3a', at(0, by, bz), [2.0, 0.1, 0.5], r);
+    g.box('#7a5a3a', at(0, by + 0.3, bz - 0.27), [2.0, 0.5, 0.07], r);
+    g.box('#4a3a2c', at(0, (by + 1.2) / 2, bz), [1.8, by - 1.2, 0.08], r);
+  }
+  for (const sx of [-1, 1]) for (const pz of [1.1, -3.5]) g.box('#3a3a3a', at(sx * 1.1, 2.45, pz), [0.07, 2.4, 0.07], r);
+  g.box('#c8b88a', at(0, 3.68, -1.2), [2.4, 0.07, 4.9], r);
+  g.cylinder('#1a1a1a', at(0, 1.6, -3.75), 0.42, 0.42, 0.25, 10, [Math.PI / 2, r, 0]); // spare wheel
+  for (const [lx, lz] of [[0.95, 2.3], [-0.95, 2.3], [0.95, -1.9], [-0.95, -1.9]]) {
+    g.cylinder('#1a1a1a', at(lx, 0.5, lz), 0.5, 0.5, 0.34, 12, [0, r, Math.PI / 2]);
+    g.cylinder('#8a8a7a', at(lx * 1.04, 0.5, lz), 0.22, 0.22, 0.35, 8, [0, r, Math.PI / 2]);
+  }
+}
+
+function legs(g: ColorGeometryBuilder, a: Scaled, color: string, x: number, zf: number, zb: number, h: number, rad: number) {
+  for (const lx of [x, -x]) for (const lz of [zf, zb]) g.cylinder(color, a(lx, h / 2, lz), rad * a.k, rad * a.k * 0.85, h * a.k, 6);
+}
+
+function elephant(g: ColorGeometryBuilder, a: Scaled, r: number) {
+  const c = '#8a847c';
+  const k = a.k;
+  g.ellipsoid(c, a(0, 2.15, 0), 1.0 * k, [1.05, 1.0, 1.55], [12, 9], [0, r, 0]);
+  legs(g, a, shade(c, -0.05), 0.5, 0.85, -0.85, 1.6, 0.3);
+  g.ellipsoid(c, a(0, 2.55, 1.55), 0.62 * k, [0.95, 1.0, 0.9], [10, 8], [0, r, 0]);
+  for (const sx of [-1, 1]) g.ellipsoid(shade(c, -0.08), a(sx * 0.62, 2.55, 1.3), 0.7 * k, [0.12, 1.0, 0.8], [8, 6], [0, r, 0]);
+  g.cylinder(shade(c, -0.04), a(0, 1.55, 2.0), 0.14 * k, 0.2 * k, 1.5 * k, 6);
+  for (const sx of [-1, 1]) g.box('#efe6d0', a(sx * 0.22, 1.95, 2.0), [0.08 * k, 0.08 * k, 0.6 * k], r);
+  g.cylinder(shade(c, -0.1), a(0, 1.7, -1.6), 0.04 * k, 0.05 * k, 1.0 * k, 4);
+}
+
+function antelope(g: ColorGeometryBuilder, a: Scaled, r: number, color = '#c99a5c') {
+  const k = a.k;
+  g.ellipsoid(color, a(0, 1.05, 0), 0.5 * k, [0.62, 0.72, 1.35], [10, 7], [0, r, 0]);
+  g.ellipsoid('#efe3cc', a(0, 0.9, 0), 0.42 * k, [0.55, 0.4, 1.1], [8, 6], [0, r, 0]);
+  legs(g, a, shade(color, -0.15), 0.18, 0.45, -0.45, 0.85, 0.05);
+  g.cylinder(color, a(0, 1.45, 0.55), 0.09 * k, 0.13 * k, 0.6 * k, 6);
+  g.ellipsoid(color, a(0, 1.78, 0.68), 0.17 * k, [0.8, 0.9, 1.5], [8, 6], [0, r, 0]);
+  for (const sx of [-1, 1]) g.cylinder('#3a2e24', a(sx * 0.06, 2.08, 0.62), 0.015 * k, 0.03 * k, 0.4 * k, 4);
+}
+
+function baboon(g: ColorGeometryBuilder, a: Scaled, r: number, sitting: boolean) {
+  const c = '#7d6c4f';
+  const k = a.k;
+  if (sitting) {
+    g.ellipsoid(c, a(0, 0.38, 0), 0.32 * k, [1, 1.25, 0.95], [8, 6], [0, r, 0]);
+    g.sphere(c, a(0, 0.82, 0.08), 0.17 * k);
+    g.ellipsoid('#4d4033', a(0, 0.78, 0.22), 0.08 * k, [0.8, 0.8, 1.4], [6, 5], [0, r, 0]);
+  } else {
+    g.ellipsoid(c, a(0, 0.5, 0), 0.34 * k, [0.6, 0.62, 1.15], [8, 6], [0, r, 0]);
+    legs(g, a, shade(c, -0.1), 0.13, 0.25, -0.25, 0.42, 0.045);
+    g.sphere(c, a(0, 0.66, 0.42), 0.15 * k);
+    g.cylinder(c, a(0, 0.6, -0.55), 0.03 * k, 0.03 * k, 0.6 * k, 4);
+  }
+}
+
+function warthog(g: ColorGeometryBuilder, a: Scaled, r: number) {
+  const c = '#5e4c3f';
+  const k = a.k;
+  g.ellipsoid(c, a(0, 0.48, 0), 0.4 * k, [0.7, 0.75, 1.4], [8, 6], [0, r, 0]);
+  legs(g, a, shade(c, -0.1), 0.17, 0.3, -0.3, 0.32, 0.05);
+  g.ellipsoid(c, a(0, 0.42, 0.62), 0.24 * k, [0.85, 0.8, 1.2], [8, 6], [0, r, 0]);
+  g.box('#3a2e24', a(0, 0.68, 0.1), [0.08 * k, 0.12 * k, 0.8 * k], r);
+  for (const sx of [-1, 1]) g.box('#efe6d0', a(sx * 0.13, 0.42, 0.84), [0.04 * k, 0.16 * k, 0.04 * k], r);
+}
+
+function buffalo(g: ColorGeometryBuilder, a: Scaled, r: number) {
+  const c = '#5a3a28';
+  const k = a.k;
+  g.ellipsoid(c, a(0, 1.15, 0), 0.72 * k, [0.92, 0.95, 1.5], [10, 7], [0, r, 0]);
+  legs(g, a, shade(c, -0.1), 0.32, 0.6, -0.6, 0.85, 0.1);
+  g.ellipsoid(c, a(0, 1.1, 1.2), 0.34 * k, [0.9, 0.95, 1.1], [8, 6], [0, r, 0]);
+  g.box('#2e2620', a(0, 1.42, 1.18), [0.95 * k, 0.1 * k, 0.12 * k], r);
+}
+
+function hippo(g: ColorGeometryBuilder, a: Scaled, r: number) {
+  const c = '#6b5a5e';
+  const k = a.k;
+  g.ellipsoid(c, a(0, -0.05, 0), 0.9 * k, [0.9, 0.5, 1.5], [10, 6], [0, r, 0]);
+  g.ellipsoid(c, a(0, 0.12, 1.3), 0.42 * k, [1.1, 0.55, 1.0], [8, 6], [0, r, 0]);
+  for (const sx of [-1, 1]) {
+    g.sphere(shade(c, -0.1), a(sx * 0.22, 0.38, 1.05), 0.09 * k);
+    g.sphere(shade(c, -0.15), a(sx * 0.3, 0.42, 0.9), 0.06 * k);
   }
 }
 
@@ -586,6 +749,7 @@ function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
     // beach: driftwood and rocks close each end; nothing else on the sand
     const rnd = seeded(pack.id + 'rocks');
     for (const end of [-1, 1]) {
+      if (pack.backdrop === 'reserve') continue; // a camp road runs on into the bush instead
       for (let x = -8; x < 11; x += 0.9 + rnd() * 0.7) {
         g.blob(rnd() > 0.5 ? '#8a8379' : '#a39b8e', [x, 0.3, end * (L - 1.4 + rnd() * 1.2)], 0.45 + rnd() * 0.45, [1.2, 0.7, 1]);
       }
@@ -639,6 +803,10 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   const rnd = seeded('backdrop' + pack.id);
   const seaSide = !!pack.sea;
   const tones = ['#c9a98a', '#b99c84', '#d4b896', '#a98f7a', '#bfa58e'];
+  if (pack.backdrop === 'reserve') {
+    reserveBeyond(g, pack, rnd);
+    return;
+  }
   // behind both rows
   for (const side of [-1, 1]) {
     if (seaSide && side === 1) continue;
@@ -687,6 +855,86 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
     g.box('#b7a593', [-30, 22, -78], [8, 44, 8]);
     g.box('#c4b19c', [26, 16, -84], [10, 32, 9]);
   }
+}
+
+/**
+ * A camp in a game reserve: bush instead of city blocks on every side, and to the north the savanna running down to a
+ * river with gallery forest, the game-drive track worn into the grass (from the pack's ride), and low hills far off.
+ * The camp gate stands where the track leaves the street.
+ */
+function reserveBeyond(g: ColorGeometryBuilder, pack: DestinationPack, rnd: () => number) {
+  const greens = ['#7f9a46', '#8aa150', '#718f42'];
+  const L = pack.road.length / 2;
+  // bush behind both rows and beyond the south end
+  for (let i = 0; i < 46; i++) {
+    const side = i % 2 ? 1 : -1;
+    const x = side * (17 + rnd() * 22);
+    const z = -40 + rnd() * 90;
+    g.cylinder('#5b4a3a', [x, 1.5, z], 0.14, 0.22, 3, 6);
+    g.blob(greens[i % 3], [x, 3.6, z], 1.8 + rnd() * 1.2, [1.4, 0.4, 1.2]);
+  }
+  for (let x = -40; x < 40; x += 4 + rnd() * 4) {
+    g.cylinder('#5b4a3a', [x, 1.5, L + 6 + rnd() * 10], 0.14, 0.22, 3, 6);
+    g.blob(greens[Math.floor(rnd() * 3)], [x, 3.4, L + 6 + rnd() * 10], 2 + rnd(), [1.4, 0.45, 1.2]);
+  }
+  // dry grass to the north, a darker band of grass along the river, the river and its forest
+  g.box('#c0b277', [0, 0.004, -76], [200, 0.01, 66]);
+  g.box('#a3a862', [0, 0.008, -86], [200, 0.01, 10]);
+  for (let x = -100; x < 100; x += 8) {
+    const z = -92 + Math.sin(x * 0.07) * 2.2;
+    g.box('#6aa3a6', [x + 4, 0.02, z], [8.6, 0.02, 5.4]);
+    for (let i = 0; i < 2; i++) {
+      const tx = x + rnd() * 8;
+      const tz = z - 4.5 - rnd() * 6;
+      g.cylinder('#4a3a2c', [tx, 2.2, tz], 0.2, 0.3, 4.4, 6);
+      g.blob(['#5a8a42', '#66944a', '#527f3c'][i], [tx, 5.6, tz], 2.4 + rnd() * 1.2, [1.2, 0.8, 1.2]);
+    }
+  }
+  g.box('#8f9a5e', [0, 0.004, -103], [200, 0.01, 16]);
+  // low hills on the horizon
+  for (let x = -100; x < 100; x += 14 + rnd() * 10) g.blob('#7d8a5a', [x, -2, -108 - rnd() * 2], 10 + rnd() * 6, [1.6, 0.6, 0.6]);
+  // the track, worn into the grass
+  const ride = pack.events?.find((e) => e.ride)?.ride;
+  if (ride) {
+    for (let i = 1; i < ride.track.length; i++) {
+      let [ax, az] = ride.track[i - 1];
+      let [bx, bz] = ride.track[i];
+      // only the part beyond the camp gate (the camp road is already dirt)
+      if (az > -L && bz > -L) continue;
+      if (az > -L) [ax, az] = [ax + ((bx - ax) * (az + L)) / (az - bz), -L];
+      if (bz > -L) [bx, bz] = [bx + ((ax - bx) * (bz + L)) / (bz - az), -L];
+      const len = Math.hypot(bx - ax, bz - az);
+      const ends = az === -L || bz === -L ? 0 : 2.4; // round the bends; stop clean at the gate
+      g.box('#c2a273', [(ax + bx) / 2, 0.012, (az + bz) / 2], [2.4, 0.012, len + ends], Math.atan2(bx - ax, bz - az));
+    }
+  }
+  // scattered acacias and a baobab or two, kept off the track
+  for (let i = 0; i < 34; i++) {
+    const x = -80 + rnd() * 160;
+    const z = -48 - rnd() * 34;
+    if (Math.abs(x) < 7 && z > -60) continue;
+    if (ride && distToSegments(ride.track, x, z) < 4) continue;
+    g.cylinder('#5b4a3a', [x, 1.6, z], 0.12, 0.2, 3.2, 6);
+    g.blob(greens[i % 3], [x, 4.0, z], 2.2 + rnd() * 0.8, [1.4, 0.28, 1.2]);
+  }
+  // the camp gate: two timber posts and a crossbeam, high enough for the truck
+  for (const sx of [-1, 1]) g.box('#6a4a30', [sx * 5.2, 2.6, -L + 0.4], [0.4, 5.2, 0.4]);
+  g.box('#6a4a30', [0, 5.0, -L + 0.4], [11, 0.5, 0.45]);
+  g.box('#c8b88a', [0, 5.65, -L + 0.4], [4.6, 0.8, 0.12]);
+}
+
+function distToSegments(track: [number, number][], x: number, z: number): number {
+  let best = Infinity;
+  for (let i = 1; i < track.length; i++) {
+    const [ax, az] = track[i - 1];
+    const [bx, bz] = track[i];
+    const dx = bx - ax;
+    const dz = bz - az;
+    const len2 = dx * dx + dz * dz || 1;
+    const k = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / len2));
+    best = Math.min(best, Math.hypot(x - ax - dx * k, z - az - dz * k));
+  }
+  return best;
 }
 
 /** North of a street left open: dry grass, scattered trees and a few low roofs running out to the horizon. */
@@ -919,6 +1167,13 @@ export function vehicleGeometry(kind: 'danfo' | 'keke' | 'car', color?: string):
   } else {
     prop(g, { id: 'v', kind, position: [0, 0], rotation: 0, color });
   }
+  return g.build();
+}
+
+/** The game-drive truck as its own geometry (front faces +z), for the ride. */
+export function safariTruckGeometry(color?: string): THREE.BufferGeometry {
+  const g = new ColorGeometryBuilder();
+  safariTruck(g, placer(0, 0, 0), 0, color);
   return g.build();
 }
 

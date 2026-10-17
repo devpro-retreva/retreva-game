@@ -110,7 +110,18 @@ export type PropKind =
   | 'gatedesk'
   | 'stanchion'
   | 'car'
-  | 'plane';
+  | 'plane'
+  // game reserves
+  | 'safaritruck'
+  | 'elephant'
+  | 'antelope'
+  | 'baboon'
+  | 'warthog'
+  | 'buffalo'
+  | 'hippo'
+  | 'acacia'
+  | 'baobab'
+  | 'spring';
 
 export interface PropDef {
   id: string;
@@ -281,8 +292,10 @@ export interface JobDef {
 /** Something in the world you can use: a bench to rest on, the door of a home to rent. */
 export interface SpotDef {
   id: string;
-  /** bench: rest. home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). jetty: the boat landing. */
-  kind: 'bench' | 'home' | 'door' | 'event' | 'jetty';
+  /** bench: rest. swim: a swim (joy). home: a home's door (rent/buy, go inside). door: a public place's door (restaurant). jetty: the boat landing. */
+  kind: 'bench' | 'home' | 'door' | 'event' | 'jetty' | 'swim';
+  /** For a 'swim': how much it lifts your joy. */
+  joy?: number;
   /** For an 'event': which show this is the gate of. */
   eventId?: string;
   /** For a 'door': the interior it leads into. */
@@ -316,7 +329,7 @@ export interface HomeDef {
 export interface EventDef {
   id: string;
   name: string;
-  kind: 'concert' | 'comedy' | 'festival';
+  kind: 'concert' | 'comedy' | 'festival' | 'safari';
   venue: string;
   description: string;
   /** [start, end] hour; end may pass midnight. */
@@ -332,6 +345,21 @@ export interface EventDef {
   stage?: { position: Vec2; size: [number, number]; facing: number; color: string; accent: string };
   /** Who is on stage (looks for the performers). */
   performers?: CharacterLookLite[];
+  /** A ride instead of a stage: going in boards the vehicle, which carries you along its track and back. */
+  ride?: RideDef;
+}
+
+/** A ride along a fixed track (the game drive): you sit in the vehicle and watch for what's out there. */
+export interface RideDef {
+  vehicle: 'safari-truck';
+  /** From where you board to where you get off — both on the walkable street; the rest may run out beyond it. */
+  track: Vec2[];
+  /** Metres per real second (the whole drive is about a minute or two). */
+  speed: number;
+  /** Game minutes the drive takes on the clock. */
+  minutes: number;
+  /** What you can spot from the track; each counts once you come within `radius` of it. */
+  sightings: { id: string; name: string; blurb: string; position: Vec2; radius: number }[];
 }
 
 export interface CharacterLookLite {
@@ -375,11 +403,11 @@ export interface DestinationPack {
   /** How many walkers stay out after dark (default 2). */
   nightWalkers?: number;
   /** What lies behind the street: city blocks (default), an airfield with parked planes, or railway tracks with a waiting train beyond the north end. */
-  backdrop?: 'city' | 'airfield' | 'railway';
+  backdrop?: 'city' | 'airfield' | 'railway' | 'reserve';
   /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
   /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), a pine-topped escarpment (Enugu's Milliken Hill), granite boulder hills (the Jos Plateau), or an old earthen city wall with a gate (Kano). */
-  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment' | 'boulders' | 'citywall';
+  vistaStyle?: 'savanna' | 'roofs' | 'forest' | 'moat' | 'escarpment' | 'boulders' | 'citywall' | 'reserve';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

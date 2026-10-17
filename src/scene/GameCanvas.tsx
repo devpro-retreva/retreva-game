@@ -6,6 +6,7 @@ import { input } from '../game/core/input';
 import { useGame } from '../game/store/gameStore';
 import { Beacons } from './Beacons';
 import { Collectibles } from './Collectibles';
+import { DriveRide } from './Drive';
 import { Traffic } from './Traffic';
 import { ParkedVehicles } from './Vehicles';
 import { NightLights, SkyDome } from './Sky';
@@ -95,6 +96,7 @@ export function GameCanvas() {
             <StaticWorld pack={pack} shadows={shadows} />
             <Npcs />
             <Traffic />
+            <DriveRide />
             <ParkedVehicles />
             <Venues />
             <Beacons />

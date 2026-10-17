@@ -11,6 +11,8 @@ import { groundHeight, lerpAngle, useCollisionWorld, usePack } from './worldCont
 import { findVehicle } from '../game/content/vehicles';
 import { bicycleGeometry } from './Vehicles';
 import { worldColorMaterial } from './materials';
+import { findEvent } from '../game/content';
+import { ridePose, SEAT } from '../game/systems/drive';
 
 const WALK = 3.4;
 const RUN = 6.4;
@@ -35,6 +37,27 @@ export function Player() {
     const h = d / steps;
     const p = runtime.player;
     const s = useGame.getState();
+
+    // on a game drive: sit in the back of the truck wherever it is on its track
+    const drive = s.drive ? findEvent(s.drive.eventId)?.ride : undefined;
+    if (s.drive && drive) {
+      const pose = ridePose(drive, Date.now() - s.drive.startedAt);
+      p.x = pose.x;
+      p.z = pose.z;
+      p.yaw = pose.yaw;
+      p.speed = drive.speed;
+      p.moving = true;
+      const c = Math.cos(pose.yaw);
+      const sn = Math.sin(pose.yaw);
+      g.position.set(pose.x + SEAT.x * c + SEAT.z * sn, SEAT.y, pose.z - SEAT.x * sn + SEAT.z * c);
+      g.rotation.y = pose.yaw;
+      anim.current.speed = 0;
+      anim.current.talking = false;
+      anim.current.pose = 'sit';
+      if (bike.current) bike.current.visible = false;
+      vel.current = { x: 0, z: 0, y: 0 };
+      return;
+    }
 
     const m = readMove();
     const cy = runtime.camera.yaw;

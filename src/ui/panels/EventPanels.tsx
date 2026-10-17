@@ -11,7 +11,7 @@ import { homeValuation } from '../../game/systems/home';
 import { usePack } from '../../scene/worldContext';
 import { IconClose, IconTicket } from '../icons/Icons';
 
-const KIND_LABEL: Record<EventDef['kind'], string> = { concert: 'Live music', comedy: 'Comedy', festival: 'Street jam' };
+const KIND_LABEL: Record<EventDef['kind'], string> = { concert: 'Live music', comedy: 'Comedy', festival: 'Street jam', safari: 'Game drive' };
 
 /** "Today 19:00–22:00", "Tomorrow …", "Day 5 …" relative to the game clock. */
 export function whenLabel(start: number, end: number, now: number): string {
@@ -53,7 +53,7 @@ export function EventGatePanel() {
       <div className="sheet-body">
         {show && (
           <div className="card-line">
-            <span className="muted">{day !== null ? 'On now' : 'Next show'}</span>
+            <span className="muted">{day !== null ? (ev.ride ? 'Drives running' : 'On now') : ev.ride ? 'Next drives' : 'Next show'}</span>
             <b className="num" data-when>{whenLabel(show.start, show.end, time)}</b>
           </div>
         )}
@@ -63,12 +63,12 @@ export function EventGatePanel() {
         </div>
         {day !== null && mine ? (
           <button className="btn block" data-act="attend" onClick={() => attend(ev.id)}>
-            <IconTicket size={18} /> Show your ticket and go in
+            <IconTicket size={18} /> {ev.ride ? 'Show your ticket and board' : 'Show your ticket and go in'}
           </button>
         ) : day !== null ? (
           !confirm ? (
             <>
-              <p className="muted">No ticket for tonight. You can pay at the gate — it's cheaper in the Events app ({formatMoney(pack, ev.price)}).</p>
+              <p className="muted">No ticket for {ev.ride ? 'today' : 'tonight'}. You can pay at the gate — it's cheaper in the Events app ({formatMoney(pack, ev.price)}).</p>
               <button className="btn block" data-act="gate" disabled={balance < gate} onClick={() => setConfirm(true)}>
                 {balance < gate ? `Need ${formatMoney(pack, gate - balance)} more` : `Buy at the gate · ${formatMoney(pack, gate)}`}
               </button>

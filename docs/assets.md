@@ -40,6 +40,8 @@ Jos (`destinations/jos.ts`) names real places — the National Museum (with its 
 
 Kano (`destinations/kano.ts`, `kanoAirport.ts`) names real places — Kurmi Market, the Kofar Mata dye pits, Gidan Rumfa (the Emir’s palace), the old city walls and Mallam Aminu Kano International Airport — with short factual blurbs; the mud buildings, pinnacles and wall are procedural. The Durbar's card says the real parade rides at the two Sallah festivals. Baba Audu, Malam Bashir, Hajiya Binta, Mama Hadiza, Yetunde, Musa, the airport staff and their businesses are fictional; airport signage is generic.
 
+Yankari (`destinations/yankari.ts`) names real places and wildlife — Yankari Game Reserve, Wikki Camp, the Wikki Warm Spring (about 31 °C), the Gaji River, and the reserve's elephants, olive baboons, western kob, savanna buffalo, warthogs and hippos — with short factual blurbs; the animals, the safari truck, the reserve and the spring are procedural geometry. Prices are 2025–26 guide figures (game drive ₦6,000–8,000, chalets from about ₦9,500); the Jos–Yankari bus fare is an estimate. Ranger Bala, Mama Asabe, Baba Yusuf, Mama Saratu, Malam Sani, Mallam Haruna and their businesses are fictional.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

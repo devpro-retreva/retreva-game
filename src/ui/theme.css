@@ -2474,3 +2474,66 @@ input[type='range'] {
 .city-row { padding: 8px 10px; background: var(--ink-3); display: flex; flex-direction: column; gap: 8px; }
 .city-row .chip { flex: none; }
 .city-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* game drive: a compact card at the foot of the screen, so the bush stays in view */
+.drive-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none;
+}
+.drive-card {
+  pointer-events: auto;
+  width: min(480px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  padding: 12px 14px;
+}
+.drive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.drive-head b {
+  font-size: var(--fs-md);
+}
+.drive-head .btn {
+  min-height: 44px;
+  flex: none;
+}
+.drive-bar {
+  height: 4px;
+  margin: 10px 0 8px;
+  background: var(--line);
+}
+.drive-bar i {
+  display: block;
+  height: 100%;
+  background: var(--danfo);
+  transition: width 0.25s linear;
+}
+.drive-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.drive-list li {
+  font-size: var(--fs-xs);
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  color: var(--faint);
+}
+.drive-list li.seen {
+  color: var(--ink);
+  background: var(--danfo);
+  border-color: var(--danfo);
+  font-weight: 700;
+}

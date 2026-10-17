@@ -41,6 +41,10 @@ const PROP_SHAPES: Partial<Record<PropKind, { box?: [number, number]; r?: number
   counter: { box: [0.45, 1.5], h: 1.1 },
   gatedesk: { box: [0.4, 0.8], h: 1.1 },
   car: { box: [0.9, 2.1], h: 1.5 },
+  safaritruck: { box: [1.15, 3.1], h: 3.7 },
+  acacia: { r: 0.3, h: 4 },
+  baobab: { r: 1.3, h: 7 },
+  spring: { box: [3.7, 7.2], h: 0.3 },
 };
 
 export const PLAYER_RADIUS = 0.32;

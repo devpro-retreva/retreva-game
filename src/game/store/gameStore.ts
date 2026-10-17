@@ -50,6 +50,7 @@ import { benchLabels, repairQueue, repairSeconds, scoreRepair, shuffledSteps, ta
 import { courierRank, courierRuns, rankBonus } from '../systems/careers';
 import { visitStop } from '../systems/jobs';
 import { cityName, cityOfArea, isCityLoaded, loadCity } from '../content/cities';
+import { pointAlong } from '../systems/drive';
 import { gatePrice, nextShowing, onNow, showtime, ticketTxId, type EventTicket } from '../systems/events';
 import { findInterior, WELL_RESTED_COMFORT } from '../content/interiors';
 import { belongings, comfort, emptyProperty, fits, homeValuation, place, store as storeFn, take as takeFn, unplace } from '../systems/home';
@@ -69,7 +70,7 @@ import { runtime, resetRuntime } from '../core/runtime';
 import { clearInput, input } from '../core/input';
 
 export type Phase = 'boot' | 'title' | 'create' | 'loading' | 'playing';
-export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight' | 'gift' | 'dealer' | 'repair' | 'storage' | 'furnish' | 'menu' | 'event' | 'benchmark';
+export type UiMode = 'play' | 'dialogue' | 'shop' | 'phone' | 'pause' | 'wardrobe' | 'travel' | 'transit' | 'shift' | 'home' | 'resting' | 'flight' | 'gift' | 'dealer' | 'repair' | 'storage' | 'furnish' | 'menu' | 'event' | 'benchmark' | 'drive';
 export type PhoneApp = 'home' | 'jobs' | 'bag' | 'wallet' | 'map' | 'profile' | 'settings' | 'messages' | 'travel' | 'events' | 'bookings';
 
 export interface Toast {
@@ -139,7 +140,9 @@ interface GameState {
   life: LifeState;
   shift: ShiftRun | null;
   /** Resting overlay: where and until when (ms timestamp). */
-  resting: { at: 'bench' | 'home' | 'meal' | 'event'; eventId?: string; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
+  /** A ride along an event's track (the game drive); not saved — a reload leaves the ticket unused. */
+  drive: { eventId: string; startedAt: number; spotted: string[] } | null;
+  resting: { at: 'bench' | 'home' | 'meal' | 'event' | 'swim'; eventId?: string; joy?: number; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
   /** Flight ticket + history (saved). */
@@ -207,6 +210,8 @@ interface GameState {
   serveDish(dishId: string | null): void;
   closeShift(): void;
   startRest(at: 'bench' | 'home' | 'meal' | 'event'): void;
+  /** A swim (a spring or pool spot): a little energy back and a lift in joy. */
+  startSwim(spotId: string): void;
   finishRest(): void;
   rentHome(homeId: string): boolean;
   // social
@@ -230,6 +235,10 @@ interface GameState {
   startBenchmark(): void;
   finishBenchmark(): void;
   attendEvent(eventId: string): void;
+  /** Something seen from the drive (counts once; kept in world.discovered). */
+  spotOnDrive(sightingId: string): void;
+  /** Back where the drive set off: joy, energy, time, ticket used. */
+  finishDrive(): void;
   // repair bench
   startRepair(repairId: string): void;
   tapRepair(step: string): void;
@@ -369,6 +378,13 @@ export function requirementsOf(id: string): Requirement | undefined {
 export const findShift = (p: DestinationPack, id: string): ShiftDef | undefined => p.shifts?.find((x) => x.id === id);
 export { canRun };
 
+function drivePosition(s: Pick<GameState, 'drive'>): { position: [number, number]; yaw: number } | null {
+  const ride = s.drive && findEvent(s.drive.eventId)?.ride;
+  if (!ride) return null;
+  const p = pointAlong(ride.track, 0);
+  return { position: [p.x, p.z], yaw: p.yaw };
+}
+
 function setUiMode(ui: UiMode) {
   input.enabled = ui === 'play';
   if (ui !== 'play') clearInput();
@@ -443,6 +459,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
     life: emptyLife(),
     shift: null,
     resting: null,
+    drive: null,
     homeId: null,
     dealerId: null,
     repair: null,
@@ -489,6 +506,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         flight: null,
         shift: null,
         resting: null,
+        drive: null,
         homeId: null,
         playTimeMs: 0,
         ui: 'play',
@@ -522,6 +540,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         flight: null,
         shift: null,
         resting: null,
+        drive: null,
         homeId: null,
         settings: { ...DEFAULT_SETTINGS, ...save.settings },
         playTimeMs: save.stats?.playTimeMs ?? 0,
@@ -553,6 +572,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         flight: null,
         shift: null,
         resting: null,
+        drive: null,
         homeId: null,
         ui: 'play',
         dialogue: null,
@@ -599,6 +619,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         get().parkIfRiding();
         const spot = pack().spots?.find((x) => x.id === nearby.id);
         if (spot?.kind === 'bench') get().startRest('bench');
+        else if (spot?.kind === 'swim') get().startSwim(spot.id);
         else if (spot?.kind === 'jetty') get().openTravel('boat');
         else if (spot?.kind === 'door' && spot.interiorId) get().enterInterior(spot.interiorId);
         else if (spot?.kind === 'event' && spot.eventId) {
@@ -708,7 +729,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     openPhone(app = 'home') {
       const ui = get().ui;
-      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight' || ui === 'gift' || ui === 'dealer' || ui === 'repair' || ui === 'storage' || ui === 'furnish' || ui === 'menu' || ui === 'event' || ui === 'benchmark') return;
+      if (ui === 'dialogue' || ui === 'shop' || ui === 'travel' || ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'home' || ui === 'flight' || ui === 'gift' || ui === 'dealer' || ui === 'repair' || ui === 'storage' || ui === 'furnish' || ui === 'menu' || ui === 'event' || ui === 'benchmark' || ui === 'drive') return;
       set({ ui: 'phone', phoneApp: app });
       setUiMode('phone');
       if (app === 'messages') get().markMessagesRead();
@@ -721,7 +742,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     togglePause() {
       const ui = get().ui;
-      if (ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'flight' || ui === 'repair') return;
+      if (ui === 'transit' || ui === 'shift' || ui === 'resting' || ui === 'flight' || ui === 'repair' || ui === 'drive') return;
       if (ui === 'pause') {
         set({ ui: 'play' });
         setUiMode('play');
@@ -750,7 +771,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
 
     closePanel() {
       const ui0 = get().ui;
-      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight' || ui0 === 'repair') return;
+      if (ui0 === 'transit' || ui0 === 'shift' || ui0 === 'resting' || ui0 === 'flight' || ui0 === 'repair' || ui0 === 'drive') return;
       set({ ui: 'play', dialogue: null, shopId: null, phoneApp: 'home', haggle: null, homeId: null, dealerId: null, slotId: null, eventId: null });
       setUiMode('play');
     },
@@ -1317,8 +1338,50 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const has = day !== null && (s.world.tickets ?? []).some((x) => x.eventId === ev.id && x.day === day && x.status === 'booked');
       if (!has) return;
       get().parkIfRiding();
+      if (ev.ride) {
+        // board: the truck sets off now and carries you round its track (scene/Drive.tsx follows the same clock)
+        const start = pointAlong(ev.ride.track, 0);
+        runtime.player.x = start.x;
+        runtime.player.z = start.z;
+        runtime.player.yaw = start.yaw;
+        runtime.camera.yaw = start.yaw;
+        set({ ui: 'drive', eventId: null, dialogue: null, drive: { eventId, startedAt: Date.now(), spotted: [] } });
+        setUiMode('drive');
+        return;
+      }
       set({ ui: 'resting', eventId: null, resting: { at: 'event', to: 0, until: Date.now() + 4200, eventId } });
       setUiMode('resting');
+    },
+
+    spotOnDrive(sightingId) {
+      const s = get();
+      const d = s.drive;
+      const v = d && findEvent(d.eventId)?.ride?.sightings.find((x) => x.id === sightingId);
+      if (!d || !v || d.spotted.includes(sightingId)) return;
+      const discovered = s.world.discovered.includes(sightingId) ? s.world.discovered : [...s.world.discovered, sightingId];
+      set({ drive: { ...d, spotted: [...d.spotted, sightingId] }, world: { ...s.world, discovered }, critical: s.critical + 1 });
+      get().pushToast({ kind: 'discover', title: `Spotted: ${v.name}`, detail: v.blurb });
+    },
+
+    finishDrive() {
+      const s = get();
+      const d = s.drive;
+      const ev = d && findEvent(d.eventId);
+      if (!d || !ev?.ride) return;
+      const ride = ev.ride;
+      const t0 = s.world.time ?? START_TIME;
+      const showDay = onNow(ev, t0) ?? dayOf(t0);
+      const after = cheer(spend(s.life.needs, ev.energy), ev.joy + d.spotted.length * 2);
+      const tickets = (s.world.tickets ?? []).map((t) => (t.eventId === ev.id && t.day === showDay && t.status === 'booked' ? { ...t, status: 'used' as const } : t));
+      const end = ride.track[ride.track.length - 1];
+      const prev = ride.track[ride.track.length - 2];
+      runtime.player.x = end[0];
+      runtime.player.z = end[1];
+      runtime.player.yaw = Math.atan2(end[0] - prev[0], end[1] - prev[1]);
+      set({ drive: null, ui: 'play', life: { ...s.life, needs: after }, world: { ...s.world, tickets, time: t0 + ride.minutes }, critical: s.critical + 1 });
+      setUiMode('play');
+      get().pushToast({ kind: 'goal', title: 'Back at camp', detail: `${ev.name} · you spotted ${d.spotted.length} of ${ride.sightings.length} · Joy ${Math.round(after.joy)}` });
+      get().checkGoals();
     },
 
     startRepair(repairId) {
@@ -1782,10 +1845,25 @@ export const useGame = create<GameState>()((set, get): GameState => {
       setUiMode('resting');
     },
 
+    startSwim(spotId) {
+      const s = get();
+      const spot = pack().spots?.find((x) => x.id === spotId);
+      if (!spot || spot.kind !== 'swim') return;
+      set({ ui: 'resting', resting: { at: 'swim', to: Math.min(100, s.life.needs.energy + 10), joy: spot.joy ?? 12, until: Date.now() + 3000 } });
+      setUiMode('resting');
+    },
+
     finishRest() {
       const s = get();
       const r = s.resting;
       if (!r) return;
+      if (r.at === 'swim') {
+        const needs = cheer(rest(s.life.needs, r.to), r.joy ?? 12);
+        set({ resting: null, ui: 'play', life: { ...s.life, needs }, world: { ...s.world, time: (s.world.time ?? START_TIME) + 40 }, critical: s.critical + 1 });
+        setUiMode('play');
+        get().pushToast({ kind: 'goal', title: 'What a swim', detail: `Joy ${Math.round(needs.joy)} · energy ${Math.round(needs.energy)}` });
+        return;
+      }
       let needs = rest(s.life.needs, r.to);
       const comfy = r.at === 'home' && r.homeId ? comfort(s.life.property[r.homeId]) : 0;
       if (r.at === 'home') needs = cheer(needs, 4 + comfy * 2);
@@ -1875,7 +1953,8 @@ export function snapshotForSave() {
     life: s.life,
     travel: s.travel,
     settings: s.settings,
-    player: { position: [runtime.player.x, runtime.player.z] as [number, number], yaw: runtime.player.yaw },
+    // out on a drive you're off the street: a save made now puts you back where you boarded
+    player: drivePosition(s) ?? { position: [runtime.player.x, runtime.player.z] as [number, number], yaw: runtime.player.yaw },
     stats: { playTimeMs: s.playTimeMs },
   };
 }

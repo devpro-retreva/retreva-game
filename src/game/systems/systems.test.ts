@@ -43,7 +43,10 @@ import { ENUGU_PACKS } from '../content/destinations/enuguPack';
 import { PORT_HARCOURT_PACKS } from '../content/destinations/portHarcourtPack';
 import { JOS_PACKS } from '../content/destinations/josPack';
 import { KANO_PACKS } from '../content/destinations/kanoPack';
+import { YANKARI_PACKS } from '../content/destinations/yankariPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
+import { distanceToTrack, poseAlong, ridePose, rideSeconds, sightingsBetween, trackLength } from './drive';
+import type { Vec2 } from '../content/types';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
 registerPacks(DUBAI_PACKS);
@@ -57,6 +60,7 @@ registerPacks(ENUGU_PACKS);
 registerPacks(PORT_HARCOURT_PACKS);
 registerPacks(JOS_PACKS);
 registerPacks(KANO_PACKS);
+registerPacks(YANKARI_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1531,7 +1535,7 @@ describe('Jos', () => {
   it('is the bus from Abuja (₦6,000, 4 h 30); Mallam Garba in Wuse offers it; Jos is a separate city pack', () => {
     expect(fareBetween('abuja-wuse', 'jos-terminus', 'coach')).toBe(6000);
     expect(minutesBetween('abuja-wuse', 'jos-terminus', 'coach')).toBe(270);
-    expect(coachesFrom('jos-terminus').map((a) => a.id)).toEqual(['abuja-wuse']);
+    expect(coachesFrom('jos-terminus').map((a) => a.id)).toEqual(['abuja-wuse', 'yankari-wikki']);
     expect(CITY_PACKS.find((c) => c.id === 'jos')?.builtIn).toBe(false);
   });
   it('the produce stall is a trading shift in its own words; the walk visits real landmarks in order', () => {
@@ -1564,5 +1568,53 @@ describe('Kano', () => {
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(k.landmarks.some((l) => l.id === id), id).toBe(true);
     expect(k.buildings.filter((b) => b.style === 'adobe').length).toBeGreaterThan(5);
+  });
+});
+
+describe('Yankari and the game drive', () => {
+  const y = ALL_PACKS.find((p) => p.id === 'yankari-wikki')!;
+  const drive = y.events!.find((e) => e.id === 'game-drive')!;
+  const ride = drive.ride!;
+  it('is a bus ride from Jos (an estimate) and a separate city pack', () => {
+    expect(coachesFrom('jos-terminus').map((a) => a.id)).toContain('yankari-wikki');
+    expect(coachesFrom('yankari-wikki').map((a) => a.id)).toEqual(['jos-terminus']);
+    expect([fareBetween('jos-terminus', 'yankari-wikki', 'coach'), minutesBetween('jos-terminus', 'yankari-wikki', 'coach')]).toEqual([12000, 300]);
+    expect(CITY_PACKS.find((c) => c.id === 'yankari')?.builtIn).toBe(false);
+  });
+  it('the drive boards and ends on the camp road, and leaves it in between', () => {
+    const [x0, z0, x1, z1] = y.walkable[0];
+    const inside = ([x, z]: Vec2) => x > x0 && x < x1 && z > z0 && z < z1;
+    expect(inside(ride.track[0]) && inside(ride.track[ride.track.length - 1])).toBe(true);
+    expect(ride.track.some((p) => !inside(p))).toBe(true);
+    // everything stays on the ground plane (±110 m)
+    for (const [x, z] of ride.track) expect(Math.max(Math.abs(x), Math.abs(z))).toBeLessThan(100);
+    const secs = rideSeconds(ride);
+    expect(secs).toBeGreaterThan(50);
+    expect(secs).toBeLessThan(120);
+  });
+  it('every sighting is passed on the way, and none of the animals stand on the track', () => {
+    expect(sightingsBetween(ride, 0, trackLength(ride.track)).sort()).toEqual(ride.sightings.map((v) => v.id).sort());
+    const wild = y.props.filter((p) => ['elephant', 'antelope', 'baboon', 'warthog', 'buffalo', 'hippo', 'baobab', 'acacia'].includes(p.kind) && p.position[1] < -44);
+    expect(wild.length).toBeGreaterThan(6);
+    for (const p of wild) expect(distanceToTrack(ride.track, p.position[0], p.position[1]), p.id).toBeGreaterThan(5);
+    // sightings are named for what is there: each has an animal group close by
+    for (const v of ride.sightings) expect(wild.some((p) => Math.hypot(p.position[0] - v.position[0], p.position[1] - v.position[1]) < 2), v.id).toBe(true);
+  });
+  it('the truck turns smoothly and the pose follows the clock', () => {
+    const a = ridePose(ride, 0);
+    expect([a.x, a.z]).toEqual(ride.track[0]);
+    const end = ridePose(ride, rideSeconds(ride) * 1000 + 5000);
+    expect([end.x, end.z]).toEqual(ride.track[ride.track.length - 1]);
+    let maxTurn = 0;
+    for (let s = 1; s < trackLength(ride.track); s += 0.5) {
+      let d = Math.abs(poseAlong(ride.track, s).yaw - poseAlong(ride.track, s - 0.5).yaw) % (Math.PI * 2);
+      if (d > Math.PI) d = Math.PI * 2 - d;
+      maxTurn = Math.max(maxTurn, d);
+    }
+    expect(maxTurn).toBeLessThan(0.45);
+  });
+  it('the drive is a daily ticketed event; the spring is a swim', () => {
+    expect([drive.kind, drive.everyDays, drive.price, ride.minutes]).toEqual(['safari', 1, 7000, 120]);
+    expect(y.spots!.find((s) => s.kind === 'swim')?.joy).toBeGreaterThan(0);
   });
 });

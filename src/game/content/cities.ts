@@ -106,6 +106,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['kurmi-room'],
     load: () => import('./destinations/kanoPack').then((m) => m.KANO_PACKS),
   },
+  {
+    id: 'yankari',
+    builtIn: false,
+    eventIds: ['game-drive'],
+    homeIds: ['wikki-chalet'],
+    load: () => import('./destinations/yankariPack').then((m) => m.YANKARI_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

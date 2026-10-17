@@ -24,6 +24,9 @@ export const COACHES: Route[] = [
   { between: ['enugu-ogui', 'ph-waterfront'], fare: 10000, minutes: 270, via: 'via Aba' },
   // Abuja → Jos (about 250 km, up onto the plateau): guides list ₦4,000–8,500, the Plateau State fare list about ₦6,000
   { between: ['abuja-wuse', 'jos-terminus'], fare: 6000, minutes: 270, via: 'via Keffi and Akwanga' },
+  // Jos → Yankari: a bus to Bauchi (about 130 km, 3 h) and on to Wikki Camp (about 110 km more, the last 40 inside the
+  // reserve). No through fare is published, so this is an estimate from the two legs plus the gate fee (₦2,000–3,000)
+  { between: ['jos-terminus', 'yankari-wikki'], fare: 12000, minutes: 300, via: 'via Bauchi and the Mainamaji gate' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -42,4 +45,5 @@ export const NIGERIA_MAP: Record<string, [number, number]> = {
   'port-harcourt': [55, 52],
   abuja: [47, 28],
   jos: [58, 23],
+  yankari: [71, 24],
 };

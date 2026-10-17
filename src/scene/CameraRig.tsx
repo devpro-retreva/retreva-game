@@ -52,6 +52,11 @@ export function CameraRig() {
       }
     }
 
+    if (g.ui === 'drive') {
+      // ride along: the camera swings round behind the truck, a little to one side, as it turns
+      c.yaw = lerpAngle(c.yaw, p.yaw + 0.4, Math.min(1, d * 1.6));
+    }
+
     let yaw = c.yaw;
     let pitch = c.pitch;
     let dist = BASE_DIST;
@@ -66,6 +71,11 @@ export function CameraRig() {
         dist = 3.3;
         target.set((p.x * 0.6 + npc.x * 0.4), 1.5, (p.z * 0.6 + npc.z * 0.4));
       }
+    } else if (g.ui === 'drive') {
+      // high enough to see over the canopy to whatever is beside the track
+      dist = 9;
+      pitch = 0.42;
+      target.y = 2.6;
     } else if (g.ui === 'shop') {
       dist = 4.2;
       pitch = 0.18;
