@@ -1343,7 +1343,7 @@ describe('Ibadan and the train', () => {
     expect(modeBetween('lagos-station', 'lagos-airport')).toBe('Taxi');
     expect(fareBetween('ibadan-dugbe', 'ibadan-station')).toBe(5000);
     expect(CITY_PACKS.find((c) => c.id === 'ibadan')?.builtIn).toBe(false);
-    const snap = progressSnapshot({ jobs: emptyJobs(), world: { ...emptyWorld(), visited: ['lagos-station'] }, inventory: emptyInventory(), wallet: createWallet(0), travel: { ticket: null, history: [{ routeId: 'los-ibd-s', ticketId: 't1', at: 1 }] } } as never);
+    const snap = progressSnapshot({ jobs: emptyJobs(), world: { ...emptyWorld('lagos-adeniyi'), visited: ['lagos-station'] }, inventory: emptyInventory(), wallet: createWallet(0), travel: { ticket: null, history: [{ routeId: 'los-ibd-s', ticketId: 't1', at: 1 }] } } as never);
     expect(snap.flights).toBe(0);
     expect(snap.trains).toBe(1);
     expect(snap.flightFund).toBe(270000);
