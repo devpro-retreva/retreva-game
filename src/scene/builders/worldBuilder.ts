@@ -327,6 +327,16 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const [lx, lz] of [[-5, -5], [5.5, 3], [-4, 6]]) prop(g, { id: `${p.id}-palm-${lx}`, kind: 'palm', position: [p.position[0] + lx, p.position[1] + lz] });
       break;
     }
+    case 'monolith': {
+      // a great granite inselberg on the horizon (Aso Rock): steep domes rising straight out of the plain
+      // (blob centres at ground level, so only the upper halves show), with trees at its foot
+      const greys = ['#8d8478', '#9a9184', '#7f776c'];
+      g.blob(greys[0], at(0, 0, 0), 26, [1.5, 1.25, 0.8]);
+      g.blob(greys[1], at(-24, 0, 6), 18, [1.1, 1.05, 0.8]);
+      g.blob(greys[2], at(22, 0, 4), 16, [1.1, 1.2, 0.8]);
+      for (const [lx, lz, r] of [[-40, 12, 6], [-18, 20, 5], [8, 22, 6], [34, 16, 5]]) g.blob('#5f7f40', at(lx, 1.5, lz), r, [1.4, 0.45, 1]);
+      break;
+    }
     case 'busstop': {
       // shelter: back panel at local -z, roof, bench, sign post; long side along local x
       g.box('#3a5a7a', at(0, 1.25, -0.45), [3.0, 2.3, 0.08], r);
@@ -539,6 +549,10 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   // street ends: a near row closing the view, and a taller far row for depth
   for (const end of [-1, 1]) {
     if (airfield && end === -1) continue; // the airfield is open beyond the north fence
+    if (pack.vista === 'north' && end === -1) {
+      openCountry(g, rnd);
+      continue;
+    }
     const maxX = seaSide ? 6 : 30;
     for (let x = -30; x < maxX; ) {
       const w = 5 + rnd() * 4;
@@ -557,9 +571,31 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, end * (58 + rnd() * 6)], [5 + rnd() * 3, h, 6]);
     }
   }
-  // a distant tower, for skyline character
-  g.box('#b7a593', [-30, 22, -78], [8, 44, 8]);
-  g.box('#c4b19c', [26, 16, -84], [10, 32, 9]);
+  // a distant tower, for skyline character (not where the view north is kept open)
+  if (pack.vista !== 'north') {
+    g.box('#b7a593', [-30, 22, -78], [8, 44, 8]);
+    g.box('#c4b19c', [26, 16, -84], [10, 32, 9]);
+  }
+}
+
+/** North of a street left open: dry grass, scattered trees and a few low roofs running out to the horizon. */
+function openCountry(g: ColorGeometryBuilder, rnd: () => number) {
+  g.box('#b3a06e', [0, 0.003, -78], [140, 0.01, 60]);
+  const greens = ['#5f7f40', '#6f8a4a', '#4f7038'];
+  for (let i = 0; i < 26; i++) {
+    const x = -60 + rnd() * 120;
+    const z = -52 - rnd() * 36;
+    if (Math.abs(x) < 7 && z > -62) continue; // keep the line of sight down the street clear
+    g.cylinder('#5a3b26', [x, 1.2, z], 0.18, 0.25, 2.4, 6);
+    g.blob(greens[i % 3], [x, 3.2, z], 1.6 + rnd() * 1.4, [1.3, 0.7, 1.3]);
+  }
+  for (let i = 0; i < 6; i++) {
+    const x = (i % 2 ? 1 : -1) * (14 + rnd() * 30);
+    const z = -56 - rnd() * 20;
+    const w = 5 + rnd() * 4;
+    g.box('#cdbfa4', [x, 1.5, z], [w, 3, 5]);
+    g.box('#8a5a3c', [x, 3.15, z], [w + 0.4, 0.3, 5.4]);
+  }
 }
 
 /** North of an airport street: a perimeter fence, the apron, parked airliners and the control tower. */

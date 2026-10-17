@@ -91,6 +91,8 @@ export type PropKind =
   | 'jetty'
   | 'canoe'
   | 'arch'
+  // skylines
+  | 'monolith'
   // airports
   | 'counter'
   | 'scanner'
@@ -363,6 +365,8 @@ export interface DestinationPack {
   nightWalkers?: number;
   /** What lies behind the street: city blocks (default), or an airfield with parked planes beyond the north end. */
   backdrop?: 'city' | 'airfield';
+  /** Leave one street end open (low savanna, no closing row of buildings) so a distant landmark can be seen. */
+  vista?: 'north';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

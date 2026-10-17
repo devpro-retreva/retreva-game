@@ -7,12 +7,13 @@
 import { LAGOS } from './lagosState';
 import { ACCRA } from './greaterAccra';
 import { DUBAI } from './dubai';
+import { ABUJA } from './abuja';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
 export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {

@@ -650,7 +650,7 @@ function FlightCard({ routeId }: { routeId: string }) {
             {route.cityName}, {route.country}
           </div>
           <div className="sub">
-            {route.carrier} {route.code} · about {route.minutes} min · gate {route.gate} · ECOWAS, no visa
+            {route.carrier} {route.code} · about {route.minutes} min · gate {route.gate} · {route.papers}
           </div>
         </div>
       </div>

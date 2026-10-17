@@ -33,10 +33,12 @@ import { bookFlight, canBoard, checkIn, clearSecurity, completeFlight, emptyTrav
 import { ALL_PACKS, localPrice as localPriceOf, registerPacks } from '../content';
 import { ACCRA_PACKS } from '../content/destinations/accraPack';
 import { DUBAI_PACKS } from '../content/destinations/dubaiPack';
+import { ABUJA_PACKS } from '../content/destinations/abujaPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
 registerPacks(DUBAI_PACKS);
+registerPacks(ABUJA_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1150,7 +1152,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['accra-airport', 'dubai-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'dubai-airport']);
     for (const f of FLIGHTS) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1227,7 +1229,7 @@ describe('saving for a first flight', () => {
   const base = { jobs: emptyJobs(), jobArea: () => undefined, visited: [], discovered: [], inventory: emptyInventory(), bestBargain: 0, rides: 0, totalAreas: 5 };
   const cheapest = Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip));
   it('counts the money you hold towards the cheapest return flight from Lagos, and is done once you can afford it', () => {
-    expect(cheapest).toBe(450000);
+    expect(cheapest).toBe(270000); // Lagos–Abuja return, the cheapest flight
     expect(fund.money).toBe(true);
     expect(fund.progress({ ...base, balance: 5000, flightFund: cheapest })).toEqual([5000, cheapest]);
     expect(newlyCompleted({ ...base, balance: cheapest - 1, flightFund: cheapest }, []).map((g) => g.id)).not.toContain('flight-fund');
@@ -1239,5 +1241,40 @@ describe('saving for a first flight', () => {
   it('a new life in Lagos starts with ₦5,000 — a few rides and meals, nowhere near a flight', () => {
     expect(lagos.startingMoney).toBe(5000);
     expect(lagos.startingMoney).toBeLessThan(cheapest / 50);
+  });
+});
+
+describe('Abuja and domestic flights', () => {
+  const out = findFlight('los-abv')!;
+  const back = findFlight('abv-los')!;
+  it('Lagos ↔ Abuja is a domestic route at real fares, with an ID card instead of a passport', () => {
+    expect(out.domestic && back.domestic).toBe(true);
+    expect(out.ticket).toBe(140000);
+    expect(out.roundTrip).toBe(270000);
+    expect(out.roundTrip).toBeLessThan(findFlight('los-acc')!.roundTrip);
+    expect(out.returnId).toBe('abv-los');
+    expect(back.returnId).toBe('los-abv');
+    expect(out.chart).toBe('nigeria');
+    expect(flightText('{papers}, please… {entry}', out)).toBe('ID card, please… Domestic flight — your national ID card is all you need.');
+    expect(flightText('{papers}, please…', findFlight('los-acc'))).toBe('Passport, please…');
+    for (const f of FLIGHTS) expect(f.papers, f.id).toBeTruthy();
+  });
+  it('lands you in Wuse, a separate city pack with its own airport and a taxi between them', () => {
+    expect(out.arriveAt).toBe('abuja-wuse');
+    expect(regionOf('abuja-wuse')?.id).toBe('abuja');
+    expect(regionOf('abuja-airport')?.areas.find((a) => a.id === 'abuja-airport')?.hub).toBe('airport');
+    expect(modeBetween('abuja-wuse', 'abuja-airport')).toBe('Taxi');
+    expect(fareBetween('abuja-wuse', 'abuja-airport')).toBe(12000);
+    expect(CITY_PACKS.find((c) => c.id === 'abuja')?.builtIn).toBe(false);
+    expect(cityAreas('abuja').sort()).toEqual(['abuja-airport', 'abuja-wuse']);
+  });
+  it('the Capital Walk visits real landmarks in order, and the check-in desk asks for ID on this route', () => {
+    const wuse = ALL_PACKS.find((p) => p.id === 'abuja-wuse')!;
+    const walk = wuse.jobs.find((j) => j.id === 'capital-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(wuse.landmarks.some((l) => l.id === id), id).toBe(true);
+    const airport = ALL_PACKS.find((p) => p.id === 'abuja-airport')!;
+    const desk = airport.npcs.find((n) => n.role === 'Check-in agent')!;
+    expect(flightText(desk.dialogue.nodes.checkin.text, back)).toContain('ID card, please');
   });
 });

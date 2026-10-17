@@ -111,7 +111,7 @@ await S(() => window.__retreva.store.getState().openPhone('jobs'));
 await p.click('button[role="tab"]:has-text("Goals")');
 await p.waitForSelector('.goal-row:has-text("First flight fund")');
 const fundRow = (await p.textContent('.goal-row:has-text("First flight fund")')) ?? '';
-log('the First flight fund goal counts savings in naira towards the ₦450,000 Accra return', new RegExp(`₦${s.bal.toLocaleString('en-NG')} of ₦450,000`).test(fundRow), fundRow.trim());
+log('the First flight fund goal counts savings in naira towards the ₦270,000 Abuja return', new RegExp(`₦${s.bal.toLocaleString('en-NG')} of ₦270,000`).test(fundRow), fundRow.trim());
 await shot('08b-flight-fund');
 await S(() => window.__retreva.store.getState().closePanel());
 

@@ -36,6 +36,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['creek-studio'],
     load: () => import('./destinations/dubaiPack').then((m) => m.DUBAI_PACKS),
   },
+  {
+    id: 'abuja',
+    builtIn: false,
+    eventIds: ['suya-night'],
+    homeIds: ['wuse-studio'],
+    load: () => import('./destinations/abujaPack').then((m) => m.ABUJA_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

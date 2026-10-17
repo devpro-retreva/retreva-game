@@ -20,6 +20,8 @@ Every asset the shipped game uses, where it came from, and its terms. Update thi
 
 Badagry (`destinations/badagry.ts`) depicts real public monuments by name — the First Storey Building (1845), the Badagry Heritage Museum, the Agia Tree monument, the jetty to Gberefu Island and, across the lagoon, a stylised Point of No Return arch — all modelled procedurally, not copied from photos; its businesses and people are fictional. The slave-trade history is stated plainly and is never the object of a job: the paid work there is guiding a visitor and carrying fish.
 
+Abuja (`destinations/abuja.ts`) names Wuse Market and Aso Rock (a stylised granite dome on the horizon, modelled procedurally); its businesses and people are fictional, and the Nnamdi Azikiwe airport terminal uses the same generic template as the other airports.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)
