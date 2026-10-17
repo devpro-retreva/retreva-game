@@ -1,20 +1,21 @@
 /**
  * Regions group the areas you can ride between without flying.
  * Fares and trip times are listed per region (`routes`, and `boats` between areas with a jetty); a pair nobody has
- * priced yet falls back to a map-distance estimate. The everyday ride (danfo, tro-tro…) links ordinary areas,
- * a taxi any trip to or from a hub.
+ * priced yet falls back to a map-distance estimate. The everyday ride (danfo, tro-tro…) links ordinary areas and
+ * railway stations, a taxi any trip to or from an airport.
  */
 import { LAGOS } from './lagosState';
 import { ACCRA } from './greaterAccra';
 import { DUBAI } from './dubai';
 import { ABUJA } from './abuja';
 import { CALABAR } from './calabar';
+import { OYO } from './oyo';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
 export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {
@@ -56,7 +57,7 @@ export function modeBetween(fromId: string, toId: string, by: TravelBy = 'road')
   if (by === 'boat') return regionOf(fromId)?.boatName ?? 'Boat';
   const a = findArea(fromId);
   const b = findArea(toId);
-  if (a?.hub || b?.hub) return 'Taxi';
+  if (a?.hub === 'airport' || b?.hub === 'airport') return 'Taxi';
   return regionOf(fromId)?.transit ?? 'Danfo';
 }
 
@@ -72,7 +73,7 @@ export function fareBetween(fromId: string, toId: string, by: TravelBy = 'road')
   if (listed) return listed.fare;
   if (by === 'boat') return 0;
   const d = distance(a, b);
-  const taxi = !!(a.hub || b.hub) || regionOf(a.id)?.transit === 'Taxi';
+  const taxi = a.hub === 'airport' || b.hub === 'airport' || regionOf(a.id)?.transit === 'Taxi';
   return Math.round((taxi ? 3000 + d * 200 : 300 + d * 30) / 50) * 50;
 }
 

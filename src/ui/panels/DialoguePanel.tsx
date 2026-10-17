@@ -40,10 +40,11 @@ export function DialoguePanel() {
   const npc = dialogue ? findNpc(pack, dialogue.npcId) : undefined;
   const regard = useGame((s) => (dialogue ? s.life.regard[dialogue.npcId] ?? 0 : 0));
   const node = useMemo(() => (npc && dialogue ? socialNode(npc, dialogue) : undefined), [npc, dialogue]);
-  // airport staff talk about *your* flight: {flight}, {gate}, {entry} come from your ticket (or the first route from here)
+  // airport and station staff talk about *your* trip: {flight}, {gate}, {entry}, {departs}… come from your ticket (or the first route from here)
   const ticketRoute = useGame((s) => s.travel.ticket?.routeId);
   const route = (ticketRoute ? findFlight(ticketRoute) : undefined) ?? flightsFrom(pack.id)[0];
-  const text = flightText(node?.text ?? '', route);
+  const now = useGame((s) => s.world.time ?? 0);
+  const text = flightText(node?.text ?? '', route, now);
   // Progress is tied to the exact line, so switching nodes can never briefly
   // report the previous line as "finished".
   const [typed, setTyped] = useState<{ text: string; n: number }>({ text: '', n: 0 });

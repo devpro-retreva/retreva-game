@@ -93,6 +93,11 @@ export type PropKind =
   | 'arch'
   // skylines
   | 'monolith'
+  | 'skyscraper'
+  | 'hilltower'
+  | 'colonnade'
+  // railways
+  | 'train'
   // airports
   | 'counter'
   | 'scanner'
@@ -363,10 +368,12 @@ export interface DestinationPack {
   ambience?: { traffic: number; crowd: number; horns: number; waves?: number; chimes?: number };
   /** How many walkers stay out after dark (default 2). */
   nightWalkers?: number;
-  /** What lies behind the street: city blocks (default), or an airfield with parked planes beyond the north end. */
-  backdrop?: 'city' | 'airfield';
-  /** Leave one street end open (low savanna, no closing row of buildings) so a distant landmark can be seen. */
+  /** What lies behind the street: city blocks (default), an airfield with parked planes, or railway tracks with a waiting train beyond the north end. */
+  backdrop?: 'city' | 'airfield' | 'railway';
+  /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
+  /** What the open end shows: low savanna (default) or a sea of rust-brown roofs over the hills (old Ibadan). */
+  vistaStyle?: 'savanna' | 'roofs';
   /** The local currency, shown next to wallet prices as a guide (₦ per 1 local unit). The wallet itself stays in naira. */
   localCurrency?: { code: string; symbol: string; perUnit: number };
   /** Open sea beyond this x (east side), for beach areas. */

@@ -1,0 +1,41 @@
+// node playtests/run.mjs ibadan-views — screenshots of Ibadan and the stations at noon (no pass/fail): Dugbe looking north to the roofs and Bower's Tower,
+// Cocoa House over the west row, Mapo Hall, and the train waiting beyond the platform fence.
+import { launch, BASE_URL, outDir } from './lib.mjs';
+const OUT = outDir('ibadan-views');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const b = await launch();
+const p = await (await b.newContext({ viewport: { width: 1280, height: 760 } })).newPage();
+const S = (fn, a) => p.evaluate(fn, a);
+const playing = () => p.waitForFunction(() => window.__retreva?.store.getState().phase === 'playing', null, { timeout: 60000 });
+const view = async (name, x, z, yaw, pitch) => {
+  await S(([x, z, yaw, pitch]) => { const r = window.__retreva.runtime; r.player.x = x; r.player.z = z; r.player.yaw = yaw; r.camera.yaw = yaw; if (pitch !== undefined) r.camera.pitch = pitch; }, [x, z, yaw, pitch]);
+  await sleep(2500);
+  await p.screenshot({ path: `${OUT}/${name}.png` });
+};
+await p.goto(BASE_URL);
+await p.waitForSelector('.wordmark');
+await S(() => indexedDB.deleteDatabase('retriever'));
+await p.reload();
+await p.waitForSelector('.wordmark');
+await p.click('text=Start a new life');
+await p.fill('#name', 'View');
+await p.click('text=Start my life');
+await playing();
+await S(() => window.__retreva.store.getState().updateSettings({ tips: false, shadows: 'off' }));
+await S(() => window.__retreva.store.getState().travelTo('lagos-station'));
+await p.waitForFunction(() => window.__retreva.store.getState().destinationId === 'lagos-station' && window.__retreva.store.getState().phase === 'playing', null, { timeout: 60000 });
+await S(() => { const st = window.__retreva.store; st.setState({ world: { ...st.getState().world, time: 1440 + 12 * 60 } }); });
+await view('station-platform-train', 2, -36, Math.PI);
+await view('station-hall', -3, 0, Math.PI / 2);
+await S(() => window.__retreva.cities.loadCity('ibadan'));
+await S(() => { const st = window.__retreva.store; st.setState({ travel: { ...st.getState().travel, ticket: { id: 'v1', routeId: 'los-ibd-s', stage: 'cleared', paid: 0, roundTrip: false, bookedAt: 0 } } }); st.getState().board(); st.getState().land(); });
+await p.waitForFunction(() => window.__retreva.store.getState().destinationId === 'ibadan-station' && window.__retreva.store.getState().phase === 'playing', null, { timeout: 60000 });
+await S(() => window.__retreva.store.getState().travelTo('ibadan-dugbe'));
+await p.waitForFunction(() => window.__retreva.store.getState().destinationId === 'ibadan-dugbe' && window.__retreva.store.getState().phase === 'playing' && window.__retreva.store.getState().ui === 'play', null, { timeout: 60000 });
+await S(() => { const st = window.__retreva.store; st.setState({ world: { ...st.getState().world, time: 2 * 1440 + 12 * 60 } }); });
+await view('dugbe-north', 0, -20, Math.PI);
+await view('dugbe-cocoa-house', 5.5, 25, Math.PI + 0.745, -0.08);
+await view('dugbe-north-look-up', 0, -30, Math.PI, -0.08);
+await view('dugbe-mapo-hall', -1, 22, Math.PI / 2 + 0.35, 0.12);
+await view('dugbe-south', 0, 0, 0);
+await b.close();

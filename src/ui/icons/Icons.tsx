@@ -165,6 +165,12 @@ export const IconFlag = (p: P) => (
     <path d="M5.5 21V4M5.5 4.5h11l-2 4 2 4h-11" />
   </Base>
 );
+export const IconTrain = (p: P) => (
+  <Base {...p}>
+    <rect x="5.5" y="3.5" width="13" height="14" rx="3" />
+    <path d="M5.5 11h13M9 7h6M8.5 14.5h.01M15.5 14.5h.01M8 17.5l-2.5 3M16 17.5l2.5 3" />
+  </Base>
+);
 export const IconBus = (p: P) => (
   <Base {...p}>
     <rect x="4" y="4.5" width="16" height="12.5" rx="2" />

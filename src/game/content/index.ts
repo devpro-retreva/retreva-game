@@ -5,6 +5,7 @@ import { lekki } from './destinations/lekki';
 import { ikeja } from './destinations/ikeja';
 import { badagry } from './destinations/badagry';
 import { lagosAirport } from './destinations/lagosAirport';
+import { lagosStation } from './destinations/lagosStation';
 
 /**
  * Registry of destination packs. Lagos (the home city) is built in; other cities are city packs that
@@ -18,6 +19,7 @@ const PACKS: Record<string, DestinationPack> = {
   [ikeja.id]: ikeja,
   [badagry.id]: badagry,
   [lagosAirport.id]: lagosAirport,
+  [lagosStation.id]: lagosStation,
 };
 
 /** Every registered pack. A live array: city packs are appended when they load. */

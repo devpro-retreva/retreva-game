@@ -1,6 +1,6 @@
 /**
- * Flying abroad: trip budgets, the ticket, and the airport steps
- * (check-in → security → boarding). Pure functions; the store applies them
+ * Flying abroad (or taking the train): trip budgets, the ticket, and the airport or station steps
+ * (check-in / ticket check → security → boarding). Pure functions; the store applies them
  * and moves the money through the wallet ledger.
  *
  * A ticket only changes hands when the plane lands (completeFlight), so a
@@ -38,7 +38,7 @@ export const emptyTravel = (): TravelState => ({ ticket: null, history: [] });
 // ── budget ───────────────────────────────────────────────────────────────
 
 export interface BudgetLine {
-  key: 'taxi' | 'ticket' | 'stay' | 'around';
+  key: 'taxi' | 'ticket' | 'onward' | 'stay' | 'around';
   label: string;
   amount: number;
   note?: string;
@@ -53,19 +53,23 @@ export interface TripBudget {
 }
 
 /**
- * Full picture before you buy: getting to the airport, the ticket, somewhere to stay and getting around.
- * Only the ticket is charged at booking; the rest are estimates you pay as you go.
+ * Full picture before you buy: getting to the airport (or station), the ticket, somewhere to stay and getting around.
+ * Only the ticket is charged at booking; the rest are estimates you pay as you go. A flight's fare includes the
+ * arrival taxi into town; a train stops at the station, so the ride on into town is its own line.
  */
 export function tripBudget(route: FlightRoute, opts: { taxiToAirport: number; roundTrip: boolean; hasStay: boolean }): TripBudget {
   const ticket = opts.roundTrip ? route.roundTrip : route.ticket;
+  const rail = route.mode === 'rail';
   const lines: BudgetLine[] = [];
-  if (opts.taxiToAirport > 0) lines.push({ key: 'taxi', label: 'Taxi to the airport', amount: opts.taxiToAirport });
+  if (opts.taxiToAirport > 0) lines.push({ key: 'taxi', label: rail ? 'Ride to the station' : 'Taxi to the airport', amount: opts.taxiToAirport });
+  const kind = opts.roundTrip ? 'Return' : 'One-way';
   lines.push({
     key: 'ticket',
-    label: opts.roundTrip ? `Return ticket · ${route.code}` : `One-way ticket · ${route.code}`,
+    label: rail ? `${kind} · ${route.rail?.cls} class · ${route.code}` : `${kind} ticket · ${route.code}`,
     amount: ticket,
-    note: `arrival taxi into ${route.cityName} included`,
+    note: rail ? (opts.roundTrip ? 'two singles — no return discount' : undefined) : `arrival taxi into ${route.cityName} included`,
   });
+  if (route.budget.onward) lines.push({ key: 'onward', label: route.budget.onward.label, amount: route.budget.onward.cost, note: 'paid when you arrive' });
   lines.push(opts.hasStay
     ? { key: 'stay', label: route.budget.stay.name, amount: 0, note: 'already yours' }
     : { key: 'stay', label: route.budget.stay.name, amount: route.budget.stay.cost, note: route.budget.stay.note });

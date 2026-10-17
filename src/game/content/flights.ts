@@ -1,6 +1,7 @@
 /**
- * Flight routes between airport hubs. Prices are data, in the one wallet currency (naira).
- * The airline is fictional. Lagos ↔ Accra is an ECOWAS route: no visa needed.
+ * Flight routes between airport hubs, and train routes between stations (`mode: 'rail'`) — both are bought,
+ * checked and boarded the same way. Prices are data, in the one wallet currency (naira).
+ * The airline and the rail operator are fictional. Lagos ↔ Accra is an ECOWAS route: no visa needed.
  */
 export interface FlightRoute {
   id: string;
@@ -25,6 +26,8 @@ export interface FlightRoute {
     stay: { name: string; cost: number; note: string };
     /** A few days of local rides at the other end (taxis, tro-tros, the metro, danfos), in naira. */
     gettingAround: number;
+    /** Trains: the ride from the arrival station into town, paid there (flights fold it into the fare). */
+    onward?: { label: string; cost: number };
   };
   /** What the check-in agent says about entry papers (game simplification: nothing to arrange yourself). */
   entry: string;
@@ -34,8 +37,14 @@ export interface FlightRoute {
   domestic?: boolean;
   /** Shown on the ticket card when the route simplifies something real. */
   note?: string;
-  /** Which map the flight is drawn on: the Gulf of Guinea coast, a long-haul overview, or Nigeria. */
-  chart?: 'coast' | 'longhaul' | 'nigeria';
+  /** Which map the trip is drawn on: the Gulf of Guinea coast, a long-haul overview, Nigeria, or a railway line. */
+  chart?: 'coast' | 'longhaul' | 'nigeria' | 'rail';
+  /** A train between stations instead of a flight: ticket check, bag scan, then the platform ({gate} is the platform). */
+  mode?: 'rail';
+  /** Trains only: the ticket class and what it gets you (joy on arrival), and the stops the line runs through. */
+  rail?: { cls: 'Standard' | 'Business' | 'First'; perk: string; joy: number; stops: string[] };
+  /** Trains only: departure times (minutes after midnight). Boarding means waiting on the platform for the next one. */
+  departs?: number[];
   /** The return route id, used for round-trip tickets. */
   returnId: string;
   /** Text on the in-flight sequence. */
@@ -257,10 +266,112 @@ export const FLIGHTS: FlightRoute[] = [
   },
 ];
 
-/** Fill a line of airport dialogue for your ticket: {flight}, {gate}, {entry}, {papers} (passport or ID card). */
-export function flightText(text: string, route: FlightRoute | undefined): string {
+
+/*
+ * The Lagos–Ibadan standard-gauge line: Mobolaji Johnson Station (Ebute Metta) to Obafemi Awolowo Station (Moniya),
+ * through Agege, Agbado, Kajola, Papalanto, Abeokuta, Olodo and Omi-Adio. Fares are the railway's published
+ * adult fares (fare tables updated October 2026): Standard ₦3,600, Business ₦6,500, First ₦13,000 (older guides
+ * still say ₦9,000 for First). There is no return discount, so a return is two singles. The regular timetable
+ * has a morning and an afternoon train each way (8:00 and 16:00; extra trains run at holidays); the trip takes
+ * about 2½ hours with the Abeokuta stop. The operator name in the game is fictional.
+ */
+const RAIL = 'Western Express Rail';
+const LINE = ['Ebute Metta', 'Agege', 'Agbado', 'Kajola', 'Papalanto', 'Abeokuta', 'Olodo', 'Omi-Adio', 'Moniya'];
+const CLASSES = [
+  { key: 's', cls: 'Standard', fare: 3600, perk: 'a window seat in a busy coach', joy: 0, snack: { name: 'gala and a sachet of water from the trolley', fullness: 6 } },
+  { key: 'b', cls: 'Business', fare: 6500, perk: 'a wide reclining seat and a quiet coach', joy: 4, snack: { name: 'meat pie and a cold malt', fullness: 12 } },
+  { key: 'f', cls: 'First', fare: 13000, perk: 'a lounge seat, a hot meal and the best view of the Ogun River', joy: 8, snack: { name: 'jollof rice and chicken at your seat', fullness: 30 } },
+] as const;
+
+function trains(): FlightRoute[] {
+  const out: FlightRoute[] = [];
+  for (const c of CLASSES) {
+    const common = {
+      carrier: RAIL,
+      country: 'Nigeria',
+      minutes: 150,
+      ticket: c.fare,
+      roundTrip: c.fare * 2,
+      entry: 'Ticket and a quick bag check — no ID or boarding pass needed on the train.',
+      papers: `${c.cls} class · ${c.perk}`,
+      domestic: true,
+      mode: 'rail' as const,
+      chart: 'rail' as const,
+      snack: c.snack,
+      departs: [8 * 60, 16 * 60],
+    };
+    out.push({
+      ...common,
+      id: `los-ibd-${c.key}`,
+      code: 'WX 1',
+      from: 'lagos-station',
+      to: 'ibadan-station',
+      arriveAt: 'ibadan-station',
+      cityName: 'Ibadan',
+      gate: '2',
+      budget: {
+        stay: { name: 'Room in Dugbe', cost: 7000, note: 'a room for your stay' },
+        gettingAround: 6000,
+        onward: { label: 'Taxi from Moniya into Dugbe', cost: 5000 },
+      },
+      rail: { cls: c.cls, perk: c.perk, joy: c.joy, stops: LINE },
+      returnId: `ibd-los-${c.key}`,
+      map: { from: [10, 50], to: [88, 12] },
+    });
+    out.push({
+      ...common,
+      id: `ibd-los-${c.key}`,
+      code: 'WX 2',
+      from: 'ibadan-station',
+      to: 'lagos-station',
+      arriveAt: 'lagos-station',
+      cityName: 'Lagos',
+      gate: '1',
+      budget: {
+        stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
+        gettingAround: 3000,
+        onward: { label: 'Danfo from Ebute Metta to Yaba', cost: 300 },
+      },
+      rail: { cls: c.cls, perk: c.perk, joy: c.joy, stops: [...LINE].reverse() },
+      returnId: `los-ibd-${c.key}`,
+      map: { from: [88, 12], to: [10, 50] },
+    });
+  }
+  return out;
+}
+
+FLIGHTS.push(...trains());
+
+/** Clock time for minutes after midnight, e.g. 960 → "16:00". */
+const clock = (m: number) => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+/**
+ * The next train on a route, from game time `now` (minutes since day 1 00:00): when it leaves (absolute game minutes)
+ * and how to say it. Routes without a timetable leave straight away.
+ */
+export function nextDeparture(route: FlightRoute, now: number): { at: number; label: string } {
+  if (!route.departs?.length) return { at: now, label: 'now' };
+  const day = Math.floor(now / 1440);
+  for (const d of [0, 1]) {
+    for (const t of [...route.departs].sort((a, b) => a - b)) {
+      const at = (day + d) * 1440 + t;
+      if (at >= now) return { at, label: d === 0 ? clock(t) : `${clock(t)} tomorrow` };
+    }
+  }
+  return { at: now, label: 'now' };
+}
+
+export const isRail = (route: FlightRoute | undefined) => route?.mode === 'rail';
+
+/**
+ * Fill a line of airport or station dialogue for your ticket: {flight}, {gate}, {entry}, {papers} (passport or ID card),
+ * {class} and {departs} (the next train, from game time `now`).
+ */
+export function flightText(text: string, route: FlightRoute | undefined, now = 0): string {
   if (!route || !text.includes('{')) return text;
   return text
+    .replace(/\{departs\}/g, nextDeparture(route, now).label)
+    .replace(/\{class\}/g, route.rail?.cls ?? 'Economy')
     .replace(/\{flight\}/g, `${route.cityName} (${route.code})`)
     .replace(/\{gate\}/g, route.gate)
     .replace(/\{entry\}/g, route.entry)
@@ -271,7 +382,7 @@ export function findFlight(id: string): FlightRoute | undefined {
   return FLIGHTS.find((f) => f.id === id);
 }
 
-/** Flights leaving a given airport. */
+/** Flights (or trains) leaving a given airport (or station). */
 export function flightsFrom(airportId: string): FlightRoute[] {
   return FLIGHTS.filter((f) => f.from === airportId);
 }

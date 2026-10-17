@@ -3,7 +3,8 @@ import type { Region, RegionArea, Route } from './types';
 /**
  * Lagos State: the areas you can travel between by danfo, placed on a
  * schematic map (0–100 on both axes, north up) for the Travel app.
- * The airport is a hub: you get there by taxi, and fly abroad from it.
+ * The airport is a hub: you get there by taxi, and fly abroad from it. The railway station at Ebute Metta is a hub
+ * too (trains to Ibadan), a short danfo ride from Yaba.
  */
 export const LAGOS_AREAS: RegionArea[] = [
   { id: 'ikeja-village', district: 'Ikeja', known: 'Phones & gadgets', map: [34, 20] },
@@ -12,6 +13,7 @@ export const LAGOS_AREAS: RegionArea[] = [
   { id: 'lekki-beach', district: 'Lekki', known: 'Beach & coconut', map: [76, 82], dock: [72, 71] },
   { id: 'badagry-marina', district: 'Badagry', known: 'Heritage & lagoon', map: [11, 58], dock: [13, 66.5] },
   { id: 'lagos-airport', district: 'Airport', known: 'Flights abroad', map: [20, 9], hub: 'airport' },
+  { id: 'lagos-station', district: 'Ebute Metta', known: 'Trains to Ibadan', map: [27, 44], hub: 'station' },
 ];
 
 /**
@@ -37,6 +39,13 @@ const ROUTES: Route[] = [
   { between: ['lagos-airport', 'lagos-island'], fare: 12000, minutes: 65 },
   { between: ['lagos-airport', 'lekki-beach'], fare: 18000, minutes: 90 },
   { between: ['lagos-airport', 'badagry-marina'], fare: 20000, minutes: 100 },
+  // Mobolaji Johnson Station, Ebute Metta: by danfo (it's next to Yaba); a taxi from the airport
+  { between: ['lagos-station', 'lagos-adeniyi'], fare: 300, minutes: 15 },
+  { between: ['lagos-station', 'lagos-island'], fare: 400, minutes: 30 },
+  { between: ['lagos-station', 'ikeja-village'], fare: 600, minutes: 45 },
+  { between: ['lagos-station', 'lekki-beach'], fare: 1100, minutes: 80, via: 'via CMS' },
+  { between: ['lagos-station', 'badagry-marina'], fare: 1800, minutes: 115, via: 'via Mile 2' },
+  { between: ['lagos-station', 'lagos-airport'], fare: 8000, minutes: 45 },
 ];
 
 /**

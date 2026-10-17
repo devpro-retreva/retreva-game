@@ -19,6 +19,8 @@ export interface ProgressSnapshot {
   totalAreas: number;
   /** Flights taken (landed). */
   flights?: number;
+  /** Train journeys finished. */
+  trains?: number;
   /** Ticketed shows attended. */
   shows?: number;
   /** Cities you have been to (Lagos, Accra, Dubai…). */
@@ -59,7 +61,7 @@ export const GOALS: GoalDef[] = [
     progress: (p) => [Math.min(3, new Set(completed(p).map((h) => p.jobArea(h.jobId)).filter(Boolean)).size), 3] },
   { id: 'explorer', title: 'Lagos explorer', description: 'Visit every area of Lagos.', reward: 1500,
     progress: (p) => [Math.min(p.totalAreas, p.visited.length), p.totalAreas] },
-  { id: 'globetrotter', title: 'Globetrotter', description: 'Visit three cities — Lagos and two more (Abuja, Accra, Dubai…).', reward: 2500,
+  { id: 'globetrotter', title: 'Globetrotter', description: 'Visit three cities — Lagos and two more (Ibadan, Abuja, Accra, Dubai…).', reward: 2500,
     progress: (p) => [Math.min(3, p.cities ?? 1), 3] },
   { id: 'night-out', title: 'Night out', description: 'See a show with a ticket — a concert, comedy or a street jam.', reward: 800,
     progress: (p) => [Math.min(1, p.shows ?? 0), 1] },
@@ -71,6 +73,8 @@ export const GOALS: GoalDef[] = [
     } },
   { id: 'first-flight', title: 'Wheels up', description: 'Take your first flight.', reward: 1500,
     progress: (p) => [Math.min(1, p.flights ?? 0), 1] },
+  { id: 'first-train', title: 'All aboard', description: 'Take the train from Lagos to Ibadan (or back).', reward: 1000,
+    progress: (p) => [Math.min(1, p.trains ?? 0), 1] },
 ];
 
 /** Goals newly completed in this snapshot that are not yet marked done. */
@@ -109,6 +113,7 @@ export const TIPS: Record<string, TipDef> = {
   'home-inside': { id: 'home-inside', title: 'Your place', text: 'Walk to a spot and press E to furnish it with furniture from your bag (Okon sells it in Yaba). Comfort 4+ and you wake up well rested. The chest keeps things safe; the bed is for sleeping. Leave by the door.' },
   repair: { id: 'repair', title: 'Repair bench', text: 'Tap the repair steps in the right order before the bar runs out. One slip is fine; a clean session earns a tip and a better skill level.' },
   riding: { id: 'riding', title: 'On your bike', text: 'Riding is twice as fast as walking and less tiring. Get off anywhere (E or the action button) and the bike stays parked there — even after a reload. Danfos, taxis and planes don’t take bikes, so it waits where you left it.' },
+  train: { id: 'train', title: 'Your train', text: 'Your ticket is in the Travel app. Get to the station (a danfo from Yaba to Ebute Metta), have your ticket checked at the barrier, go through the bag scan and board at the platform. Trains leave at 8:00 and 16:00 — if you’re early, you wait on board.' },
   flight: { id: 'flight', title: 'Your trip', text: 'Your boarding pass is in the Travel app. Take a taxi to the airport, check in at the desk, go through security (no bottled drinks!) and board at the gate.' },
   shift: { id: 'shift', title: 'Kitchen shift', text: 'Each ticket names a dish — tap it (or press 1–4) before the bar runs out. Better cooking skill means more time and better pay.' },
 };

@@ -50,6 +50,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['marina-flat'],
     load: () => import('./destinations/calabarPack').then((m) => m.CALABAR_PACKS),
   },
+  {
+    id: 'ibadan',
+    builtIn: false,
+    eventIds: ['fuji-night'],
+    homeIds: ['dugbe-room'],
+    load: () => import('./destinations/ibadanPack').then((m) => m.IBADAN_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

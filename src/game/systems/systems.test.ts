@@ -11,12 +11,12 @@ import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
 import { ALL_AREAS, boatsFrom, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
-import { FLIGHTS, findFlight, flightText } from '../content/flights';
+import { FLIGHTS, findFlight, flightText, isRail, nextDeparture } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
 import { VEHICLES, findVehicle } from '../content/vehicles';
 import { advance, afterSleep, dayOf, daylight, formatClock, isOpen, phaseOf, START_TIME } from './clock';
-import { npcPresent } from '../store/gameStore';
+import { npcPresent, progressSnapshot } from '../store/gameStore';
 import { repairQueue, scoreRepair, shuffledSteps, tapStep } from './repair';
 import { meets as meetsReq } from './requirements';
 import { courierRank, rankBonus } from './careers';
@@ -35,12 +35,14 @@ import { ACCRA_PACKS } from '../content/destinations/accraPack';
 import { DUBAI_PACKS } from '../content/destinations/dubaiPack';
 import { ABUJA_PACKS } from '../content/destinations/abujaPack';
 import { CALABAR_PACKS } from '../content/destinations/calabarPack';
+import { IBADAN_PACKS } from '../content/destinations/ibadanPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
 registerPacks(DUBAI_PACKS);
 registerPacks(ABUJA_PACKS);
 registerPacks(CALABAR_PACKS);
+registerPacks(IBADAN_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -484,15 +486,19 @@ describe('regions and taxis', () => {
     expect(fareBetween('accra-osu', 'accra-airport')).toBeGreaterThan(0);
     expect(fareBetween('lagos-adeniyi', 'accra-osu')).toBe(0);
     expect(regionOf('accra-osu')?.country).toBe('Ghana');
-    for (const r of REGIONS) expect(r.areas.filter((a) => a.hub)).toHaveLength(1);
+    for (const r of REGIONS) expect(r.areas.filter((a) => a.hub === 'airport').length + r.areas.filter((a) => a.hub === 'station').length).toBeGreaterThan(0);
+    for (const r of REGIONS) expect(r.areas.filter((a) => a.hub === 'airport').length).toBeLessThanOrEqual(1);
   });
-  it('every flight connects two airports and lands in a real area of the destination region', () => {
+  it('every flight connects two airports (every train two stations) and arrives in a real area of the destination region', () => {
     for (const f of FLIGHTS) {
-      expect(ALL_AREAS.find((a) => a.id === f.from)?.hub, f.id).toBe('airport');
-      expect(ALL_AREAS.find((a) => a.id === f.to)?.hub, f.id).toBe('airport');
+      const hub = f.mode === 'rail' ? 'station' : 'airport';
+      expect(ALL_AREAS.find((a) => a.id === f.from)?.hub, f.id).toBe(hub);
+      expect(ALL_AREAS.find((a) => a.id === f.to)?.hub, f.id).toBe(hub);
       expect(regionOf(f.arriveAt), f.id).toBe(regionOf(f.to));
       expect(findFlight(f.returnId)?.from, f.id).toBe(f.to);
-      expect(f.roundTrip).toBeLessThan(f.ticket * 2);
+      // airlines discount a return; the railway sells two singles
+      if (f.mode === 'rail') expect(f.roundTrip).toBe(f.ticket * 2);
+      else expect(f.roundTrip).toBeLessThan(f.ticket * 2);
       expect(ALL_PACKS.find((p) => p.id === f.arriveAt), f.arriveAt).toBeDefined();
     }
   });
@@ -1155,7 +1161,7 @@ describe('city packs', () => {
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
     expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'calabar-airport', 'dubai-airport']);
-    for (const f of FLIGHTS) {
+    for (const f of FLIGHTS.filter((r) => !isRail(r))) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
       expect(f.roundTrip).toBeLessThan(f.ticket * 2);
@@ -1301,5 +1307,58 @@ describe('Calabar', () => {
     let x = 7.4;
     for (let i = 0; i < 80; i++) x = resolveMove(w, x, -20, x + 0.1, -20).x;
     expect(x).toBeGreaterThan(14);
+  });
+});
+
+describe('Ibadan and the train', () => {
+  const classes = ['s', 'b', 'f'].map((k) => findFlight(`los-ibd-${k}`)!);
+  const dugbe = ALL_PACKS.find((p) => p.id === 'ibadan-dugbe')!;
+  it('the Lagos–Ibadan train has three classes at the railway’s published fares, two singles for a return', () => {
+    expect(classes.map((r) => r.rail?.cls)).toEqual(['Standard', 'Business', 'First']);
+    expect(classes.map((r) => r.ticket)).toEqual([3600, 6500, 13000]);
+    for (const r of classes) {
+      expect(r.mode).toBe('rail');
+      expect(r.from).toBe('lagos-station');
+      expect(r.arriveAt).toBe('ibadan-station');
+      expect(findFlight(r.returnId)?.arriveAt).toBe('lagos-station');
+      expect(r.rail?.stops[0]).toBe('Ebute Metta');
+      expect(r.rail?.stops.at(-1)).toBe('Moniya');
+    }
+    expect(classes[2].rail!.joy).toBeGreaterThan(classes[0].rail!.joy);
+    expect(isRail(findFlight('los-abv'))).toBe(false);
+  });
+  it('trains keep a timetable: 8:00 and 16:00, and the next one rolls over to tomorrow', () => {
+    const r = classes[0];
+    const day2 = 1440;
+    expect(nextDeparture(r, day2 + 7 * 60)).toEqual({ at: day2 + 8 * 60, label: '08:00' });
+    expect(nextDeparture(r, day2 + 8 * 60)).toEqual({ at: day2 + 8 * 60, label: '08:00' });
+    expect(nextDeparture(r, day2 + 9 * 60).label).toBe('16:00');
+    expect(nextDeparture(r, day2 + 17 * 60)).toEqual({ at: 2 * 1440 + 8 * 60, label: '08:00 tomorrow' });
+    expect(flightText('Next train {departs}, {class} class, platform {gate}', r, day2 + 9 * 60)).toBe('Next train 16:00, Standard class, platform 2');
+    expect(nextDeparture(findFlight('los-abv')!, 500)).toEqual({ at: 500, label: 'now' });
+  });
+  it('the station is a danfo ride from Yaba; Moniya is a taxi from Dugbe; the flight fund ignores trains', () => {
+    expect(fareBetween('lagos-adeniyi', 'lagos-station')).toBe(300);
+    expect(modeBetween('lagos-adeniyi', 'lagos-station')).toBe('Danfo');
+    expect(modeBetween('lagos-station', 'lagos-airport')).toBe('Taxi');
+    expect(fareBetween('ibadan-dugbe', 'ibadan-station')).toBe(5000);
+    expect(CITY_PACKS.find((c) => c.id === 'ibadan')?.builtIn).toBe(false);
+    const snap = progressSnapshot({ jobs: emptyJobs(), world: { ...emptyWorld(), visited: ['lagos-station'] }, inventory: emptyInventory(), wallet: createWallet(0), travel: { ticket: null, history: [{ routeId: 'los-ibd-s', ticketId: 't1', at: 1 }] } } as never);
+    expect(snap.flights).toBe(0);
+    expect(snap.trains).toBe(1);
+    expect(snap.flightFund).toBe(270000);
+    expect(snap.totalAreas).toBe(5);
+  });
+  it('a rail trip budget shows the ride to the station and the taxi on into town; no return discount', () => {
+    const b = tripBudget(classes[1], { taxiToAirport: 300, roundTrip: true, hasStay: false });
+    expect(b.lines.map((l) => l.key)).toEqual(['taxi', 'ticket', 'onward', 'stay', 'around']);
+    expect(b.lines[0].label).toBe('Ride to the station');
+    expect(b.dueNow).toBe(13000);
+    expect(b.lines.find((l) => l.key === 'onward')?.amount).toBe(5000);
+  });
+  it('the Grandfather’s City tour visits real landmarks in order', () => {
+    const walk = dugbe.jobs.find((j) => j.id === 'dugbe-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(dugbe.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 });

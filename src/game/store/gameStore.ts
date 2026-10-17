@@ -42,7 +42,7 @@ import { emptyWorld, type AvatarLook, type Profile, type SaveData, type Settings
 import { sanitizeLook } from '../core/avatarPresets';
 import { districts, fareBetween, findArea, minutesBetween, modeBetween, regionOf, REGIONS, type TravelBy } from '../content/regions';
 import { advance, afterSleep, dayOf, formatClock, hourOf, isOpen, opensAt, START_TIME } from '../systems/clock';
-import { FLIGHTS, findFlight } from '../content/flights';
+import { FLIGHTS, findFlight, isRail, nextDeparture } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
 import { meets, type RequirementContext } from '../systems/requirements';
 import { repairQueue, repairSeconds, scoreRepair, shuffledSteps, tapStep, type DeviceResult, type RepairDef } from '../systems/repair';
@@ -144,7 +144,8 @@ interface GameState {
   /** Flight ticket + history (saved). */
   travel: TravelState;
   /** The flight in progress (not saved: a reload mid-flight puts you back at the gate with your ticket). */
-  flight: { routeId: string; firstVisit: boolean } | null;
+  /** A flight (or train ride) in progress; `wait` is game minutes spent on the platform before a train leaves. */
+  flight: { routeId: string; firstVisit: boolean; wait?: number } | null;
   dirty: number;
   critical: number;
 
@@ -297,7 +298,8 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
     bestBargain: s.world.bestBargain,
     rides: s.world.rides,
     totalAreas: lagosDistricts.length,
-    flights: s.travel.history.length,
+    flights: s.travel.history.filter((h) => !isRail(findFlight(h.routeId))).length,
+    trains: s.travel.history.filter((h) => isRail(findFlight(h.routeId))).length,
     shows: (s.world.tickets ?? []).filter((t) => t.status === 'used').length,
     cities: new Set(s.world.visited.map((a) => regionOf(a)?.id).filter(Boolean)).size,
     balance: s.wallet.balance,
@@ -305,8 +307,8 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
   };
 }
 
-/** The cheapest return ticket out of the home city's airport. */
-const HOME_FLIGHT_FUND = Math.min(...FLIGHTS.filter((f) => regionOf(f.from)?.id === REGIONS[0].id).map((f) => f.roundTrip));
+/** The cheapest return ticket out of the home city's airport (trains don't count — it's a flight fund). */
+const HOME_FLIGHT_FUND = Math.min(...FLIGHTS.filter((f) => !isRail(f) && regionOf(f.from)?.id === REGIONS[0].id).map((f) => f.roundTrip));
 
 export interface ShiftRun {
   shiftId: string;
@@ -843,7 +845,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const route = findFlight(routeId);
       if (!route) return false;
       if (regionOf(route.from) !== regionOf(s.destinationId)) {
-        get().pushToast({ kind: 'warn', title: 'Not from here', detail: `That flight leaves from ${findArea(route.from)?.district ?? 'another airport'}.` });
+        get().pushToast({ kind: 'warn', title: 'Not from here', detail: `That ${isRail(route) ? 'train' : 'flight'} leaves from ${findArea(route.from)?.district ?? 'another airport'}.` });
         return false;
       }
       const dest = cityOfArea(route.arriveAt);
@@ -871,8 +873,13 @@ export const useGame = create<GameState>()((set, get): GameState => {
         return false;
       }
       set({ wallet: pay.wallet, travel: r.state, critical: s.critical + 1 });
-      get().pushToast({ kind: 'item', title: `Ticket booked · ${route.code}`, detail: `To ${route.cityName}. Get to the airport and check in.` });
-      get().showTip('flight');
+      if (isRail(route)) {
+        get().pushToast({ kind: 'item', title: `Train ticket · ${route.rail?.cls} class`, detail: `To ${route.cityName}. Get to ${findArea(route.from)?.district ?? 'the station'} station and have it checked.` });
+        get().showTip('train');
+      } else {
+        get().pushToast({ kind: 'item', title: `Ticket booked · ${route.code}`, detail: `To ${route.cityName}. Get to the airport and check in.` });
+        get().showTip('flight');
+      }
       return true;
     },
 
@@ -882,18 +889,21 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const r = checkInFn(s.travel, route, pack().id);
       get().closePanel();
       if (!r.ok) {
-        get().pushToast({ kind: 'warn', title: r.reason === 'wrong-airport' ? 'Wrong airport for this ticket' : r.reason === 'no-ticket' ? 'No ticket' : 'Already checked in' });
+        get().pushToast({ kind: 'warn', title: r.reason === 'wrong-airport' ? (isRail(route) ? 'Wrong station for this ticket' : 'Wrong airport for this ticket') : r.reason === 'no-ticket' ? 'No ticket' : 'Already checked in' });
         return;
       }
       set({ travel: r.state, critical: s.critical + 1 });
-      get().pushToast({ kind: 'info', title: 'Checked in', detail: `Next: security, then gate ${route!.gate}.` });
+      if (isRail(route)) get().pushToast({ kind: 'info', title: 'Ticket checked', detail: `Next: the bag scan, then platform ${route!.gate}.` });
+      else get().pushToast({ kind: 'info', title: 'Checked in', detail: `Next: security, then gate ${route!.gate}.` });
     },
 
     passSecurity(liquids) {
       const s = get();
-      const drinks = liquidsIn(s.inventory);
+      // drinks are fine on a train; at an airport the officer asks about them first
+      const rail = isRail(s.travel.ticket ? findFlight(s.travel.ticket.routeId) : undefined);
+      const drinks = rail ? [] : liquidsIn(s.inventory);
       get().closePanel();
-      if (drinks.length && !liquids) return; // the officer asks about them first
+      if (drinks.length && !liquids) return;
       const r = clearSecurity(s.travel);
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: r.reason === 'not-checked-in' ? 'Check in first' : r.reason === 'no-ticket' ? 'No ticket' : 'Already through security' });
@@ -912,7 +922,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const route = findFlight(r.state.ticket!.routeId);
       set({ travel: r.state, inventory, life: { ...s.life, needs }, critical: s.critical + 1 });
       const note = n === 0 ? '' : liquids === 'drink' ? ` You finished ${n} drink${n > 1 ? 's' : ''}.` : ` You left ${n} drink${n > 1 ? 's' : ''} behind.`;
-      get().pushToast({ kind: 'info', title: 'Through security', detail: `Gate ${route?.gate} is at the end of the concourse.${note}` });
+      get().pushToast({ kind: 'info', title: 'Through security', detail: rail ? `Platform ${route?.gate} is at the end of the hall.` : `Gate ${route?.gate} is at the end of the concourse.${note}` });
     },
 
     board() {
@@ -921,11 +931,14 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const ok = canBoard(s.travel, route, pack().id);
       if (ok !== true || !route) {
         get().closePanel();
-        get().pushToast({ kind: 'warn', title: ok === 'not-cleared' ? 'Security first' : ok === 'not-checked-in' ? 'Check in first' : 'No boarding pass' });
+        get().pushToast({ kind: 'warn', title: ok === 'not-cleared' ? 'Security first' : ok === 'not-checked-in' ? (isRail(route) ? 'Have your ticket checked first' : 'Check in first') : 'No boarding pass' });
         return;
       }
       get().parkIfRiding();
-      set({ ui: 'flight', flight: { routeId: route.id, firstVisit: !s.world.visited.includes(route.arriveAt) }, dialogue: null, nearby: null });
+      // a train keeps its timetable: you wait on board for the next departure
+      const now = s.world.time ?? START_TIME;
+      const wait = nextDeparture(route, now).at - now;
+      set({ ui: 'flight', flight: { routeId: route.id, firstVisit: !s.world.visited.includes(route.arriveAt), wait }, dialogue: null, nearby: null });
       setUiMode('flight');
     },
 
@@ -947,8 +960,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
         destinationId: dest.id,
         travel: r.state,
         flight: null,
-        life: { ...s.life, needs: eat(s.life.needs, route.snack.fullness) },
-        world: { ...s.world, visited, time: (s.world.time ?? START_TIME) + route.minutes + 40 },
+        // the class you paid for lifts your mood (trains); a flight's fare includes the taxi into town (+40 min)
+        life: { ...s.life, needs: cheer(eat(s.life.needs, route.snack.fullness), route.rail?.joy ?? 0) },
+        world: { ...s.world, visited, time: (s.world.time ?? START_TIME) + (f.wait ?? 0) + route.minutes + (isRail(route) ? 0 : 40) },
         arrival: { firstVisit: f.firstVisit },
         ui: 'play',
         nearby: null,
@@ -956,7 +970,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
         critical: s.critical + 1,
       });
       setUiMode('play');
-      if (r.state.ticket) setTimeout(() => get().pushToast({ kind: 'info', title: 'Return ticket ready', detail: `${findFlight(r.state.ticket!.routeId)?.code} home is in your Travel app.` }), 4200);
+      if (r.state.ticket) setTimeout(() => get().pushToast({ kind: 'info', title: 'Return ticket ready', detail: `${findFlight(r.state.ticket!.routeId)?.code} back is in your Travel app.` }), 4200);
     },
 
     chat() {

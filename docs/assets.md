@@ -24,6 +24,8 @@ Abuja (`destinations/abuja.ts`) names Wuse Market and Aso Rock (a stylised grani
 
 Calabar (`destinations/calabar.ts`) names real places on the Marina — the Slave History Museum, the Old Residency (National Museum) and the river front — and the carnival tradition, with short factual blurbs; Mma Affiong, Ekaette, Nsa, Tolani, Okokon and their businesses are fictional, and the Margaret Ekpo airport terminal uses the generic airport template. Everything is modelled procedurally.
 
+Ibadan (`destinations/ibadan.ts`) names real places in and around Dugbe — Cocoa House, Dugbe Market, Mapo Hall and Bower's Tower on Oke-Are — with short factual blurbs, all modelled procedurally (a banded tower, a columned hall, a hill with a white tower, a field of brown roofs). Mama Risi, Iya Sikiru, Alhaji Lateef, Dayo, Baba Tunde and their businesses are fictional. The railway stations (`station.ts`) use the real station names (Mobolaji Johnson Station, Ebute Metta; Obafemi Awolowo Station, Moniya) with generic signage; the train operator "Western Express Rail" and its livery are fictional, and fares follow the railway's published adult fares.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

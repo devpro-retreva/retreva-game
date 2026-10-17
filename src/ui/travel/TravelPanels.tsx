@@ -24,7 +24,7 @@ export function TravelPanel() {
     <section className="sheet travel-sheet cut" role="dialog" aria-label="Choose a destination">
       <header className="sheet-head">
         <div>
-          <div className="eyelabel">{boat ? region?.boatName ?? 'Boat' : here?.hub ? 'Taxi' : region?.transit} · from {here?.district}</div>
+          <div className="eyelabel">{boat ? region?.boatName ?? 'Boat' : here?.hub === 'airport' ? 'Taxi' : region?.transit} · from {here?.district}</div>
           <h2>{boat ? 'Where by boat?' : 'Where to?'}</h2>
           <p>{boat ? 'Pay the fare and take the boat across the lagoon — life jackets on.' : `Pay the fare and ride to another part of ${region?.name ?? 'town'}.`}</p>
         </div>

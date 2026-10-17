@@ -6,8 +6,8 @@ export interface RegionArea {
   known: string;
   /** Position on the region's schematic map (0–100, north up). */
   map: [number, number];
-  /** Transport hubs (airports) are reached by taxi and don't count toward "visit every area". */
-  hub?: 'airport';
+  /** Transport hubs don't count toward "visit every area". Airports are reached by taxi; a station by the everyday ride. */
+  hub?: 'airport' | 'station';
   /** Where this area's boat landing sits on the region map (on the water), for areas that have boats. */
   dock?: [number, number];
 }

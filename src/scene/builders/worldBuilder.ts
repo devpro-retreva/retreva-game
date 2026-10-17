@@ -337,6 +337,67 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const [lx, lz, r] of [[-40, 12, 6], [-18, 20, 5], [8, 22, 6], [34, 16, 5]]) g.blob('#5f7f40', at(lx, 1.5, lz), r, [1.4, 0.45, 1]);
       break;
     }
+    case 'skyscraper': {
+      // a tall slab tower seen over the rooftops (Cocoa House): bands of windows, a darker crown
+      const h = 62;
+      g.box('#ece8de', at(0, h / 2, 0), [12, h, 12], r);
+      for (let y = 4.5; y < h - 4; y += 3.2) {
+        for (const s of [-1, 1]) {
+          g.box('#4c5a64', at(s * 6.02, y, 0), [0.06, 1.3, 10.6], r);
+          g.box('#4c5a64', at(0, y, s * 6.02), [10.6, 1.3, 0.06], r);
+        }
+      }
+      g.box('#7a5a3c', at(0, h + 1.2, 0), [12.4, 2.4, 12.4], r);
+      g.box('#c9c3b6', at(0, h + 4, 0), [5, 3.2, 5], r);
+      g.cylinder('#c0392b', at(0, h + 7.5, 0), 0.12, 0.12, 4, 6);
+      break;
+    }
+    case 'colonnade': {
+      // a colonial town hall front (Mapo Hall): steps, a row of tall columns, entablature and a low roof;
+      // the long side runs along local x and the columns face local +z
+      g.box('#d9d2c4', at(0, 0.4, 0), [16, 0.8, 10], r);
+      g.box('#d1c9b9', at(0, 0.9, 4.2), [15, 0.3, 1.4], r);
+      g.box('#ebe5d8', at(0, 5, -1.6), [15, 8.4, 5.6], r);
+      for (let i = 0; i < 7; i++) g.cylinder('#f4f0e6', at(-6.3 + i * 2.1, 4.8, 2.6), 0.42, 0.48, 7.8, 10);
+      g.box('#e6dfd0', at(0, 9.1, 0.6), [15.6, 1.2, 6.8], r);
+      g.box('#8a5a3c', at(0, 10.1, 0), [15.2, 0.8, 7.4], r);
+      for (const s of [-1, 1]) g.box('#3a4048', at(s * 2.6, 3.2, 1.2), [1.4, 4, 0.06], r);
+      break;
+    }
+    case 'hilltower': {
+      // a hill on the horizon (Oke-Are) crowned by a slim white tower (Bower's Tower)
+      // a long low hill, lighter than the roofs in front of it, so the white tower reads against the sky
+      g.blob('#8a9a5c', at(0, 0, 0), 28, [2.2, 0.36, 1]);
+      g.blob('#93a265', at(-34, 0, 8), 18, [1.6, 0.32, 1]);
+      const top = 28 * 0.36 - 1.2;
+      g.box('#f4f1ea', at(0, top + 6.5, 0), [3.6, 13, 3.6], r);
+      g.box('#e2ddd2', at(0, top + 13.6, 0), [4.4, 1.2, 4.4], r);
+      for (const y of [4.5, 8, 11]) g.box('#5a5550', at(0, top + y, 1.82), [0.9, 1.4, 0.04], r);
+      break;
+    }
+    case 'train': {
+      // a standard-gauge passenger train standing at a platform: diesel locomotive and coaches along local +x
+      const coach = p.color ?? '#f1efe8';
+      const stripe = '#1f6f4a';
+      const len = 22;
+      for (let i = 0; i < 4; i++) {
+        const cx = -i * (len + 1);
+        const loco = i === 0;
+        g.box(loco ? '#e9e6dc' : coach, at(cx, 2.4, 0), [len, 3.4, 3.2], r);
+        g.box(stripe, at(cx, 1.9, 0), [len + 0.02, 0.5, 3.22], r);
+        g.box('#f2b705', at(cx, 2.25, 0), [len + 0.02, 0.12, 3.24], r);
+        g.box('#55585c', at(cx, 4.2, 0), [len - 0.4, 0.25, 2.8], r);
+        g.box('#2f3236', at(cx, 0.55, 0), [len - 2, 0.7, 2.4], r);
+        if (loco) {
+          g.box('#22282c', at(cx + len / 2 - 0.5, 3.0, 0), [0.1, 1.0, 2.6], r);
+          g.box('#c0392b', at(cx + len / 2 + 0.06, 1.3, 0), [0.12, 0.5, 2.8], r);
+        } else {
+          for (let wx = -len / 2 + 1.6; wx < len / 2 - 1; wx += 2.0) for (const s of [-1, 1]) g.box('#2a3640', at(cx + wx, 3.0, s * 1.61), [1.3, 0.9, 0.04], r);
+          for (const s of [-1, 1]) g.box('#3a4a52', at(cx - len / 2 + 1.2, 2.2, s * 1.61), [0.9, 2.4, 0.05], r);
+        }
+      }
+      break;
+    }
     case 'busstop': {
       // shelter: back panel at local -z, roof, bench, sign post; long side along local x
       g.box('#3a5a7a', at(0, 1.25, -0.45), [3.0, 2.3, 0.08], r);
@@ -544,13 +605,15 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       g.box(tones[Math.floor(rnd() * tones.length)], [x, h / 2, z], [6 + rnd() * 4, h, 5 + rnd() * 3]);
     }
   }
-  const airfield = pack.backdrop === 'airfield';
-  if (airfield) airfieldBeyond(g, pack);
+  const airfield = pack.backdrop === 'airfield' || pack.backdrop === 'railway';
+  if (pack.backdrop === 'airfield') airfieldBeyond(g, pack);
+  if (pack.backdrop === 'railway') railwayBeyond(g, pack);
   // street ends: a near row closing the view, and a taller far row for depth
   for (const end of [-1, 1]) {
-    if (airfield && end === -1) continue; // the airfield is open beyond the north fence
+    if (airfield && end === -1) continue; // the airfield (or the railway) is open beyond the north fence
     if (pack.vista === 'north' && end === -1) {
-      openCountry(g, rnd);
+      if (pack.vistaStyle === 'roofs') roofscape(g, rnd);
+      else openCountry(g, rnd);
       continue;
     }
     const maxX = seaSide ? 6 : 30;
@@ -596,6 +659,51 @@ function openCountry(g: ColorGeometryBuilder, rnd: () => number) {
     g.box('#cdbfa4', [x, 1.5, z], [w, 3, 5]);
     g.box('#8a5a3c', [x, 3.15, z], [w + 0.4, 0.3, 5.4]);
   }
+}
+
+/** North of a street in old Ibadan: rust-brown corrugated roofs crowding over the low hills to the horizon. */
+function roofscape(g: ColorGeometryBuilder, rnd: () => number) {
+  g.box('#8a7458', [0, 0.003, -80], [150, 0.01, 64]);
+  const rust = ['#a8643a', '#b8743f', '#96582f', '#c08048', '#8c5030'];
+  const walls = ['#cdbb9c', '#bfa98a', '#d8c7a8', '#b59d7e'];
+  for (let i = 0; i < 70; i++) {
+    const x = -66 + rnd() * 132;
+    const z = -52 - rnd() * 44;
+    if (Math.abs(x) < 6 && z > -60) continue; // keep the view down the street open
+    const rise = Math.max(0, (-z - 52) * 0.12) + rnd() * 1.5; // the city climbs the hills as it goes back
+    const w = 4 + rnd() * 4;
+    const d = 4 + rnd() * 3;
+    const h = 2.6 + rnd() * 2;
+    g.box(walls[i % walls.length], [x, rise + h / 2, z], [w, h, d]);
+    g.boxR(rust[i % rust.length], [x, rise + h + 0.45, z - d / 4], [w + 0.5, 0.12, d / 2 + 0.5], [0.32, 0, 0]);
+    g.boxR(rust[(i + 2) % rust.length], [x, rise + h + 0.45, z + d / 4], [w + 0.5, 0.12, d / 2 + 0.5], [-0.32, 0, 0]);
+  }
+  for (const [x, z, r] of [[-40, -70, 5], [36, -64, 4], [-12, -88, 6]]) g.blob('#5f7f40', [x, 3, z], r, [1.3, 0.6, 1.3]);
+}
+
+/** North of a station street: the fence, the platform with its canopy, two tracks and a train waiting to leave. */
+function railwayBeyond(g: ColorGeometryBuilder, pack: DestinationPack) {
+  const z0 = -pack.road.length / 2 - 3;
+  g.box('#a39d90', [0, 0.004, z0 - 30], [140, 0.01, 60]);
+  // fence
+  for (let x = -40; x <= 40; x += 3) g.box('#7d8288', [x, 1.1, z0], [0.08, 2.2, 0.08]);
+  for (const y of [0.3, 1.1, 2.1]) g.box('#8e9399', [0, y, z0], [80, 0.04, 0.04]);
+  // platform and canopy
+  const pz = z0 - 8;
+  g.box('#cfc8b8', [0, 0.5, pz], [90, 1, 6]);
+  g.box('#f2b705', [0, 1.01, pz - 2.8], [90, 0.02, 0.25]);
+  for (let x = -40; x <= 40; x += 8) g.box('#e9e6df', [x, 3.2, pz + 0.8], [0.3, 4.4, 0.3]);
+  g.box('#e9e6df', [0, 5.5, pz], [88, 0.25, 6.6]);
+  g.box('#1f6f4a', [0, 5.8, pz], [88, 0.35, 0.4]);
+  // tracks: sleepers and rails
+  for (const tz of [pz - 6, pz - 12]) {
+    for (let x = -66; x <= 66; x += 1.2) g.box('#5a4a3c', [x, 0.06, tz], [0.35, 0.12, 2.6]);
+    for (const s of [-0.72, 0.72]) g.box('#8e9399', [0, 0.2, tz + s], [134, 0.14, 0.1]);
+  }
+  prop(g, { id: 'train-1', kind: 'train', position: [30, pz - 6] });
+  // a goods wagon line and distant trees
+  for (let x = -60; x < 30; x += 9) g.box('#8a5a3c', [x, 1.6, pz - 12], [8.4, 2.6, 2.8]);
+  for (let x = -60; x <= 60; x += 7) g.blob('#5f7f40', [x, 3.4, z0 - 36 - (x % 3)], 3.2, [1.4, 0.8, 1.2]);
 }
 
 /** North of an airport street: a perimeter fence, the apron, parked airliners and the control tower. */
