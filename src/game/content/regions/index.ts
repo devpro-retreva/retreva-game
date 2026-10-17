@@ -10,12 +10,15 @@ import { DUBAI } from './dubai';
 import { ABUJA } from './abuja';
 import { CALABAR } from './calabar';
 import { OYO } from './oyo';
+import { ABEOKUTA } from './abeokuta';
+import { COACHES, COACH_NAME } from './intercity';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
 export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
+export { COACHES, COACH_NAME, SOUTH_WEST_MAP } from './intercity';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {
@@ -39,8 +42,9 @@ function routeIn(list: Route[] | undefined, a: string, b: string): Route | undef
   return list?.find((r) => (r.between[0] === a && r.between[1] === b) || (r.between[0] === b && r.between[1] === a));
 }
 
-/** The listed trip between two areas of the same region, by road or by boat. */
+/** The listed trip between two areas: of the same region by road or by boat, or between cities by intercity bus. */
 export function routeBetween(fromId: string, toId: string, by: TravelBy = 'road'): Route | undefined {
+  if (by === 'coach') return fromId === toId ? undefined : routeIn(COACHES, fromId, toId);
   const region = regionOf(fromId);
   if (!region || region !== regionOf(toId) || fromId === toId) return undefined;
   return routeIn(by === 'boat' ? region.boats : region.routes, fromId, toId);
@@ -52,8 +56,14 @@ export function boatsFrom(areaId: string): RegionArea[] {
   return (region?.areas ?? []).filter((a) => a.id !== areaId && !!routeIn(region?.boats, areaId, a.id));
 }
 
+/** Areas in other cities you can reach by intercity bus from here (none unless this area has a motor park). */
+export function coachesFrom(areaId: string): RegionArea[] {
+  return ALL_AREAS.filter((a) => a.id !== areaId && !!routeIn(COACHES, areaId, a.id));
+}
+
 /** How you get between two areas of the same region. */
 export function modeBetween(fromId: string, toId: string, by: TravelBy = 'road'): string {
+  if (by === 'coach') return COACH_NAME;
   if (by === 'boat') return regionOf(fromId)?.boatName ?? 'Boat';
   const a = findArea(fromId);
   const b = findArea(toId);
@@ -66,6 +76,7 @@ export function modeBetween(fromId: string, toId: string, by: TravelBy = 'road')
  * map distance rounded to ₦50. 0 for the same area, across regions (that needs a flight) or a boat that doesn't run.
  */
 export function fareBetween(fromId: string, toId: string, by: TravelBy = 'road'): number {
+  if (by === 'coach') return routeBetween(fromId, toId, 'coach')?.fare ?? 0;
   const a = findArea(fromId);
   const b = findArea(toId);
   if (!a || !b || a.id === b.id || regionOf(a.id) !== regionOf(b.id)) return 0;

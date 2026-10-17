@@ -82,8 +82,14 @@ const b = await launch();
   await place(-3.0, -30, 0);
   await S(() => { window.__retreva.runtime.camera.yaw = 0; });
   await sleep(600);
+  // speed is measured in simulated time (runtime.player.speed = metres per simulated second), so the comparison
+  // holds at any frame rate; software GL runs at a few fps and caps each frame at 0.1 s, so wall-clock distance can't
+  const topSpeed = () => S(() => { window.__top = 0; window.__spd = setInterval(() => { window.__top = Math.max(window.__top, window.__retreva.runtime.player.speed); }, 30); });
+  const readTop = () => S(() => { clearInterval(window.__spd); return window.__top; });
   const z0 = await S(() => window.__retreva.runtime.player.z);
+  await topSpeed();
   await hold('KeyW', 2500);
+  const rideSpeed = await readTop();
   const rideDist = (await S(() => window.__retreva.runtime.player.z)) - z0;
   await waitNearby(() => window.__retreva.store.getState().nearby?.kind === 'dismount');
   await p.keyboard.press('KeyE');
@@ -95,9 +101,11 @@ const b = await launch();
   await S(() => { window.__retreva.runtime.camera.yaw = 0; });
   await sleep(600);
   const w0 = await S(() => window.__retreva.runtime.player.z);
+  await topSpeed();
   await hold('KeyW', 2500);
+  const walkSpeed = await readTop();
   const walkDist = (await S(() => window.__retreva.runtime.player.z)) - w0;
-  log('riding covers much more ground than walking in the same time', rideDist > walkDist * 1.4, `ride ${rideDist.toFixed(1)} m vs walk ${walkDist.toFixed(1)} m`);
+  log('riding is much faster than walking', rideSpeed > walkSpeed * 1.4 && walkSpeed > 0, `ride ${rideSpeed.toFixed(2)} m/s vs walk ${walkSpeed.toFixed(2)} m/s (distance this run: ${rideDist.toFixed(1)} m vs ${walkDist.toFixed(1)} m)`);
 
   // ── persistence: the parked bike is still there after a reload
   await S(() => window.__retreva.saves.saveNow());

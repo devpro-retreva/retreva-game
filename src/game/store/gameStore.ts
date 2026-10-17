@@ -45,7 +45,7 @@ import { advance, afterSleep, dayOf, formatClock, hourOf, isOpen, opensAt, START
 import { FLIGHTS, findFlight, isRail, nextDeparture } from '../content/flights';
 import { findVehicle } from '../content/vehicles';
 import { meets, type RequirementContext } from '../systems/requirements';
-import { repairQueue, repairSeconds, scoreRepair, shuffledSteps, tapStep, type DeviceResult, type RepairDef } from '../systems/repair';
+import { benchLabels, repairQueue, repairSeconds, scoreRepair, shuffledSteps, tapStep, type DeviceResult, type RepairDef } from '../systems/repair';
 import { courierRank, courierRuns, rankBonus } from '../systems/careers';
 import { visitStop } from '../systems/jobs';
 import { cityName, cityOfArea, isCityLoaded, loadCity } from '../content/cities';
@@ -300,6 +300,8 @@ export function progressSnapshot(s: Pick<GameState, 'jobs' | 'world' | 'inventor
     totalAreas: lagosDistricts.length,
     flights: s.travel.history.filter((h) => !isRail(findFlight(h.routeId))).length,
     trains: s.travel.history.filter((h) => isRail(findFlight(h.routeId))).length,
+    // intercity bus fares paid (each ride is one ledger entry with a coach- id)
+    buses: s.wallet.ledger.filter((t) => t.id.startsWith('coach-')).length,
     shows: (s.world.tickets ?? []).filter((t) => t.status === 'used').length,
     cities: new Set(s.world.visited.map((a) => regionOf(a)?.id).filter(Boolean)).size,
     balance: s.wallet.balance,
@@ -790,18 +792,26 @@ export const useGame = create<GameState>()((set, get): GameState => {
       }
       set({ ui: 'travel', dialogue: null, travelBy: by });
       setUiMode('travel');
+      if (by === 'coach') get().showTip('coach');
     },
 
     travelTo(areaId, by = 'road') {
       const s = get();
       const from = s.destinationId;
       const area = findArea(areaId);
-      if (!area || areaId === from || s.jobs.active || regionOf(areaId) !== regionOf(from)) return;
+      // the danfo and the boat stay inside a city; the intercity bus is the one that crosses to another
+      if (!area || areaId === from || s.jobs.active || (by !== 'coach' && regionOf(areaId) !== regionOf(from))) return;
       const fare = fareBetween(from, areaId, by);
-      if (by === 'boat' && fare === 0) return; // no boat runs between these two
+      if ((by === 'boat' || by === 'coach') && fare === 0) return; // no boat or bus runs between these two
+      const city = cityOfArea(areaId);
+      if (city && !isCityLoaded(city.id)) {
+        get().pushToast({ kind: 'warn', title: `${cityName(city.id)} isn't ready yet`, detail: 'It downloads before the bus leaves — connect to the internet and try again.' });
+        void loadCity(city.id).catch(() => undefined);
+        return;
+      }
       get().parkIfRiding();
       const p = pack();
-      const r = debit(s.wallet, { id: makeId(by === 'boat' ? 'boat' : 'ride'), amount: fare, reason: `${modeBetween(from, areaId, by)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
+      const r = debit(s.wallet, { id: makeId(by === 'boat' ? 'boat' : by === 'coach' ? 'coach' : 'ride'), amount: fare, reason: `${modeBetween(from, areaId, by)} · ${p.area} → ${area.district}`, at: Date.now(), destinationId: from });
       if (!r.ok) {
         get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(p, fare - s.wallet.balance)} more. Every area has work — ask around.` });
         return;
@@ -1374,7 +1384,9 @@ export const useGame = create<GameState>()((set, get): GameState => {
       if (run && !run.outcome) return;
       set({ repair: null, ui: 'play' });
       setUiMode('play');
-      if (run?.outcome?.levelUp) get().pushToast({ kind: 'goal', title: `Repair skill up: level ${skillLevel(get().life.skills.repair)}`, detail: 'More time per phone and better pay.' });
+      const def = run && pack().repairs?.find((x) => x.id === run.repairId);
+      const l = benchLabels(def);
+      if (run?.outcome?.levelUp && def) get().pushToast({ kind: 'goal', title: `${l.skill} skill up: level ${skillLevel(get().life.skills[def.skill])}`, detail: `More time per ${l.unit.toLowerCase()} and better pay.` });
     },
 
     discover(landmarkId) {

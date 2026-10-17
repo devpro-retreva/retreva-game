@@ -375,6 +375,22 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const y of [4.5, 8, 11]) g.box('#5a5550', at(0, top + y, 1.82), [0.9, 1.4, 0.04], r);
       break;
     }
+    case 'clothline': {
+      // cloth hung out to sell (adire): two posts, a line, and panels in shades of indigo along local x
+      for (const lx of [-2.2, 2.2]) g.box('#5a3b26', at(lx, 1.15, 0), [0.08, 2.3, 0.08], r);
+      g.box('#2a2622', at(0, 2.25, 0), [4.4, 0.03, 0.03], r);
+      const blues = ['#3d6aa3', '#4f7fc0', '#2c5a96', '#6b95cc', '#355d9e'];
+      for (let i = 0; i < 5; i++) {
+        const lx = -1.75 + i * 0.88;
+        g.box(blues[i], at(lx, 1.45, 0), [0.78, 1.55, 0.03], r);
+        // pale resist patterns on both faces: circles (oniko) read as dots, paste lines (eleko) as bands
+        for (const side of [-1, 1]) {
+          g.box('#eef0f2', at(lx, 1.75 - (i % 2) * 0.35, side * 0.02), [0.5, 0.08, 0.01], r);
+          g.box('#eef0f2', at(lx, 1.2, side * 0.02), [0.12, 0.12, 0.01], r);
+        }
+      }
+      break;
+    }
     case 'train': {
       // a standard-gauge passenger train standing at a platform: diesel locomotive and coaches along local +x
       const coach = p.color ?? '#f1efe8';

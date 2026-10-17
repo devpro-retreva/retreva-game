@@ -23,15 +23,15 @@ export const lagosStation = makeStation({
       look: { gender: 'male', skin: '#4a2c1c', top: '#e8e6e0', bottom: '#e8e6e0', outfit: 'kaftan', hair: 'bald', facialHair: 'beard', headwear: 'kufi', headColor: '#7a3b72', height: 1.7 },
     },
     ride: {
-      id: 'conductor-wale', name: 'Wale', kind: 'danfo', color: '#f2b705',
+      id: 'conductor-wale', name: 'Sola', kind: 'danfo', color: '#f2b705',
       line: 'Yaba! Oyingbo! CMS! Ikeja, Lekki, Badagry — enter, we dey go now now!',
       look: { gender: 'male', skin: '#3f2516', top: '#d8452b', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', height: 1.74 },
     },
   },
   items: [
     { id: 'gala', name: 'Gala sausage roll', category: 'food', basePrice: 400, nutrition: 15, consumable: true, icon: 'snack', description: 'The roadside classic, sold on every Nigerian journey.' },
-    { id: 'puff-puff', name: 'Puff-puff', category: 'food', basePrice: 500, nutrition: 18, consumable: true, icon: 'snack', description: 'Sweet fried dough balls in a paper bag.' },
-    { id: 'zobo', name: 'Zobo', category: 'drink', basePrice: 600, nutrition: 8, consumable: true, icon: 'bottle', description: 'Chilled hibiscus drink with ginger — fine on the train.' },
+    { id: 'ls-puff-puff', name: 'Puff-puff', category: 'food', basePrice: 500, nutrition: 18, consumable: true, icon: 'snack', description: 'Sweet fried dough balls in a paper bag.' },
+    { id: 'ls-zobo', name: 'Zobo', category: 'drink', basePrice: 600, nutrition: 8, consumable: true, icon: 'bottle', description: 'Chilled hibiscus drink with ginger — fine on the train.' },
     { id: 'rail-keyring', name: 'Little train keyring', category: 'souvenir', basePrice: 1200, icon: 'key', description: 'A green-and-white standard-gauge train for your keys.' },
   ],
   walkers: [

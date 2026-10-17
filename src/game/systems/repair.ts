@@ -22,6 +22,30 @@ export interface RepairDef {
   energyCost: number;
   minEnergy: number;
   requires?: Requirement;
+  /** Words for the work, when it isn't phone repair (e.g. an adire dye pit: "Cloth", "cloths", "Dyed", "Dyeing"). */
+  labels?: BenchLabels;
+}
+
+export interface BenchLabels {
+  /** One piece of work, e.g. "Phone". */
+  unit: string;
+  /** Plural, lower case, e.g. "phones". */
+  units: string;
+  /** What finishing one is called, e.g. "Fixed". */
+  done: string;
+  /** The skill's name, e.g. "Repair". */
+  skill: string;
+  /** The trade, shown over the panel, e.g. "Repairs". */
+  trade: string;
+  /** The instruction line. */
+  hint: string;
+}
+
+const PHONE_LABELS: BenchLabels = { unit: 'Phone', units: 'phones', done: 'Fixed', skill: 'Repair', trade: 'Repairs', hint: 'Do each repair step in the right order before time runs out.' };
+
+/** The words a bench uses (phone repair unless the bench says otherwise). */
+export function benchLabels(def: Pick<RepairDef, 'labels'> | undefined | null): BenchLabels {
+  return def?.labels ?? PHONE_LABELS;
 }
 
 export interface DeviceResult {

@@ -57,6 +57,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['dugbe-room'],
     load: () => import('./destinations/ibadanPack').then((m) => m.IBADAN_PACKS),
   },
+  {
+    id: 'abeokuta',
+    builtIn: false,
+    eventIds: ['adire-runway'],
+    homeIds: ['itoku-room'],
+    load: () => import('./destinations/abeokutaPack').then((m) => m.ABEOKUTA_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

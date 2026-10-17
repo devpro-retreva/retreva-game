@@ -105,7 +105,7 @@ export const ibadan: DestinationPack = {
           'Ibadan people don’t rush. We get there, and we get there with pepper.',
           'My mother had this same spot in Dugbe. Her mother before her.',
         ],
-        likes: ['abula', 'aso-oke-cap', 'gala'],
+        likes: ['abula', 'iseyin-fila', 'gala'],
       },
       idle: 'busy',
       dialogue: {
@@ -231,7 +231,7 @@ export const ibadan: DestinationPack = {
           'I can understand Yoruba, I just reply in English. Don’t laugh.',
           'All these brown roofs — he described them exactly.',
         ],
-        likes: ['ibadan-postcard', 'aso-oke-cap', 'abula'],
+        likes: ['ibadan-postcard', 'iseyin-fila', 'abula'],
       },
       idle: 'wave',
       dialogue: {
@@ -311,6 +311,30 @@ export const ibadan: DestinationPack = {
         },
       },
     },
+    {
+      id: 'conductor-rasaki',
+      name: 'Rasaki',
+      role: 'Bus conductor',
+      personality: 'Fills a bus faster than anyone at the park.',
+      position: [5.0, 25.6],
+      facing: -Math.PI / 2,
+      look: { gender: 'male', skin: '#3f2516', top: '#1f6f4a', bottom: '#2a2a2a', outfit: 'tee-shorts', hair: 'low', headwear: 'cap', headColor: '#f2b705', height: 1.72 },
+      promptVerb: 'Talk to',
+      social: { lines: ["In Ibadan the buses leave from Iwo Road and Challenge. I bring them to you.", "Abeokuta is close — under two hours.", "Lagos traffic is the only thing slower than my last driver."], likes: ['abula', 'kokoro', 'gala'] },
+      idle: 'wave',
+      dialogue: {
+        entries: [{ node: 'hello' }],
+        nodes: {
+          hello: {
+            text: 'Lagos! Ojota! Abeokuta! Iwo Road buses — enter, enter!',
+            options: [
+              { label: 'Take an intercity bus', action: { kind: 'openTravel', by: 'coach' } },
+              { label: 'Not yet', action: { kind: 'close' } },
+            ],
+          },
+        },
+      },
+    },
   ],
 
   walkers: [
@@ -364,7 +388,7 @@ export const ibadan: DestinationPack = {
       haggle: { floor: 0.7, patience: 3 },
       stock: [
         { itemId: 'aso-oke-strip', price: 7500 },
-        { itemId: 'aso-oke-cap', price: 4000 },
+        { itemId: 'iseyin-fila', price: 4000 },
         { itemId: 'gangan-drum', price: 6000 },
         { itemId: 'ibadan-postcard', price: 600 },
       ],
@@ -377,7 +401,7 @@ export const ibadan: DestinationPack = {
     { id: 'ofada-ayamase', name: 'Ofada rice & ayamase', category: 'food', basePrice: 2500, consumable: true, nutrition: 48, icon: 'plate', description: 'Local brown rice with green-pepper stew, wrapped in leaves.' },
     { id: 'ekuru', name: 'Ekuru', category: 'food', basePrice: 1000, consumable: true, nutrition: 25, icon: 'snack', description: 'Steamed white bean cake with pepper sauce.' },
     { id: 'aso-oke-strip', name: 'Aso-oke cloth', category: 'souvenir', basePrice: 7500, icon: 'bag', description: 'Hand-woven strips from Iseyin, sewn into a wrapper.' },
-    { id: 'aso-oke-cap', name: 'Aso-oke cap (fila)', category: 'souvenir', basePrice: 4000, icon: 'key', description: 'A folded fila, worn tilted for a party.' },
+    { id: 'iseyin-fila', name: 'Aso-oke cap (fila)', category: 'souvenir', basePrice: 4000, icon: 'key', description: 'A folded fila, worn tilted for a party.' },
     { id: 'gangan-drum', name: 'Gangan talking drum', category: 'souvenir', basePrice: 6000, icon: 'key', description: 'Squeeze the strings and it talks — a small one, for your shelf.' },
     { id: 'ibadan-postcard', name: 'Ibadan postcard', category: 'souvenir', basePrice: 600, icon: 'key', description: 'Brown roofs and Cocoa House, on card.' },
   ],

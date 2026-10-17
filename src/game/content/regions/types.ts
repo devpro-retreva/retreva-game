@@ -21,7 +21,8 @@ export interface Route {
   via?: string;
 }
 
-export type TravelBy = 'road' | 'boat';
+/** road: the everyday ride inside a region; boat: between jetties; coach: the intercity bus between cities. */
+export type TravelBy = 'road' | 'boat' | 'coach';
 
 export interface Region {
   id: string;

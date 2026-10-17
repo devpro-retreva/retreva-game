@@ -11,8 +11,9 @@ import { usePack } from '../../scene/worldContext';
 import { MapView } from '../hud/MapView';
 import { LagosMap } from '../travel/LagosMap';
 import { GOALS } from '../../game/systems/progress';
-import { fareBetween, findArea, modeBetween, regionOf } from '../../game/content/regions';
+import { COACHES, fareBetween, findArea, modeBetween, regionOf } from '../../game/content/regions';
 import { findFlight, flightsFrom, isRail, nextDeparture } from '../../game/content/flights';
+import { benchLabels } from '../../game/systems/repair';
 import { tripBudget } from '../../game/systems/travel';
 import { dayOf as gameDay, formatClock as formatGameClock, isOpen, opensAt } from '../../game/systems/clock';
 import { findVehicle } from '../../game/content/vehicles';
@@ -520,6 +521,8 @@ function TravelApp() {
   // one card per train line: its classes are separate routes (Standard, Business, First)
   const lines = station ? [...new Set(flightsFrom(station.id).map((r) => r.to))].map((to) => flightsFrom(station.id).filter((r) => r.to === to).map((r) => r.id)) : [];
   const ride = region?.transit ?? 'Danfo';
+  // buses to other cities from any motor park in this one
+  const buses = COACHES.filter((r) => r.between.some((id) => region?.areas.some((x) => x.id === id)));
   return (
     <>
       {ticket && <BoardingPass />}
@@ -531,6 +534,28 @@ function TravelApp() {
       {lines.map((ids) => (
         <FlightCard key={ids[0]} routeIds={ids} />
       ))}
+      {buses.length > 0 && (
+        <>
+          <h3 className="phone-sub">Intercity buses</h3>
+          {buses.map((r) => {
+            const [here, there] = region?.areas.some((x) => x.id === r.between[0]) ? r.between : [r.between[1], r.between[0]];
+            return (
+              <div className="card-line" key={`${here}-${there}`} data-coach={there}>
+                <div style={{ minWidth: 0 }}>
+                  <div>
+                    {regionOf(there)?.name} · {findArea(there)?.district}
+                  </div>
+                  <div className="sub">
+                    Bus from {findArea(here)?.district} · {Math.floor(r.minutes / 60)} h{r.minutes % 60 ? ` ${r.minutes % 60} min` : ''}
+                    {r.via ? ` · ${r.via}` : ''}
+                  </div>
+                </div>
+                <span className="num" style={{ color: 'var(--cream)', fontWeight: 750 }}>{formatMoney(pack, r.fare)}</span>
+              </div>
+            );
+          })}
+        </>
+      )}
       <h3 className="phone-sub">Around {region?.name}</h3>
       {region?.map === 'lagos' && (
         <div className="travel-map cut-sm" style={{ marginBottom: 12 }}>
@@ -765,6 +790,13 @@ function LifeSection() {
       />
       <h3 className="phone-sub">Skills</h3>
       <Stat k="Cooking" v={`Level ${skillLevel(life.skills.cooking)} · ${life.skills.cooking ?? 0} XP`} />
+      {/* bench skills you've started (repair, adire dyeing…), named by the bench that teaches them */}
+      {Object.entries(life.skills)
+        .filter(([id]) => id !== 'cooking')
+        .map(([id, xp]) => {
+          const bench = ALL_PACKS.flatMap((p) => p.repairs ?? []).find((r) => r.skill === id);
+          return <Stat key={id} k={bench ? benchLabels(bench).skill : id} v={`Level ${skillLevel(xp)} · ${xp} XP`} />;
+        })}
       <h3 className="phone-sub">People</h3>
       {people.length === 0 ? (
         <p className="muted" style={{ fontSize: 'var(--fs-sm)' }}>Work with people and they'll get to know you.</p>

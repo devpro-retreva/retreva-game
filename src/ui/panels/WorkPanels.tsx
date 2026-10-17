@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { formatMoney } from '../../game/content';
 import { useGame } from '../../game/store/gameStore';
 import { levelProgress, skillLevel } from '../../game/systems/life';
+import { benchLabels } from '../../game/systems/repair';
 import { usePack } from '../../scene/worldContext';
 import { IconBolt, IconHome, IconStar } from '../icons/Icons';
 
@@ -50,6 +51,7 @@ export function RepairPanel() {
   if (!run || !def) return null;
   const owner = pack.npcs.find((n) => n.id === def.npcId);
   const device = def.devices[run.queue[Math.min(run.index, run.queue.length - 1)]];
+  const l = benchLabels(def);
   const left = Math.max(0, run.deadline - now);
   const frac = Math.min(1, left / (run.seconds * 1000));
   return (
@@ -57,10 +59,10 @@ export function RepairPanel() {
       <header className="sheet-head">
         <div>
           <div className="eyelabel">
-            Repairs · {owner?.name} · Repair level {run.level}
+            {l.trade} · {owner?.name} · {l.skill} level {run.level}
           </div>
           <h2>{def.title}</h2>
-          {!run.outcome && <p>Do each repair step in the right order before time runs out.</p>}
+          {!run.outcome && <p>{l.hint}</p>}
         </div>
       </header>
       <div className="stripes" style={{ margin: '0 16px 4px' }} />
@@ -70,7 +72,7 @@ export function RepairPanel() {
             <div className={`ticket cut-sm ${shake ? 'shake' : ''}`} key={shake} aria-live="polite" data-device={device.name}>
               <div className="ticket-top">
                 <span>
-                  Phone {run.index + 1} of {run.queue.length} · {device.fault}
+                  {l.unit} {run.index + 1} of {run.queue.length} · {device.fault}
                 </span>
                 <span className="num">{(left / 1000).toFixed(1)}s</span>
               </div>
@@ -98,19 +100,19 @@ export function RepairPanel() {
               })}
             </div>
             <p className="muted num" aria-live="polite">
-              Slips on this phone: {run.mistakes} {run.mistakes > 1 ? '— this one won’t count' : run.mistakes === 1 ? '— one more and it won’t count' : ''}
+              Slips on this {l.unit.toLowerCase()}: {run.mistakes} {run.mistakes > 1 ? '— this one won’t count' : run.mistakes === 1 ? '— one more and it won’t count' : ''}
             </p>
           </>
         ) : (
           <div className="shift-done">
             <div className="big num">+{formatMoney(pack, run.outcome.pay + run.outcome.tip)}</div>
             <p>
-              Fixed {run.outcome.fixed} of {run.queue.length} phones
+              {l.done} {run.outcome.fixed} of {run.queue.length} {l.units}
               {run.outcome.tip ? ` — clean work, ${owner?.name} tipped ${formatMoney(pack, run.outcome.tip)}` : ''}.
             </p>
             <ul className="shift-lines">
               <li>
-                <IconStar size={16} /> Repair +{run.outcome.xp} XP{run.outcome.levelUp ? ' — level up!' : ''}
+                <IconStar size={16} /> {l.skill} +{run.outcome.xp} XP{run.outcome.levelUp ? ' — level up!' : ''}
                 <span className="xpbar" aria-hidden="true">
                   <i style={{ width: `${levelProgress(xp) * 100}%` }} />
                 </span>

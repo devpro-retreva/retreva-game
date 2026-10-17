@@ -213,6 +213,30 @@ export const ikeja: DestinationPack = {
         },
       },
     },
+    {
+      id: 'alhaji-sule',
+      name: 'Alhaji Sule',
+      role: 'Bus conductor',
+      personality: 'Fills a bus faster than anyone at the park.',
+      position: [5.0, 29],
+      facing: -Math.PI / 2,
+      look: { gender: 'male', skin: '#4a2c1c', top: '#e8e6e0', bottom: '#e8e6e0', outfit: 'kaftan', hair: 'low', facialHair: 'beard', headwear: 'kufi', headColor: '#c0392b', height: 1.76 },
+      promptVerb: 'Talk to',
+      social: { lines: ["From Ojota I have sent buses to every corner of the South-West.", "Abeokuta two hours, Ibadan two and a half — if the expressway is kind.", "The train is fine. But the bus leaves when you are ready."], likes: ['kokoro', 'gala', 'zobo'] },
+      idle: 'wave',
+      dialogue: {
+        entries: [{ node: 'hello' }],
+        nodes: {
+          hello: {
+            text: 'Ojota park! Abeokuta! Ibadan! The bus is filling — enter now, we move!',
+            options: [
+              { label: 'Take an intercity bus', action: { kind: 'openTravel', by: 'coach' } },
+              { label: 'Not yet', action: { kind: 'close' } },
+            ],
+          },
+        },
+      },
+    },
   ],
 
   walkers: [

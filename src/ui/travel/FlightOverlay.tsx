@@ -3,6 +3,7 @@ import { findFlight, isRail, nextDeparture, type FlightRoute } from '../../game/
 import { regionOf } from '../../game/content/regions';
 import { useGame } from '../../game/store/gameStore';
 import { IconPlane, IconTrain } from '../icons/Icons';
+import { SouthWestBase } from './SouthWestMap';
 
 const PHASES = [
   { until: 0.15, text: (gate: string) => `Boarding at gate ${gate}` },
@@ -117,16 +118,8 @@ export function FlightOverlay() {
             <rect width="100" height="60" fill="#2d6f86" />
             {route.chart === 'rail' ? (
               <>
-                {/* schematic south-west Nigeria: the Lagos lagoon, the Ogun River, farmland, and the standard-gauge line */}
-                <rect width="100" height="60" fill="#b9a678" />
-                <path d="M0,54 C14,52 24,57 40,56 C56,55 70,58 100,57 V60 H0 Z" fill="#2d6f86" />
-                <path d="M30,0 C32,12 30,24 34,34 C37,42 34,50 36,56" stroke="#5c9db4" strokeWidth="0.9" fill="none" />
-                <g fontSize="2.6" fontWeight={800} fill="#6b5137" letterSpacing="0.5" opacity="0.8">
-                  <text x="6" y="12">OGUN</text>
-                  <text x="74" y="34">OYO</text>
-                </g>
-                <text x="35" y="22" fontSize="2.2" fill="#2f5f72" fontWeight={650} transform="rotate(80 35 22)">Ogun River</text>
-                <text x="46" y="58.6" fontSize="2.4" fill="#d7ecf2" opacity="0.8" fontWeight={650}>LAGOS LAGOON</text>
+                {/* schematic south-west Nigeria and the standard-gauge line */}
+                <SouthWestBase />
                 <path d={path} stroke="#3a3530" strokeWidth="1.6" fill="none" />
                 <path d={path} stroke="#f6efe2" strokeWidth="0.7" strokeDasharray="1.4 1.4" fill="none" />
                 {stops.slice(1, -1).map((name, i) => {

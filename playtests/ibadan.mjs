@@ -145,7 +145,7 @@ log('the ride starts with the wait for the 16:00 on the railway map (Abeokuta, t
 s = await st();
 const after = await S(() => ({ joy: window.__retreva.store.getState().life.needs.joy, time: window.__retreva.store.getState().world.time }));
 log('you step off at Moniya at 18:30 with the return ticket; Business lifts your mood', s.dest === 'ibadan-station' && s.ticket?.routeId === 'ibd-los-b' && s.history.length === 1 && after.time === 1440 + 18 * 60 + 30 && after.joy > before, JSON.stringify(after));
-log('the bag still has the zobo', s.bag.includes('zobo'));
+log('the bag still has the zobo', s.bag.includes('ls-zobo'));
 log('“All aboard” is paid once; “Wheels up” is not (a train is not a flight)', s.ledger.filter(([id]) => id === 'goal:first-train').length === 1 && !s.ledger.some(([id]) => id === 'goal:first-flight'));
 await shot('moniya-arrival');
 
@@ -266,7 +266,7 @@ const home = await ride('lagos-station');
 s = await st();
 log('the train home: WX 2 from platform 1, the 16:00, arriving at Ebute Metta; two trips logged', /Lagos \(WX 2\)/.test(home.line) && /platform 1/.test(home.boardLine) && s.dest === 'lagos-station' && s.ticket === null && s.history.length === 2, home.line.slice(0, 120));
 const toYaba = await taxi('conductor-wale', 'Ride to Yaba for ₦300', 'lagos-adeniyi');
-log('Wale’s danfo takes you back to Yaba for ₦300', toYaba && (await st()).dest === 'lagos-adeniyi');
+log('Sola’s danfo takes you back to Yaba for ₦300', toYaba && (await st()).dest === 'lagos-adeniyi');
 
 log('no page errors', errs.length === 0, errs.slice(0, 3).join(' | '));
 const passed = results.filter(Boolean).length;

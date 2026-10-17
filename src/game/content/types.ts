@@ -98,6 +98,8 @@ export type PropKind =
   | 'colonnade'
   // railways
   | 'train'
+  // markets
+  | 'clothline'
   // airports
   | 'counter'
   | 'scanner'
@@ -151,7 +153,7 @@ export type DialogueAction =
   | { kind: 'deliverJob'; jobId: string }
   | { kind: 'openShop'; businessId: string }
   /** The travel picker: by road (default), or the boats from this area's jetty. */
-  | { kind: 'openTravel'; by?: 'road' | 'boat' }
+  | { kind: 'openTravel'; by?: 'road' | 'boat' | 'coach' }
   | { kind: 'startShift'; shiftId: string }
   /** Airport steps. */
   | { kind: 'checkIn' }

@@ -10,14 +10,14 @@ import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
-import { ALL_AREAS, boatsFrom, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
+import { ALL_AREAS, boatsFrom, coachesFrom, COACHES, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
 import { FLIGHTS, findFlight, flightText, isRail, nextDeparture } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
 import { VEHICLES, findVehicle } from '../content/vehicles';
 import { advance, afterSleep, dayOf, daylight, formatClock, isOpen, phaseOf, START_TIME } from './clock';
 import { npcPresent, progressSnapshot } from '../store/gameStore';
-import { repairQueue, scoreRepair, shuffledSteps, tapStep } from './repair';
+import { benchLabels, repairQueue, scoreRepair, shuffledSteps, tapStep } from './repair';
 import { meets as meetsReq } from './requirements';
 import { courierRank, rankBonus } from './careers';
 import { findFurniture, findInterior, INTERIORS, WELL_RESTED_COMFORT } from '../content/interiors';
@@ -36,6 +36,7 @@ import { DUBAI_PACKS } from '../content/destinations/dubaiPack';
 import { ABUJA_PACKS } from '../content/destinations/abujaPack';
 import { CALABAR_PACKS } from '../content/destinations/calabarPack';
 import { IBADAN_PACKS } from '../content/destinations/ibadanPack';
+import { ABEOKUTA_PACKS } from '../content/destinations/abeokutaPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -43,6 +44,7 @@ registerPacks(DUBAI_PACKS);
 registerPacks(ABUJA_PACKS);
 registerPacks(CALABAR_PACKS);
 registerPacks(IBADAN_PACKS);
+registerPacks(ABEOKUTA_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -486,7 +488,8 @@ describe('regions and taxis', () => {
     expect(fareBetween('accra-osu', 'accra-airport')).toBeGreaterThan(0);
     expect(fareBetween('lagos-adeniyi', 'accra-osu')).toBe(0);
     expect(regionOf('accra-osu')?.country).toBe('Ghana');
-    for (const r of REGIONS) expect(r.areas.filter((a) => a.hub === 'airport').length + r.areas.filter((a) => a.hub === 'station').length).toBeGreaterThan(0);
+    // every city can be reached: through an airport, a railway station, or a motor park on the intercity bus network
+    for (const r of REGIONS) expect(r.areas.some((a) => !!a.hub || coachesFrom(a.id).length > 0), r.id).toBe(true);
     for (const r of REGIONS) expect(r.areas.filter((a) => a.hub === 'airport').length).toBeLessThanOrEqual(1);
   });
   it('every flight connects two airports (every train two stations) and arrives in a real area of the destination region', () => {
@@ -1360,5 +1363,53 @@ describe('Ibadan and the train', () => {
     const walk = dugbe.jobs.find((j) => j.id === 'dugbe-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(dugbe.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+});
+
+describe('content ids', () => {
+  it('item ids are unique across every area, so a bag entry always means one thing', () => {
+    const ids = ALL_PACKS.flatMap((p) => p.items.map((i) => i.id));
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([]);
+  });
+});
+
+describe('Abeokuta and the intercity bus', () => {
+  const itoku = ALL_PACKS.find((p) => p.id === 'abeokuta-itoku')!;
+  it('buses link Lagos (Ojota, by Ikeja), Abeokuta and Ibadan at 2026 park fares, in both directions', () => {
+    expect(fareBetween('ikeja-village', 'abeokuta-itoku', 'coach')).toBe(4000);
+    expect(fareBetween('abeokuta-itoku', 'ikeja-village', 'coach')).toBe(4000);
+    expect(fareBetween('abeokuta-itoku', 'ibadan-dugbe', 'coach')).toBe(2500);
+    expect(fareBetween('ikeja-village', 'ibadan-dugbe', 'coach')).toBe(6000);
+    expect(minutesBetween('ikeja-village', 'abeokuta-itoku', 'coach')).toBe(120);
+    expect(modeBetween('ikeja-village', 'abeokuta-itoku', 'coach')).toBe('Intercity bus');
+    expect(coachesFrom('ikeja-village').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ibadan-dugbe']);
+    expect(coachesFrom('lagos-adeniyi')).toEqual([]);
+    // the danfo still doesn't cross cities, and no bus runs where none is listed
+    expect(fareBetween('ikeja-village', 'abeokuta-itoku')).toBe(0);
+    expect(fareBetween('lagos-adeniyi', 'abeokuta-itoku', 'coach')).toBe(0);
+    for (const r of COACHES) expect(regionOf(r.between[0])).not.toBe(regionOf(r.between[1]));
+  });
+  it('every motor park has a conductor who opens the bus, and Abeokuta is a separate city pack', () => {
+    const parks = [...new Set(COACHES.flatMap((r) => r.between))];
+    for (const id of parks) {
+      const p = ALL_PACKS.find((x) => x.id === id)!;
+      expect(p.npcs.some((n) => Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === 'openTravel' && o.action.by === 'coach'))), id).toBe(true);
+    }
+    expect(CITY_PACKS.find((c) => c.id === 'abeokuta')?.builtIn).toBe(false);
+  });
+  it('the dye pit is a bench in its own words, unlocked by the Indigo Run; the tour visits real landmarks in order', () => {
+    const pit = itoku.repairs!.find((r) => r.id === 'adire-pit')!;
+    expect(benchLabels(pit).unit).toBe('Cloth');
+    expect(benchLabels(ALL_PACKS.find((p) => p.id === 'ikeja-village')!.repairs![0]).unit).toBe('Phone');
+    expect(pit.requires?.jobsDone?.jobId).toBe('indigo-run');
+    for (const d of pit.devices) expect(new Set(d.steps).size).toBe(d.steps.length);
+    const walk = itoku.jobs.find((j) => j.id === 'under-the-rock')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(itoku.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+  it('bus rides count for "Road trip" (each fare is one coach- ledger entry)', () => {
+    const wallet = { ...createWallet(0), ledger: [{ id: 'coach-abc-1', amount: -4000, reason: 'Intercity bus', at: 1, destinationId: 'ikeja-village' }] };
+    const snap = progressSnapshot({ jobs: emptyJobs(), world: emptyWorld('lagos-adeniyi'), inventory: emptyInventory(), wallet, travel: { ticket: null, history: [] } } as never);
+    expect(snap.buses).toBe(1);
   });
 });

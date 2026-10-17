@@ -26,6 +26,8 @@ Calabar (`destinations/calabar.ts`) names real places on the Marina — the Slav
 
 Ibadan (`destinations/ibadan.ts`) names real places in and around Dugbe — Cocoa House, Dugbe Market, Mapo Hall and Bower's Tower on Oke-Are — with short factual blurbs, all modelled procedurally (a banded tower, a columned hall, a hill with a white tower, a field of brown roofs). Mama Risi, Iya Sikiru, Alhaji Lateef, Dayo, Baba Tunde and their businesses are fictional. The railway stations (`station.ts`) use the real station names (Mobolaji Johnson Station, Ebute Metta; Obafemi Awolowo Station, Moniya) with generic signage; the train operator "Western Express Rail" and its livery are fictional, and fares follow the railway's published adult fares.
 
+Abeokuta (`destinations/abeokuta.ts`) names real places in Itoku and Ake — Olumo Rock, the Itoku adire market and Centenary Hall — with short factual blurbs; Olumo is the procedural `monolith` granite, the adire cloths a procedural `clothline` prop. Iya Alaro, Baba Ogunde, Kemi, Mama Ofada, Adaeze, Taiwo and their businesses are fictional, as are the bus conductors Alhaji Sule (Ikeja/Ojota) and Rasaki (Dugbe). Adire pattern names (oniko, eleko, alabere) are the traditional technique names.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)
