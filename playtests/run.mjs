@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
-const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city', 'device', 'travel', 'lifestyle', 'responsive', 'resilience', 'daynight', 'work', 'homes', 'leisure', 'performance', 'cities', 'dubai', 'badagry', 'abuja', 'calabar', 'ibadan', 'abeokuta', 'osogbo', 'benin', 'enugu', 'port-harcourt', 'jos', 'kano', 'yankari', 'obudu'];
+const DEFAULT = ['regression', 'expansion', 'wardrobe', 'life', 'city', 'device', 'travel', 'lifestyle', 'responsive', 'resilience', 'daynight', 'work', 'homes', 'leisure', 'performance', 'cities', 'dubai', 'badagry', 'abuja', 'calabar', 'ibadan', 'abeokuta', 'osogbo', 'benin', 'enugu', 'port-harcourt', 'jos', 'kano', 'yankari', 'obudu', 'ife'];
 const suites = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT;
 
 for (const s of suites) {

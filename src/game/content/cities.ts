@@ -120,6 +120,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['ranch-chalet'],
     load: () => import('./destinations/obuduPack').then((m) => m.OBUDU_PACKS),
   },
+  {
+    id: 'ife',
+    builtIn: false,
+    eventIds: ['olojo'],
+    homeIds: ['enuwa-room'],
+    load: () => import('./destinations/ifePack').then((m) => m.IFE_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

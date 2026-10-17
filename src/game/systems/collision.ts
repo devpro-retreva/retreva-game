@@ -45,6 +45,7 @@ const PROP_SHAPES: Partial<Record<PropKind, { box?: [number, number]; r?: number
   acacia: { r: 0.3, h: 4 },
   baobab: { r: 1.3, h: 7 },
   spring: { box: [3.7, 7.2], h: 0.3 },
+  staff: { box: [1.45, 1.45], h: 6 },
 };
 
 export const PLAYER_RADIUS = 0.32;

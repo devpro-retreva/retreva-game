@@ -45,6 +45,8 @@ import { JOS_PACKS } from '../content/destinations/josPack';
 import { KANO_PACKS } from '../content/destinations/kanoPack';
 import { YANKARI_PACKS } from '../content/destinations/yankariPack';
 import { OBUDU_PACKS } from '../content/destinations/obuduPack';
+import { IFE_PACKS } from '../content/destinations/ifePack';
+import { SOUTH_WEST_MAP } from '../content/regions/intercity';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 import { distanceToTrack, heightAlong, poseAlong, ridePose, ridePose3, rideSeconds, sightingsBetween, trackLength } from './drive';
 import type { Vec2 } from '../content/types';
@@ -63,6 +65,7 @@ registerPacks(JOS_PACKS);
 registerPacks(KANO_PACKS);
 registerPacks(YANKARI_PACKS);
 registerPacks(OBUDU_PACKS);
+registerPacks(IFE_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1437,8 +1440,8 @@ describe('Osogbo', () => {
   const oja = ALL_PACKS.find((p) => p.id === 'osogbo-oja-oba')!;
   it('the bus from Ibadan (₦3,500) is the way in; Osogbo is a separate city pack', () => {
     expect(fareBetween('ibadan-dugbe', 'osogbo-oja-oba', 'coach')).toBe(3500);
-    expect(coachesFrom('osogbo-oja-oba').map((a) => a.id)).toEqual(['ibadan-dugbe']);
-    expect(coachesFrom('ibadan-dugbe').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ikeja-village', 'osogbo-oja-oba']);
+    expect(coachesFrom('osogbo-oja-oba').map((a) => a.id).sort()).toEqual(['ibadan-dugbe', 'ife-enuwa']);
+    expect(coachesFrom('ibadan-dugbe').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ife-enuwa', 'ikeja-village', 'osogbo-oja-oba']);
     expect(CITY_PACKS.find((c) => c.id === 'osogbo')?.builtIn).toBe(false);
   });
   it('the sacred grove is seen, never worked in: no job, tour or delivery goes to it', () => {
@@ -1667,5 +1670,27 @@ describe('Obudu and the cable car', () => {
     expect(ranch.groundEdge!).toBeLessThan(z0);
     const walk = ranch.jobs.find((j) => j.id === 'ranch-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+  });
+});
+
+describe('Ile-Ife', () => {
+  const f = ALL_PACKS.find((p) => p.id === 'ife-enuwa')!;
+  it('is a bus from Osogbo or Ibadan (estimates), on the south-west map; a separate city pack', () => {
+    expect([fareBetween('osogbo-oja-oba', 'ife-enuwa', 'coach'), minutesBetween('osogbo-oja-oba', 'ife-enuwa', 'coach')]).toEqual([2500, 60]);
+    expect([fareBetween('ibadan-dugbe', 'ife-enuwa', 'coach'), minutesBetween('ibadan-dugbe', 'ife-enuwa', 'coach')]).toEqual([4000, 90]);
+    expect(coachesFrom('ife-enuwa').map((a) => a.id).sort()).toEqual(['ibadan-dugbe', 'osogbo-oja-oba']);
+    expect(SOUTH_WEST_MAP.ife).toBeDefined();
+    expect(CITY_PACKS.find((c) => c.id === 'ife')?.builtIn).toBe(false);
+  });
+  it('the bead bench is unlocked by the Bead Run and speaks beads; the walk is real; Olojo is honest', () => {
+    const bench = f.repairs!.find((r) => r.id === 'bead-workshop')!;
+    expect(benchLabels(bench).skill).toBe('Beadwork');
+    expect(bench.requires?.jobsDone?.jobId).toBe('bead-run');
+    const walk = f.jobs.find((j) => j.id === 'enuwa-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    expect(f.events!.find((e) => e.id === 'olojo')!.description).toMatch(/real festival is once a year/);
+    // Opa Oranmiyan stands at the end of the road, beyond the walkable street, where its landmark looks at it
+    const staff = f.props.find((p) => p.kind === 'staff')!;
+    expect(staff.position[1]).toBeLessThan(f.walkable[0][1]);
   });
 });

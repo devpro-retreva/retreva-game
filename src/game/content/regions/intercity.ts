@@ -15,6 +15,10 @@ export const COACHES: Route[] = [
   { between: ['abeokuta-itoku', 'ibadan-dugbe'], fare: 2500, minutes: 100, via: 'via Odeda' },
   { between: ['ikeja-village', 'ibadan-dugbe'], fare: 6000, minutes: 150, via: 'from Ojota park, Lagos–Ibadan Expressway' },
   { between: ['ibadan-dugbe', 'osogbo-oja-oba'], fare: 3500, minutes: 110, via: 'via Ikire and Ikirun junction' },
+  // to Ile-Ife: no published 2026 fare for either leg; estimates scaled from the Iwo Road park's Ibadan → Ilesa ₦4,500
+  // (a slightly longer trip on the same road) and the 50 km Osogbo → Ife road
+  { between: ['ibadan-dugbe', 'ife-enuwa'], fare: 4000, minutes: 90, via: 'via Ikire, on the Ife road' },
+  { between: ['osogbo-oja-oba', 'ife-enuwa'], fare: 2500, minutes: 60, via: 'via Ipetumodu' },
   // the long road east: luxury lines run Lagos–Benin for about ₦25,000–27,000 (GIGM online fares, October 2026)
   { between: ['ikeja-village', 'benin-kings-square'], fare: 26000, minutes: 360, via: 'from Ojota park, via Ore' },
   // Benin → Enugu (about 250 km over the Niger at Onitsha): no 2026 fare was published for this leg, so this is an
@@ -38,6 +42,7 @@ export const SOUTH_WEST_MAP: Record<string, [number, number]> = {
   abeokuta: [28, 30],
   ibadan: [52, 20],
   osogbo: [88, 10],
+  ife: [84, 30],
 };
 
 /** Cities on the map of Nigeria (same frame as the domestic flight chart), for bus trips beyond the south-west. */

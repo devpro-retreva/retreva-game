@@ -44,6 +44,8 @@ Yankari (`destinations/yankari.ts`) names real places and wildlife — Yankari G
 
 Obudu (`destinations/obuduBase.ts`, `obuduRanch.ts`) names real places — the Obudu Plateau and its mountain resort, the cable car (about 4 km, climbing some 870 m), the old cattle ranch (first ranched in 1951), the ranch dairy, the Grotto waterfall and the Becheve forest — with short factual blurbs; the mountain, cable car, cabins, stations, cattle and mist are procedural geometry. The cable car and bus fares are estimates (no current fares are published), and the real cable car has had long breakdowns. Oko, Agbor, Mama Agbo, Etim, Pa Ushie, Mama Ogar, Ukpe, Kelechi and their businesses are fictional.
 
+Ile-Ife (`destinations/ife.ts`) names real places and traditions — the Ooni’s palace at Enuwa, the National Museum and its Ife heads (about the 12th–15th centuries), Opa Oranmiyan, Ife’s historic glass-bead making, opon Ifa trays and the Olojo festival — with short factual blurbs; the staff, palace and square are procedural, and the “small cast head” on sale is described as a new piece in the old style, not a copy of a museum object. Iya Ronke, Baba Ayinde, Sola, Mama Tinuke, Damilola, Tunde and their businesses are fictional; the bus fares are estimates.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

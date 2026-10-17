@@ -554,6 +554,24 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
     case 'safaritruck':
       safariTruck(g, at, r, p.color);
       break;
+    case 'staff': {
+      // a tall granite staff, tapering, studded with a spiral of iron nails, on a low plinth inside a small railing
+      g.box('#9a958c', at(0, 0.15, 0), [1.6, 0.3, 1.6], r);
+      for (let i = 0; i < 6; i++) g.box(shade('#8e8a82', i * 0.01), at(0, 0.3 + 0.45 + i * 0.9, 0), [0.62 - i * 0.05, 0.92, 0.48 - i * 0.035], r);
+      g.box('#8e8a82', at(0, 5.75, 0), [0.32, 0.3, 0.24], r);
+      for (let k = 0; k < 40; k++) {
+        const y = 0.6 + k * 0.12;
+        const a = k * 0.9;
+        const w = 0.31 - (y / 5.6) * 0.14;
+        g.box('#3a302a', at(Math.sin(a) * w, y, Math.cos(a) * w * 0.78), [0.06, 0.06, 0.06], r);
+      }
+      for (const [rx, rz] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) g.box('#2a2a2a', at(rx, 0.5, rz), [0.06, 1.0, 0.06], r);
+      for (const sx of [-1, 1]) {
+        g.box('#2a2a2a', at(sx * 1.4, 0.9, 0), [0.04, 0.04, 2.8], r);
+        g.box('#2a2a2a', at(0, 0.9, sx * 1.4), [2.8, 0.04, 0.04], r);
+      }
+      break;
+    }
     case 'cattle': {
       // a ranch herd: long-horned cattle, mostly white, grazing in a loose group
       const rnd = seeded(p.id);

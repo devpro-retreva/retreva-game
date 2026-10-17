@@ -125,7 +125,9 @@ export type PropKind =
   // highlands
   | 'cattle'
   | 'fence'
-  | 'cablestation';
+  | 'cablestation'
+  // monuments
+  | 'staff';
 
 export interface PropDef {
   id: string;
