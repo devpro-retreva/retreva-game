@@ -16,6 +16,8 @@ const S = (fn, a) => p.evaluate(fn, a);
 const st = () => S(() => { const s = window.__retreva.store.getState(); return { ui: s.ui, dest: s.destinationId, bal: s.wallet.balance, ledger: s.wallet.ledger.map((t) => [t.id, t.amount]), skills: s.life.skills, regard: s.life.regard, active: s.jobs.active, repair: s.repair, history: s.jobs.history.length }; });
 const place = (x, z, yaw) => S(([x, z, yaw]) => { const r = window.__retreva.runtime; r.player.x = x; r.player.z = z; r.player.yaw = yaw; }, [x, z, yaw]);
 const talk = async (npcId) => {
+  // people are placed a moment after an area loads
+  await p.waitForFunction((id) => window.__retreva.runtime.actors.has(id), npcId, { timeout: 15000 }).catch(() => {});
   const at = await S((id) => { const a = window.__retreva.runtime.actors.get(id); return [a.x, a.z]; }, npcId);
   await place(at[0] + (at[0] > 0 ? -1.2 : 1.2), at[1], at[0] > 0 ? Math.PI / 2 : -Math.PI / 2);
   await p.waitForFunction((id) => window.__retreva.store.getState().nearby?.id === id, npcId, { timeout: 20000 });

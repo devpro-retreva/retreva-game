@@ -78,6 +78,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['kings-square-room'],
     load: () => import('./destinations/beninPack').then((m) => m.BENIN_PACKS),
   },
+  {
+    id: 'enugu',
+    builtIn: false,
+    eventIds: ['ogene-night'],
+    homeIds: ['ogui-room'],
+    load: () => import('./destinations/enuguPack').then((m) => m.ENUGU_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

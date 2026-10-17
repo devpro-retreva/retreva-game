@@ -17,6 +17,9 @@ export const COACHES: Route[] = [
   { between: ['ibadan-dugbe', 'osogbo-oja-oba'], fare: 3500, minutes: 110, via: 'via Ikire and Ikirun junction' },
   // the long road east: luxury lines run Lagos–Benin for about ₦25,000–27,000 (GIGM online fares, October 2026)
   { between: ['ikeja-village', 'benin-kings-square'], fare: 26000, minutes: 360, via: 'from Ojota park, via Ore' },
+  // Benin → Enugu (about 250 km over the Niger at Onitsha): no 2026 fare was published for this leg, so this is an
+  // estimate scaled by distance from the Lagos–Benin fare
+  { between: ['benin-kings-square', 'enugu-ogui'], fare: 15000, minutes: 300, via: 'via Asaba and the Niger Bridge' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -31,4 +34,5 @@ export const SOUTH_WEST_MAP: Record<string, [number, number]> = {
 export const NIGERIA_MAP: Record<string, [number, number]> = {
   lagos: [14, 47],
   benin: [36, 44],
+  enugu: [50, 45],
 };

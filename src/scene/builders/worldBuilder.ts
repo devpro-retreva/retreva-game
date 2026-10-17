@@ -654,6 +654,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
       if (pack.vistaStyle === 'roofs') roofscape(g, rnd);
       else if (pack.vistaStyle === 'forest') forest(g, rnd);
       else if (pack.vistaStyle === 'moat') moat(g, rnd);
+      else if (pack.vistaStyle === 'escarpment') escarpment(g, rnd);
       else openCountry(g, rnd);
       continue;
     }
@@ -756,6 +757,34 @@ function moat(g: ColorGeometryBuilder, rnd: () => number) {
     const z = t < 0.4 ? z0 - 8.5 - rnd() * 5 : z0 - 15 - rnd() * 26;
     const y = t < 0.4 ? 0.6 + (z0 - 8.5 - z) * 0.45 : 3.8 + rnd() * 1.5;
     g.blob(greens[i % 4], [x, y, z], t < 0.4 ? 0.8 + rnd() * 0.9 : 2 + rnd() * 2.5, [1.4, 0.7, 1.2]);
+  }
+}
+
+/** North of a street under an escarpment (Milliken Hill): low roofs, then a steep green ridge with pines along the top. */
+function escarpment(g: ColorGeometryBuilder, rnd: () => number) {
+  g.box('#7a7048', [0, 0.003, -76], [150, 0.01, 60]);
+  // the town at the foot of the hill
+  for (let i = 0; i < 22; i++) {
+    const x = -60 + rnd() * 120;
+    if (Math.abs(x) < 6) continue;
+    const z = -52 - rnd() * 12;
+    const w = 4 + rnd() * 4;
+    g.box('#cdbb9c', [x, 1.4, z], [w, 2.8, 4.5]);
+    g.box(i % 2 ? '#8a5634' : '#6c6f72', [x, 2.95, z], [w + 0.4, 0.3, 4.9]);
+  }
+  // the ridge: a long run of steep green slopes, a road scar winding up it
+  for (let i = 0; i < 7; i++) g.blob(i % 2 ? '#5f7a3c' : '#6a8442', [-72 + i * 24, 0, -92 - (i % 3) * 4], 22, [1.3, 0.95, 0.7]);
+  g.boxR('#b49a74', [-6, 9, -78], [46, 0.3, 1.6], [0, 0.35, 0.32]);
+  // pines up the slope (Ngwo), set into the hillside so none float above a dip in the ridge
+  for (let i = 0; i < 40; i++) {
+    const x = -70 + rnd() * 140;
+    const y = 6 + rnd() * 7;
+    // the slope's face at height y is about 15·√(1 − (y/21)²) in front of the ridge line; sink each tree a little behind it
+    // the ridge sections step back (−92, −96, −100); use the one this tree stands on
+    const k = Math.max(0, Math.min(6, Math.round((x + 72) / 24)));
+    const z = -92 - (k % 3) * 4 + 15 * Math.sqrt(1 - (y / 21) ** 2) - 2.5 - rnd() * 2;
+    g.cylinder('#3f2c1e', [x, y + 1.4, z], 0.22, 0.3, 2.8, 5);
+    g.cylinder('#2c4a2a', [x, y + 4.4, z], 0.05, 1.5, 4.8, 7);
   }
 }
 

@@ -22,6 +22,8 @@ const st = () => S(() => {
 const place = (x, z, yaw) => S(([x, z, yaw]) => { const r = window.__retreva.runtime; r.player.x = x; r.player.z = z; r.player.yaw = yaw; }, [x, z, yaw]);
 const near = (id) => p.waitForFunction((id) => window.__retreva.store.getState().nearby?.id === id, id, { timeout: 20000 });
 const talk = async (npcId) => {
+  // people are placed a moment after an area loads
+  await p.waitForFunction((id) => window.__retreva.runtime.actors.has(id), npcId, { timeout: 15000 }).catch(() => {});
   const at = await S((id) => { const a = window.__retreva.runtime.actors.get(id); return [a.x, a.z]; }, npcId);
   await place(at[0] + (at[0] > 0 ? -1.2 : 1.2), at[1], at[0] > 0 ? Math.PI / 2 : -Math.PI / 2);
   await near(npcId);

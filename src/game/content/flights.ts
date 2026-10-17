@@ -66,6 +66,8 @@ const CARRIER = 'Gulf Coast Air';
  * ₦110,000–135,000 budget fares and ₦135,000–185,000 for standard economy (2026).
  * Lagos–Benin City (domestic, about an hour) about ₦110,000 one-way / ₦210,000 return: Google Flights and Trip.com list
  * one-way fares from $66–88 (September–October 2026), agency pages ₦120,000–250,000 at busy times.
+ * Lagos–Enugu (domestic, about an hour) about ₦115,000 one-way / ₦215,000 return: the airline's own site lists returns
+ * from ₦108,000 to ₦214,000 for late-2026 dates; Google Flights and Trip.com one-way fares from $66–85.
  */
 
 export const FLIGHTS: FlightRoute[] = [
@@ -316,6 +318,57 @@ export const FLIGHTS: FlightRoute[] = [
     returnId: 'los-bni',
     snack: { name: 'chin-chin and a cold malt', fullness: 10 },
     map: { from: [36, 44], to: [14, 47] },
+  },
+  {
+    id: 'los-enu',
+    code: 'GC 310',
+    carrier: CARRIER,
+    from: 'lagos-airport',
+    to: 'enugu-airport',
+    arriveAt: 'enugu-ogui',
+    cityName: 'Enugu',
+    country: 'Nigeria',
+    minutes: 65,
+    ticket: 115000,
+    roundTrip: 215000,
+    gate: 'A6',
+    budget: {
+      stay: { name: 'Room in Ogui', cost: 7000, note: 'a room for your stay' },
+      gettingAround: 10000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    note: 'In the game domestic flights leave from the same hall; in Lagos they use the domestic terminal.',
+    chart: 'nigeria',
+    returnId: 'enu-los',
+    snack: { name: 'meat pie and a cold malt', fullness: 12 },
+    map: { from: [14, 47], to: [50, 45] },
+  },
+  {
+    id: 'enu-los',
+    code: 'GC 311',
+    carrier: CARRIER,
+    from: 'enugu-airport',
+    to: 'lagos-airport',
+    arriveAt: 'ikeja-village',
+    cityName: 'Lagos',
+    country: 'Nigeria',
+    minutes: 65,
+    ticket: 115000,
+    roundTrip: 215000,
+    gate: 'C2',
+    budget: {
+      stay: { name: 'Room to let, Yaba', cost: 6000, note: 'if you don’t have a place yet' },
+      gettingAround: 3000,
+    },
+    entry: 'Domestic flight — your national ID card is all you need.',
+    papers: 'Domestic · ID card, no passport',
+    domestic: true,
+    chart: 'nigeria',
+    returnId: 'los-enu',
+    snack: { name: 'meat pie and a cold malt', fullness: 12 },
+    map: { from: [50, 45], to: [14, 47] },
   },
 ];
 

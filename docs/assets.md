@@ -32,6 +32,8 @@ Osogbo (`destinations/osogbo.ts`) names real places — the Ataoja's palace, Oja
 
 Benin City (`destinations/benin.ts`) names real places around King’s Square — the National Museum, Igun Street and its guild of bronze casters, the Emotan statue at Oba Market and the old city moat — with short factual blurbs; the statues are procedural (`statue` prop), not copies of real works, and the bronzes on sale are described as new pieces cast in the old style. Pa Osayande, Mama Osas, Eghosa, Mama Ivie, Nosa, Uyi and their businesses are fictional; the Benin Airport terminal uses the generic airport template.
 
+Enugu (`destinations/enugu.ts`) names real places in Ogui — Ogbete Main Market, Michael Okpara Square, the Coal Camp — and Milliken Hill with the Ngwo pine forest, with short factual blurbs; the escarpment and pines are procedural. Nne Ada, Mama Chinyere, Uche, Fatima, Chidi and their businesses are fictional; the Akanu Ibiam terminal uses the generic airport template.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

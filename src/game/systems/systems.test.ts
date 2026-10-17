@@ -39,6 +39,7 @@ import { IBADAN_PACKS } from '../content/destinations/ibadanPack';
 import { ABEOKUTA_PACKS } from '../content/destinations/abeokutaPack';
 import { OSOGBO_PACKS } from '../content/destinations/osogboPack';
 import { BENIN_PACKS } from '../content/destinations/beninPack';
+import { ENUGU_PACKS } from '../content/destinations/enuguPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -49,6 +50,7 @@ registerPacks(IBADAN_PACKS);
 registerPacks(ABEOKUTA_PACKS);
 registerPacks(OSOGBO_PACKS);
 registerPacks(BENIN_PACKS);
+registerPacks(ENUGU_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1167,7 +1169,7 @@ describe('city packs', () => {
 
 describe('Dubai', () => {
   it('Lagos flies to Accra and Dubai; every route has a way back and lands somewhere real', () => {
-    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport']);
+    expect(FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.to).sort()).toEqual(['abuja-airport', 'accra-airport', 'benin-airport', 'calabar-airport', 'dubai-airport', 'enugu-airport']);
     for (const f of FLIGHTS.filter((r) => !isRail(r))) {
       expect(findFlight(f.returnId)?.returnId, f.id).toBe(f.id);
       expect(ALL_PACKS.some((p) => p.id === f.arriveAt), f.id).toBe(true);
@@ -1464,5 +1466,27 @@ describe('Benin City', () => {
     const walk = sq.jobs.find((j) => j.id === 'kings-square-walk')!;
     expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
     for (const id of walk.tour!.stops) expect(sq.landmarks.some((l) => l.id === id), id).toBe(true);
+  });
+});
+
+describe('Enugu', () => {
+  const ogui = ALL_PACKS.find((p) => p.id === 'enugu-ogui')!;
+  it('is a domestic flight from Lagos (Benin City stays the cheapest) or a bus from Benin City', () => {
+    const out = findFlight('los-enu')!;
+    expect([out.ticket, out.roundTrip]).toEqual([115000, 215000]);
+    expect(out.domestic && out.chart === 'nigeria' && out.arriveAt === 'enugu-ogui').toBe(true);
+    expect(Math.min(...FLIGHTS.filter((f) => f.from === 'lagos-airport').map((f) => f.roundTrip))).toBe(210000);
+    expect(fareBetween('benin-kings-square', 'enugu-ogui', 'coach')).toBe(15000);
+    expect(coachesFrom('enugu-ogui').map((a) => a.id)).toEqual(['benin-kings-square']);
+    expect(fareBetween('enugu-ogui', 'enugu-airport')).toBe(6000);
+    expect(CITY_PACKS.find((c) => c.id === 'enugu')?.builtIn).toBe(false);
+  });
+  it('the abacha stall is a cooking shift; the walk visits real landmarks in order', () => {
+    const shift = ogui.shifts!.find((x) => x.id === 'abacha-stall')!;
+    expect(shift.skill).toBe('cooking');
+    expect(shift.dishes.map((d) => d.name)).toContain('Abacha');
+    const walk = ogui.jobs.find((j) => j.id === 'coal-city-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(ogui.landmarks.some((l) => l.id === id), id).toBe(true);
   });
 });
