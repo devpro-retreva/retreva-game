@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { getDestination, formatMoney } from '../../game/content';
-import { boatsFrom, coachesFrom, fareBetween, findArea, minutesBetween, modeBetween, regionOf, routeBetween, type RegionArea, type TravelBy } from '../../game/content/regions';
+import { boatsFrom, cablesFrom, coachesFrom, fareBetween, findArea, minutesBetween, modeBetween, regionOf, routeBetween, type RegionArea, type TravelBy } from '../../game/content/regions';
 import { useGame } from '../../game/store/gameStore';
 import { usePack } from '../../scene/worldContext';
 import { IconClose } from '../icons/Icons';
@@ -23,15 +23,16 @@ export function TravelPanel() {
   const region = regionOf(current);
   const boat = by === 'boat';
   const coach = by === 'coach';
-  const others = boat ? boatsFrom(current) : coach ? coachesFrom(current) : region?.areas.filter((a) => a.id !== current) ?? [];
+  const cable = by === 'cable';
+  const others = boat ? boatsFrom(current) : coach ? coachesFrom(current) : cable ? cablesFrom(current) : region?.areas.filter((a) => a.id !== current) ?? [];
 
   return (
     <section className="sheet travel-sheet cut" role="dialog" aria-label="Choose a destination">
       <header className="sheet-head">
         <div>
-          <div className="eyelabel">{boat ? region?.boatName ?? 'Boat' : coach ? modeBetween(current, current, 'coach') : here?.hub === 'airport' ? 'Taxi' : region?.transit} · from {here?.district}</div>
-          <h2>{boat ? 'Where by boat?' : coach ? 'Which city?' : 'Where to?'}</h2>
-          <p>{boat ? 'Pay the fare and take the boat across the lagoon — life jackets on.' : coach ? 'Pay for a seat and the bus leaves when it’s full — it always is.' : `Pay the fare and ride to another part of ${region?.name ?? 'town'}.`}</p>
+          <div className="eyelabel">{cable ? 'Cable car' : boat ? region?.boatName ?? 'Boat' : coach ? modeBetween(current, current, 'coach') : here?.hub === 'airport' ? 'Taxi' : region?.transit} · from {here?.district}</div>
+          <h2>{cable ? 'Ride the cable car?' : boat ? 'Where by boat?' : coach ? 'Which city?' : 'Where to?'}</h2>
+          <p>{cable ? 'You pay at the other station. Sit back — the cabin climbs over the forest and into the mist.' : boat ? 'Pay the fare and take the boat across the lagoon — life jackets on.' : coach ? 'Pay for a seat and the bus leaves when it’s full — it always is.' : `Pay the fare and ride to another part of ${region?.name ?? 'town'}.`}</p>
         </div>
         <button className="icon-btn" onClick={close} aria-label="Close (Esc)">
           <IconClose size={18} />
@@ -72,7 +73,7 @@ function TravelRow({ area: a, by }: { area: RegionArea; by: TravelBy }) {
   const seen = visited.includes(a.id);
   const mode = modeBetween(current, a.id, by);
   const via = routeBetween(current, a.id, by)?.via;
-  const verb = by === 'boat' ? 'Boat' : coach ? 'Bus' : mode === 'Taxi' ? 'Taxi' : 'Ride';
+  const verb = by === 'boat' ? 'Boat' : by === 'cable' ? 'Cable car' : coach ? 'Bus' : mode === 'Taxi' ? 'Taxi' : 'Ride';
   const place = coach ? `${regionOf(a.id)?.name} · ${a.district}` : a.district;
   return (
     <li className="row-item travel-row" data-area={a.id}>
@@ -138,7 +139,7 @@ export function TransitOverlay() {
         )}
         {region?.map === 'lagos' && !coach && transit.by !== 'coach' && (
           <div className="transit-map cut">
-            <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to, by: transit.by }} durationMs={duration} />
+            <LagosMap current={transit.from} highlight={transit.to} route={{ from: transit.from, to: transit.to, by: transit.by === 'boat' ? 'boat' : 'road' }} durationMs={duration} />
           </div>
         )}
         <p className="transit-line">{dest.tagline}</p>

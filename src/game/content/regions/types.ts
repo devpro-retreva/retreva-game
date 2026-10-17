@@ -21,8 +21,8 @@ export interface Route {
   via?: string;
 }
 
-/** road: the everyday ride inside a region; boat: between jetties; coach: the intercity bus between cities. */
-export type TravelBy = 'road' | 'boat' | 'coach';
+/** road: the everyday ride inside a region; boat: between jetties; coach: the intercity bus between cities; cable: a cable car. */
+export type TravelBy = 'road' | 'boat' | 'coach' | 'cable';
 
 export interface Region {
   id: string;
@@ -39,4 +39,6 @@ export interface Region {
   boats?: Route[];
   /** What the boats are called here, e.g. "Ferry". */
   boatName?: string;
+  /** Cable cars between two areas (only these pairs). The lower area's pack draws it (`DestinationPack.cable`). */
+  cables?: Route[];
 }

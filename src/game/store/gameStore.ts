@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { getDestination, findItem, findJob, findNpc, findBusiness, formatMoney, DEFAULT_DESTINATION, areaOfJob, ALL_PACKS, findEvent } from '../content';
-import type { DestinationPack, DialogueOption, ItemCategory, NpcDef, Requirement } from '../content/types';
+import type { DestinationPack, DialogueOption, ItemCategory, NpcDef, Requirement, RideDef } from '../content/types';
 import { createWallet, credit, debit, makeId, type Wallet } from '../systems/economy';
 import { addItem, emptyInventory, removeFromStack, type Inventory } from '../systems/inventory';
 import {
@@ -50,7 +50,7 @@ import { benchLabels, repairQueue, repairSeconds, scoreRepair, shuffledSteps, ta
 import { courierRank, courierRuns, rankBonus } from '../systems/careers';
 import { visitStop } from '../systems/jobs';
 import { cityName, cityOfArea, isCityLoaded, loadCity } from '../content/cities';
-import { pointAlong } from '../systems/drive';
+import { pointAlong, ridePose3 } from '../systems/drive';
 import { gatePrice, nextShowing, onNow, showtime, ticketTxId, type EventTicket } from '../systems/events';
 import { findInterior, WELL_RESTED_COMFORT } from '../content/interiors';
 import { belongings, comfort, emptyProperty, fits, homeValuation, place, store as storeFn, take as takeFn, unplace } from '../systems/home';
@@ -140,8 +140,12 @@ interface GameState {
   life: LifeState;
   shift: ShiftRun | null;
   /** Resting overlay: where and until when (ms timestamp). */
-  /** A ride along an event's track (the game drive); not saved — a reload leaves the ticket unused. */
-  drive: { eventId: string; startedAt: number; spotted: string[] } | null;
+  /**
+   * A ride along a track: an event's (the game drive), or a cable car between two areas (`cable`; going down, the
+   * world switches to the lower station first and the clock starts once it's drawn — startedAt 0 until then).
+   * Not saved: a reload mid-ride leaves an event ticket unused, and a cable car is only paid for on arrival.
+   */
+  drive: { eventId?: string; cable?: { from: string; to: string; fare: number; down: boolean }; startedAt: number; spotted: string[] } | null;
   resting: { at: 'bench' | 'home' | 'meal' | 'event' | 'swim'; eventId?: string; joy?: number; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
@@ -237,7 +241,9 @@ interface GameState {
   attendEvent(eventId: string): void;
   /** Something seen from the drive (counts once; kept in world.discovered). */
   spotOnDrive(sightingId: string): void;
-  /** Back where the drive set off: joy, energy, time, ticket used. */
+  /** Starts the clock of a ride that was waiting for its world to be drawn (a cable car going down). */
+  startRideClock(): void;
+  /** Back where the drive set off: joy, energy, time, ticket used — or, on a cable car, off at the other station. */
   finishDrive(): void;
   // repair bench
   startRepair(repairId: string): void;
@@ -378,8 +384,21 @@ export function requirementsOf(id: string): Requirement | undefined {
 export const findShift = (p: DestinationPack, id: string): ShiftDef | undefined => p.shifts?.find((x) => x.id === id);
 export { canRun };
 
-function drivePosition(s: Pick<GameState, 'drive'>): { position: [number, number]; yaw: number } | null {
-  const ride = s.drive && findEvent(s.drive.eventId)?.ride;
+/** The track being ridden: the event's, or the cable car drawn in this (lower-station) area. */
+export function activeRide(s: Pick<GameState, 'drive' | 'destinationId'>): RideDef | undefined {
+  const d = s.drive;
+  if (!d) return undefined;
+  if (d.cable) return getDestination(s.destinationId).cable?.ride;
+  return d.eventId ? findEvent(d.eventId)?.ride : undefined;
+}
+
+/** Milliseconds into the ride (0 while it waits for its world). */
+export function rideMs(d: { startedAt: number }): number {
+  return d.startedAt ? Date.now() - d.startedAt : 0;
+}
+
+function drivePosition(s: Pick<GameState, 'drive' | 'destinationId'>): { position: [number, number]; yaw: number } | null {
+  const ride = activeRide(s);
   if (!ride) return null;
   const p = pointAlong(ride.track, 0);
   return { position: [p.x, p.z], yaw: p.yaw };
@@ -824,7 +843,29 @@ export const useGame = create<GameState>()((set, get): GameState => {
       // the danfo and the boat stay inside a city; the intercity bus is the one that crosses to another
       if (!area || areaId === from || s.jobs.active || (by !== 'coach' && regionOf(areaId) !== regionOf(from))) return;
       const fare = fareBetween(from, areaId, by);
-      if ((by === 'boat' || by === 'coach') && fare === 0) return; // no boat or bus runs between these two
+      if ((by === 'boat' || by === 'coach' || by === 'cable') && fare === 0) return; // no boat or bus runs between these two
+      if (by === 'cable') {
+        // the cable car is a ride: up from the lower station in its own world, or down into it from the top
+        if (s.wallet.balance < fare) {
+          get().pushToast({ kind: 'warn', title: 'Not enough for the fare', detail: `You need ${formatMoney(pack(), fare - s.wallet.balance)} more.` });
+          return;
+        }
+        get().parkIfRiding();
+        const down = !pack().cable;
+        const lower = down ? getDestination(areaId) : pack();
+        const ride = lower.cable?.ride;
+        if (!ride) return;
+        const start = ridePose3(ride, 0, down);
+        resetRuntime(start.x, start.z, start.yaw);
+        const cable = { from, to: areaId, fare, down };
+        if (!down) {
+          set({ ui: 'drive', dialogue: null, nearby: null, drive: { cable, startedAt: Date.now(), spotted: [] } });
+        } else {
+          set({ ui: 'drive', dialogue: null, nearby: null, destinationId: areaId, phase: 'loading', drive: { cable, startedAt: 0, spotted: [] }, critical: s.critical + 1 });
+        }
+        setUiMode('drive');
+        return;
+      }
       const city = cityOfArea(areaId);
       if (city && !isCityLoaded(city.id)) {
         get().pushToast({ kind: 'warn', title: `${cityName(city.id)} isn't ready yet`, detail: 'It downloads before the bus leaves — connect to the internet and try again.' });
@@ -1356,17 +1397,51 @@ export const useGame = create<GameState>()((set, get): GameState => {
     spotOnDrive(sightingId) {
       const s = get();
       const d = s.drive;
-      const v = d && findEvent(d.eventId)?.ride?.sightings.find((x) => x.id === sightingId);
+      const v = d && activeRide(s)?.sightings.find((x) => x.id === sightingId);
       if (!d || !v || d.spotted.includes(sightingId)) return;
       const discovered = s.world.discovered.includes(sightingId) ? s.world.discovered : [...s.world.discovered, sightingId];
       set({ drive: { ...d, spotted: [...d.spotted, sightingId] }, world: { ...s.world, discovered }, critical: s.critical + 1 });
       get().pushToast({ kind: 'discover', title: `Spotted: ${v.name}`, detail: v.blurb });
     },
 
+    startRideClock() {
+      const d = get().drive;
+      if (d && !d.startedAt) set({ drive: { ...d, startedAt: Date.now() } });
+    },
+
     finishDrive() {
       const s = get();
       const d = s.drive;
-      const ev = d && findEvent(d.eventId);
+      if (d?.cable) {
+        // off at the other station: the fare is paid now (a reload mid-air never charges you)
+        const c = d.cable;
+        const ride = activeRide(s);
+        const r = debit(s.wallet, { id: makeId('cable'), amount: c.fare, reason: `Cable car · ${findArea(c.from)?.district ?? c.from} → ${findArea(c.to)?.district ?? c.to}`, at: Date.now(), destinationId: c.from });
+        const wallet = r.ok ? r.wallet : s.wallet;
+        const time = (s.world.time ?? START_TIME) + (ride?.minutes ?? minutesBetween(c.from, c.to, 'cable'));
+        const visited = s.world.visited.includes(c.to) ? s.world.visited : [...s.world.visited, c.to];
+        const needs = cheer(s.life.needs, 8);
+        if (c.down) {
+          // already in the lower station's world: step out where the ride began
+          const base = ride ? pointAlong(ride.track, 0) : { x: 0, z: 0, yaw: 0 };
+          runtime.player.x = base.x;
+          runtime.player.z = base.z;
+          runtime.player.yaw = base.yaw + Math.PI;
+          runtime.camera.yaw = base.yaw + Math.PI;
+          set({ drive: null, ui: 'play', wallet, life: { ...s.life, needs }, world: { ...s.world, visited, rides: s.world.rides + 1, time }, critical: s.critical + 1 });
+          setUiMode('play');
+          get().pushToast({ kind: 'goal', title: 'Down at the base station', detail: `Cable car · ${formatMoney(pack(), c.fare)}` });
+          get().checkGoals();
+          return;
+        }
+        const dest = getDestination(c.to);
+        const at = dest.cableStation ?? dest.arrival;
+        resetRuntime(at.position[0], at.position[1], at.facing);
+        set({ drive: null, wallet, destinationId: dest.id, life: { ...s.life, needs }, world: { ...s.world, visited, rides: s.world.rides + 1, time }, arrival: { firstVisit: !s.world.visited.includes(c.to) }, ui: 'play', nearby: null, phase: 'loading', critical: s.critical + 1 });
+        setUiMode('play');
+        return;
+      }
+      const ev = d?.eventId ? findEvent(d.eventId) : undefined;
       if (!d || !ev?.ride) return;
       const ride = ev.ride;
       const t0 = s.world.time ?? START_TIME;

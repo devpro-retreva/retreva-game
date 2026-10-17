@@ -1,11 +1,11 @@
 import { makeAirport } from './airport';
 
-/** Margaret Ekpang International, Calabar — flights back to Lagos (fictional terminal, generic signage). */
+/** Margaret Ekpo International, Calabar — flights back to Lagos (fictional terminal, generic signage). */
 export const calabarAirport = makeAirport({
   id: 'calabar-airport',
   city: 'Calabar',
   country: 'Nigeria',
-  tagline: 'Margaret Ekpang International — flights back to Lagos leave from here.',
+  tagline: 'Margaret Ekpo International — flights back to Lagos leave from here.',
   brand: { primary: '#1d5f7a', accent: '#f2b705' },
   gatesSign: 'GATES E1 – E4',
   greeting: 'Abadie? Good afternoon.',

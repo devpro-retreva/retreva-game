@@ -42,6 +42,8 @@ Kano (`destinations/kano.ts`, `kanoAirport.ts`) names real places — Kurmi Mark
 
 Yankari (`destinations/yankari.ts`) names real places and wildlife — Yankari Game Reserve, Wikki Camp, the Wikki Warm Spring (about 31 °C), the Gaji River, and the reserve's elephants, olive baboons, western kob, savanna buffalo, warthogs and hippos — with short factual blurbs; the animals, the safari truck, the reserve and the spring are procedural geometry. Prices are 2025–26 guide figures (game drive ₦6,000–8,000, chalets from about ₦9,500); the Jos–Yankari bus fare is an estimate. Ranger Bala, Mama Asabe, Baba Yusuf, Mama Saratu, Malam Sani, Mallam Haruna and their businesses are fictional.
 
+Obudu (`destinations/obuduBase.ts`, `obuduRanch.ts`) names real places — the Obudu Plateau and its mountain resort, the cable car (about 4 km, climbing some 870 m), the old cattle ranch (first ranched in 1951), the ranch dairy, the Grotto waterfall and the Becheve forest — with short factual blurbs; the mountain, cable car, cabins, stations, cattle and mist are procedural geometry. The cable car and bus fares are estimates (no current fares are published), and the real cable car has had long breakdowns. Oko, Agbor, Mama Agbo, Etim, Pa Ushie, Mama Ogar, Ukpe, Kelechi and their businesses are fictional.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

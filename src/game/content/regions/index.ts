@@ -18,6 +18,7 @@ import { RIVERS } from './rivers';
 import { PLATEAU } from './plateau';
 import { KANO } from './kano';
 import { BAUCHI } from './bauchi';
+import { OBUDU } from './obudu';
 import { COACHES, COACH_NAME } from './intercity';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
@@ -25,7 +26,7 @@ export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
 export { COACHES, COACH_NAME, NIGERIA_MAP, SOUTH_WEST_MAP } from './intercity';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA, OSUN, BENIN, ENUGU, RIVERS, PLATEAU, KANO, BAUCHI];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA, OSUN, BENIN, ENUGU, RIVERS, PLATEAU, KANO, BAUCHI, OBUDU];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {
@@ -54,13 +55,19 @@ export function routeBetween(fromId: string, toId: string, by: TravelBy = 'road'
   if (by === 'coach') return fromId === toId ? undefined : routeIn(COACHES, fromId, toId);
   const region = regionOf(fromId);
   if (!region || region !== regionOf(toId) || fromId === toId) return undefined;
-  return routeIn(by === 'boat' ? region.boats : region.routes, fromId, toId);
+  return routeIn(by === 'boat' ? region.boats : by === 'cable' ? region.cables : region.routes, fromId, toId);
 }
 
 /** Areas you can reach by boat from here (none if this area has no jetty). */
 export function boatsFrom(areaId: string): RegionArea[] {
   const region = regionOf(areaId);
   return (region?.areas ?? []).filter((a) => a.id !== areaId && !!routeIn(region?.boats, areaId, a.id));
+}
+
+/** Areas you can reach by cable car from here. */
+export function cablesFrom(areaId: string): RegionArea[] {
+  const region = regionOf(areaId);
+  return (region?.areas ?? []).filter((a) => a.id !== areaId && !!routeIn(region?.cables, areaId, a.id));
 }
 
 /** Areas in other cities you can reach by intercity bus from here (none unless this area has a motor park). */
@@ -72,6 +79,7 @@ export function coachesFrom(areaId: string): RegionArea[] {
 export function modeBetween(fromId: string, toId: string, by: TravelBy = 'road'): string {
   if (by === 'coach') return COACH_NAME;
   if (by === 'boat') return regionOf(fromId)?.boatName ?? 'Boat';
+  if (by === 'cable') return 'Cable car';
   const a = findArea(fromId);
   const b = findArea(toId);
   if (a?.hub === 'airport' || b?.hub === 'airport') return 'Taxi';
@@ -89,7 +97,7 @@ export function fareBetween(fromId: string, toId: string, by: TravelBy = 'road')
   if (!a || !b || a.id === b.id || regionOf(a.id) !== regionOf(b.id)) return 0;
   const listed = routeBetween(fromId, toId, by);
   if (listed) return listed.fare;
-  if (by === 'boat') return 0;
+  if (by === 'boat' || by === 'cable') return 0;
   const d = distance(a, b);
   const taxi = a.hub === 'airport' || b.hub === 'airport' || regionOf(a.id)?.transit === 'Taxi';
   return Math.round((taxi ? 3000 + d * 200 : 300 + d * 30) / 50) * 50;

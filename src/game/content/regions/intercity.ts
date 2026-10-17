@@ -27,6 +27,9 @@ export const COACHES: Route[] = [
   // Jos → Yankari: a bus to Bauchi (about 130 km, 3 h) and on to Wikki Camp (about 110 km more, the last 40 inside the
   // reserve). No through fare is published, so this is an estimate from the two legs plus the gate fee (₦2,000–3,000)
   { between: ['jos-terminus', 'yankari-wikki'], fare: 12000, minutes: 300, via: 'via Bauchi and the Mainamaji gate' },
+  // Calabar → Obudu (about 300–330 km, 5½–6 h): no current fare is published (an older guide gives ₦4,000), so this
+  // is an estimate for 2026; it stops at the base station below the plateau
+  { between: ['calabar-marina', 'obudu-base'], fare: 10000, minutes: 345, via: 'via Ikom and Ogoja' },
 ];
 
 /** Where each city sits on the south-west map drawn for bus and train trips (0–100 × 0–60). */
@@ -46,4 +49,6 @@ export const NIGERIA_MAP: Record<string, [number, number]> = {
   abuja: [47, 28],
   jos: [58, 23],
   yankari: [71, 24],
+  calabar: [58, 55],
+  obudu: [64, 41],
 };

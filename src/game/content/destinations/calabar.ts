@@ -292,9 +292,10 @@ export const calabar: DestinationPack = {
         entries: [{ node: 'hello' }],
         nodes: {
           hello: {
-            text: 'Airport? Margaret Ekpang is just across town — twenty minutes. Enter.',
+            text: 'Airport? Margaret Ekpo is just across town — twenty minutes. Enter. Or Obudu — my cousin’s bus leaves from here for the mountain.',
             options: [
               { label: 'Take a taxi', action: { kind: 'openTravel' } },
+              { label: 'Take an intercity bus', action: { kind: 'openTravel', by: 'coach' } },
               { label: 'Not now', action: { kind: 'close' } },
             ],
           },

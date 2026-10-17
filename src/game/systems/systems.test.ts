@@ -10,7 +10,7 @@ import { emptyWorld, SAVE_SCHEMA_VERSION } from '../persistence/types';
 import { acceptAsk, makeOffer, savings, startHaggle } from './negotiation';
 import { collectSpot } from './jobs';
 import { GOALS, newlyCompleted } from './progress';
-import { ALL_AREAS, boatsFrom, coachesFrom, COACHES, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
+import { ALL_AREAS, boatsFrom, cablesFrom, coachesFrom, COACHES, fareBetween, findArea, LAGOS_AREAS, minutesBetween, modeBetween, regionOf, REGIONS, routeBetween } from '../content/regions';
 import { FLIGHTS, findFlight, flightText, isRail, nextDeparture } from '../content/flights';
 import { CHAT_COOLDOWN_MS, CHAT_GAIN, chat, chatReady, friendDiscount, friendPrice, giveGift, GIFT_LIKED, GIFT_OK, tierUp } from './social';
 import { addVehicle, canMount, mount, park, removeVehicle, vehicleResale } from './vehicles';
@@ -44,8 +44,9 @@ import { PORT_HARCOURT_PACKS } from '../content/destinations/portHarcourtPack';
 import { JOS_PACKS } from '../content/destinations/josPack';
 import { KANO_PACKS } from '../content/destinations/kanoPack';
 import { YANKARI_PACKS } from '../content/destinations/yankariPack';
+import { OBUDU_PACKS } from '../content/destinations/obuduPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
-import { distanceToTrack, poseAlong, ridePose, rideSeconds, sightingsBetween, trackLength } from './drive';
+import { distanceToTrack, heightAlong, poseAlong, ridePose, ridePose3, rideSeconds, sightingsBetween, trackLength } from './drive';
 import type { Vec2 } from '../content/types';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -61,6 +62,7 @@ registerPacks(PORT_HARCOURT_PACKS);
 registerPacks(JOS_PACKS);
 registerPacks(KANO_PACKS);
 registerPacks(YANKARI_PACKS);
+registerPacks(OBUDU_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1616,5 +1618,54 @@ describe('Yankari and the game drive', () => {
   it('the drive is a daily ticketed event; the spring is a swim', () => {
     expect([drive.kind, drive.everyDays, drive.price, ride.minutes]).toEqual(['safari', 1, 7000, 120]);
     expect(y.spots!.find((s) => s.kind === 'swim')?.joy).toBeGreaterThan(0);
+  });
+});
+
+describe('Obudu and the cable car', () => {
+  const base = ALL_PACKS.find((p) => p.id === 'obudu-base')!;
+  const ranch = ALL_PACKS.find((p) => p.id === 'obudu-ranch')!;
+  const ride = base.cable!.ride;
+  it('is a bus from Calabar (an estimate) to the base station; Obudu is a separate city pack', () => {
+    expect([fareBetween('calabar-marina', 'obudu-base', 'coach'), minutesBetween('calabar-marina', 'obudu-base', 'coach')]).toEqual([10000, 345]);
+    expect(coachesFrom('calabar-marina').map((a) => a.id)).toEqual(['obudu-base']);
+    expect(CITY_PACKS.find((c) => c.id === 'obudu')?.builtIn).toBe(false);
+  });
+  it('the cable car and the hairpin road join the base and the ranch, both ways', () => {
+    expect(cablesFrom('obudu-base').map((a) => a.id)).toEqual(['obudu-ranch']);
+    expect(cablesFrom('obudu-ranch').map((a) => a.id)).toEqual(['obudu-base']);
+    expect([fareBetween('obudu-ranch', 'obudu-base', 'cable'), minutesBetween('obudu-base', 'obudu-ranch', 'cable')]).toEqual([5000, 25]);
+    expect(fareBetween('obudu-base', 'obudu-ranch')).toBe(2000);
+    expect(cablesFrom('calabar-marina')).toEqual([]);
+    expect(base.cable!.to).toBe('obudu-ranch');
+    expect(ranch.cable).toBeUndefined();
+  });
+  it('the cable runs dead straight up the slope from a station on the street, climbing all the way', () => {
+    const [x0, z0, x1, z1] = base.walkable[0];
+    const [sx, sz] = ride.track[0];
+    expect(sx > x0 && sx < x1 && sz > z0 && sz < z1).toBe(true);
+    expect(new Set(ride.track.map(([x]) => x)).size).toBe(1);
+    const h = ride.heights!;
+    expect(h.length).toBe(ride.track.length);
+    for (let i = 1; i < h.length; i++) expect(h[i]).toBeGreaterThan(h[i - 1]);
+    expect(heightAlong(ride, trackLength(ride.track))).toBe(h[h.length - 1]);
+    const secs = rideSeconds(ride);
+    expect(secs).toBeGreaterThan(25);
+    expect(secs).toBeLessThan(70);
+    expect(sightingsBetween(ride, 0, trackLength(ride.track)).sort()).toEqual(ride.sightings.map((v) => v.id).sort());
+  });
+  it('going down rides the same track backwards, from the top to the station', () => {
+    const top = ridePose3(ride, 0, true);
+    expect([top.x, top.z, top.y]).toEqual([...ride.track[ride.track.length - 1], ride.heights![ride.heights!.length - 1]]);
+    const end = ridePose3(ride, rideSeconds(ride) * 1000 + 1000, true);
+    expect([end.x, end.z]).toEqual(ride.track[0]);
+    expect(end.y).toBeCloseTo(ride.heights![0]);
+  });
+  it('the ranch: you step off the cable car on the street, and the ground ends beyond it at the plateau edge', () => {
+    const [x0, z0, x1, z1] = ranch.walkable[0];
+    const [cx, cz] = ranch.cableStation!.position;
+    expect(cx > x0 && cx < x1 && cz > z0 && cz < z1).toBe(true);
+    expect(ranch.groundEdge!).toBeLessThan(z0);
+    const walk = ranch.jobs.find((j) => j.id === 'ranch-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
   });
 });

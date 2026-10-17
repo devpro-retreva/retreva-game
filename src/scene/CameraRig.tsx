@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { consumeLook } from '../game/core/input';
 import { runtime } from '../game/core/runtime';
 import { segmentHit } from '../game/systems/collision';
-import { useGame } from '../game/store/gameStore';
+import { activeRide, useGame } from '../game/store/gameStore';
 import { lerpAngle, useCollisionWorld } from './worldContext';
 
 const BASE_DIST = 5.4;
@@ -52,9 +52,11 @@ export function CameraRig() {
       }
     }
 
+    const cable = g.ui === 'drive' && activeRide(g)?.vehicle === 'cable-car';
     if (g.ui === 'drive') {
-      // ride along: the camera swings round behind the truck, a little to one side, as it turns
-      c.yaw = lerpAngle(c.yaw, p.yaw + 0.4, Math.min(1, d * 1.6));
+      // ride along: behind the truck and a little to one side as it turns; a cable car is watched from the side, so
+      // the climb (and the drop) shows
+      c.yaw = lerpAngle(c.yaw, p.yaw + (cable ? 1.25 : 0.4), Math.min(1, d * 1.6));
     }
 
     let yaw = c.yaw;
@@ -73,9 +75,9 @@ export function CameraRig() {
       }
     } else if (g.ui === 'drive') {
       // high enough to see over the canopy to whatever is beside the track
-      dist = 9;
-      pitch = 0.42;
-      target.y = 2.6;
+      dist = cable ? 12 : 9;
+      pitch = cable ? 0.22 : 0.42;
+      target.y = p.y + (cable ? 1.6 : 2.6);
     } else if (g.ui === 'shop') {
       dist = 4.2;
       pitch = 0.18;

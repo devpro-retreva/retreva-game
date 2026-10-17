@@ -1,7 +1,7 @@
 import type { Region } from './types';
 
 /**
- * Calabar (Cross River): the Marina on the Calabar River, and Margaret Ekpang airport in town.
+ * Calabar (Cross River): the Marina on the Calabar River, and Margaret Ekpo airport in town.
  * The airport is close — a taxi is about ₦5,000 and twenty minutes (estimate).
  */
 export const CALABAR: Region = {

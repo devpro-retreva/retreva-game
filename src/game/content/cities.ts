@@ -113,6 +113,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['wikki-chalet'],
     load: () => import('./destinations/yankariPack').then((m) => m.YANKARI_PACKS),
   },
+  {
+    id: 'obudu',
+    builtIn: false,
+    eventIds: ['ranch-bonfire'],
+    homeIds: ['ranch-chalet'],
+    load: () => import('./destinations/obuduPack').then((m) => m.OBUDU_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

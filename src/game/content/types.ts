@@ -121,7 +121,11 @@ export type PropKind =
   | 'hippo'
   | 'acacia'
   | 'baobab'
-  | 'spring';
+  | 'spring'
+  // highlands
+  | 'cattle'
+  | 'fence'
+  | 'cablestation';
 
 export interface PropDef {
   id: string;
@@ -168,7 +172,7 @@ export type DialogueAction =
   | { kind: 'deliverJob'; jobId: string }
   | { kind: 'openShop'; businessId: string }
   /** The travel picker: by road (default), or the boats from this area's jetty. */
-  | { kind: 'openTravel'; by?: 'road' | 'boat' | 'coach' }
+  | { kind: 'openTravel'; by?: 'road' | 'boat' | 'coach' | 'cable' }
   | { kind: 'startShift'; shiftId: string }
   /** Airport steps. */
   | { kind: 'checkIn' }
@@ -351,9 +355,11 @@ export interface EventDef {
 
 /** A ride along a fixed track (the game drive): you sit in the vehicle and watch for what's out there. */
 export interface RideDef {
-  vehicle: 'safari-truck';
+  vehicle: 'safari-truck' | 'cable-car';
   /** From where you board to where you get off — both on the walkable street; the rest may run out beyond it. */
   track: Vec2[];
+  /** Height of the vehicle's floor at each track point (a cable car climbing); flat on the ground if left out. */
+  heights?: number[];
   /** Metres per real second (the whole drive is about a minute or two). */
   speed: number;
   /** Game minutes the drive takes on the clock. */
@@ -381,6 +387,15 @@ export interface DestinationPack {
   spawn: { position: Vec2; facing: number };
   /** Where you step off the danfo when travelling here. */
   arrival: { position: Vec2; facing: number };
+  /**
+   * A cable car from here (the lower station: the ride is drawn in this area's world, both ways) to another area of
+   * the region. The ride's track starts at this station and climbs to the top; going down it is ridden in reverse.
+   */
+  cable?: { to: string; ride: RideDef };
+  /** Where the ground stops on the north side (the edge of a plateau: beyond it, mist and the valley below). */
+  groundEdge?: number;
+  /** Where you step off the cable car in an area at the top of one (the upper station). */
+  cableStation?: { position: Vec2; facing: number };
   /** Where you step off a boat (areas with a jetty and boats in their region's `boats`). */
   dock?: { position: Vec2; facing: number };
   /** Union of walkable rectangles: [minX, minZ, maxX, maxZ]. */
@@ -403,7 +418,7 @@ export interface DestinationPack {
   /** How many walkers stay out after dark (default 2). */
   nightWalkers?: number;
   /** What lies behind the street: city blocks (default), an airfield with parked planes, or railway tracks with a waiting train beyond the north end. */
-  backdrop?: 'city' | 'airfield' | 'railway' | 'reserve';
+  backdrop?: 'city' | 'airfield' | 'railway' | 'reserve' | 'rainforest' | 'highland';
   /** Leave one street end open (no closing row of buildings) so a distant landmark can be seen. */
   vista?: 'north';
   /** What the open end shows: low savanna (default), a sea of rust-brown roofs over the hills (old Ibadan), deep forest (a sacred grove), an old city moat (Benin), a pine-topped escarpment (Enugu's Milliken Hill), granite boulder hills (the Jos Plateau), or an old earthen city wall with a gate (Kano). */

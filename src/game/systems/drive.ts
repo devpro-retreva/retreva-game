@@ -104,5 +104,34 @@ export function ridePose(ride: RideDef, ms: number) {
   return poseAlong(ride.track, rideDistance(ride, ms));
 }
 
-/** Where a passenger sits, relative to the vehicle (local x right, z forward) and the seat height. */
-export const SEAT = { x: 0.45, z: -0.9, y: 1.31 };
+/** Height of the ride's floor `s` metres along (0 for a ride on the ground). */
+export function heightAlong(ride: RideDef, s: number): number {
+  const h = ride.heights;
+  if (!h) return 0;
+  let left = Math.max(0, s);
+  for (let i = 1; i < ride.track.length; i++) {
+    const seg = Math.hypot(ride.track[i][0] - ride.track[i - 1][0], ride.track[i][1] - ride.track[i - 1][1]);
+    if (left <= seg || i === ride.track.length - 1) return h[i - 1] + (h[i] - h[i - 1]) * (seg > 0 ? Math.min(1, left / seg) : 1);
+    left -= seg;
+  }
+  return h[0];
+}
+
+/** Where along the track the ride is `ms` after setting off; a reversed ride (a cable car going down) runs end to start. */
+export function rideAt(ride: RideDef, ms: number, reverse = false): number {
+  const d = rideDistance(ride, ms);
+  return reverse ? trackLength(ride.track) - d : d;
+}
+
+/** Full pose for drawing: position, height and heading (turned round when riding the track backwards). */
+export function ridePose3(ride: RideDef, ms: number, reverse = false): { x: number; z: number; y: number; yaw: number } {
+  const s = rideAt(ride, ms, reverse);
+  const p = poseAlong(ride.track, s);
+  return { ...p, y: heightAlong(ride, s), yaw: reverse ? p.yaw + Math.PI : p.yaw };
+}
+
+/** Where a passenger sits, relative to the vehicle (local x right, z forward) and above its floor. */
+export const SEATS: Record<RideDef['vehicle'], { x: number; z: number; y: number }> = {
+  'safari-truck': { x: 0.45, z: -0.9, y: 1.31 },
+  'cable-car': { x: 0, z: -0.5, y: -0.05 },
+};

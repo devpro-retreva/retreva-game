@@ -554,6 +554,33 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
     case 'safaritruck':
       safariTruck(g, at, r, p.color);
       break;
+    case 'cattle': {
+      // a ranch herd: long-horned cattle, mostly white, grazing in a loose group
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 5; i++) cow(g, scaled(at, (rnd() - 0.5) * 8, (rnd() - 0.5) * 6, 0.9 + rnd() * 0.15), r + (rnd() - 0.5) * 2.4, i === 2 ? '#8a5a3a' : i === 4 ? '#3a302a' : '#efe9dc');
+      break;
+    }
+    case 'fence': {
+      // ten metres of post-and-rail along the prop's local z
+      for (let z = -5; z <= 5.01; z += 2.5) g.box('#7a5a3a', at(0, 0.6, z), [0.12, 1.2, 0.12], r);
+      for (const y of [0.5, 0.95]) g.box('#8a6a48', at(0, y, 0), [0.06, 0.1, 10], r);
+      break;
+    }
+    case 'cablestation': {
+      // the upper station at the plateau edge: a canopy over two bullwheels, a cabin waiting, and the haul ropes
+      // dropping away north over the edge into the mist
+      for (const sx of [-1, 1]) for (const sz of [-2.5, 2.5]) g.box('#b8b4aa', at(sx * 3.4, 3, sz), [0.5, 6, 0.5], r);
+      g.box('#d8d4ca', at(0, 6.2, 0), [7.6, 0.4, 6.4], r);
+      g.box('#c0392b', at(0, 6.55, 0), [7.2, 0.3, 6], r);
+      for (const sx of [-1.6, 1.6]) g.cylinder('#3a3a3a', at(sx, 5.6, -1.5), 1.1, 1.1, 0.2, 14);
+      // (drawn for a station facing north, as at the end of a street: the ropes run off along -z)
+      for (const sx of [-1.6, 1.6]) {
+        const [x0, , z0] = at(sx, 0, -3);
+        g.boxR('#202020', [x0, 5.0 - 30, z0 - 35], [0.05, 0.05, Math.hypot(70, 60)], [-Math.atan2(60, 70), 0, 0]);
+      }
+      cabin(g, (x, y, z) => at(x + 1.6, y + 1.8, z - 1.2), r, '#c0392b');
+      break;
+    }
     // wildlife: each prop is a small group, spread around its position
     case 'elephant': {
       const herd: [number, number, number, number][] = [[0, 0, 1, 0], [3.2, -1.4, 0.95, 0.5], [1.4, 1.6, 0.55, 0.2]];
@@ -609,6 +636,35 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       break;
     }
   }
+}
+
+/** A cable-car cabin: floor at y 0, hanger arm up to the haul rope at y 3.2. Front faces +z. */
+function cabin(g: ColorGeometryBuilder, at: (x: number, y: number, z: number) => [number, number, number], r: number, color = '#c0392b') {
+  g.box(color, at(0, 0.2, 0), [1.9, 0.4, 2.3], r);
+  g.box('#9fbccb', at(0, 1.05, 0), [1.92, 1.0, 2.32], r); // the window band
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.box(color, at(sx * 0.92, 1.05, sz * 1.12), [0.1, 1.0, 0.1], r);
+  g.box(color, at(0, 1.72, 0), [1.9, 0.36, 2.3], r);
+  g.box(shade(color, -0.15), at(0, 1.95, 0), [1.6, 0.12, 2.0], r);
+  g.box('#5a5a5a', at(0, 2.6, 0), [0.12, 1.2, 0.12], r); // hanger
+  g.box('#4a4a4a', at(0, 3.2, 0), [0.3, 0.3, 0.7], r); // grip on the rope
+  g.box('#7a5a3a', at(0, 0.48, -0.75), [1.6, 0.1, 0.45], r); // bench
+}
+
+/** Just the cabin, for the ride (scene/Drive.tsx). */
+export function cableCabinGeometry(color?: string): THREE.BufferGeometry {
+  const g = new ColorGeometryBuilder();
+  cabin(g, placer(0, 0, 0), 0, color);
+  return g.build();
+}
+
+function cow(g: ColorGeometryBuilder, a: Scaled, r: number, c: string) {
+  const k = a.k;
+  g.ellipsoid(c, a(0, 1.05, 0), 0.6 * k, [0.8, 0.85, 1.55], [10, 7], [0, r, 0]);
+  legs(g, a, shade(c, -0.12), 0.26, 0.55, -0.55, 0.8, 0.08);
+  g.ellipsoid(c, a(0, 1.1, 1.05), 0.26 * k, [0.85, 0.9, 1.4], [8, 6], [0, r, 0]);
+  g.ellipsoid(shade(c, -0.05), a(0, 1.5, 0.35), 0.25 * k, [0.9, 0.7, 1.0], [6, 5], [0, r, 0]); // hump
+  for (const sx of [-1, 1]) g.box('#e8dcc0', a(sx * 0.3, 1.5, 0.98), [0.5 * k, 0.07 * k, 0.07 * k], r + sx * 0.4);
+  for (const sx of [-1, 1]) g.box('#e8dcc0', a(sx * 0.5, 1.75, 0.98), [0.07 * k, 0.5 * k, 0.07 * k], r);
 }
 
 /** Wraps a placer so a group member at (ox, oz) can be drawn at scale k with its own local coordinates. */
@@ -784,8 +840,9 @@ function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
   }
   // centre dashes
   for (let z = -L + 1; z < L; z += 3.2) g.box(pack.palette.roadLine, [0, 0.012, z], [0.12, 0.004, 1.6]);
-  // street-end barriers
+  // street-end barriers (not across a cable-car station at the north end)
   for (const end of [-1, 1]) {
+    if (end === -1 && (pack.cable || pack.cableStation)) continue;
     const z = end * (L - 1.6);
     for (let x = -hw - sw + 0.6, i = 0; x < hw + sw; x += 1.25, i++) {
       g.box(i % 2 ? '#f4f0e6' : '#d8452b', [x, 0.42, z], [1.15, 0.84, 0.5]);
@@ -805,6 +862,12 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
   const tones = ['#c9a98a', '#b99c84', '#d4b896', '#a98f7a', '#bfa58e'];
   if (pack.backdrop === 'reserve') {
     reserveBeyond(g, pack, rnd);
+    return;
+  }
+  if (pack.backdrop === 'rainforest' || pack.backdrop === 'highland') {
+    countryside(g, pack, rnd);
+    if (pack.cable) cableway(g, pack.cable.ride.track, pack.cable.ride.heights ?? [], rnd);
+    if (pack.backdrop === 'highland') plateauEdge(g, pack, rnd);
     return;
   }
   // behind both rows
@@ -921,6 +984,120 @@ function reserveBeyond(g: ColorGeometryBuilder, pack: DestinationPack, rnd: () =
   for (const sx of [-1, 1]) g.box('#6a4a30', [sx * 5.2, 2.6, -L + 0.4], [0.4, 5.2, 0.4]);
   g.box('#6a4a30', [0, 5.0, -L + 0.4], [11, 0.5, 0.45]);
   g.box('#c8b88a', [0, 5.65, -L + 0.4], [4.6, 0.8, 0.12]);
+}
+
+/**
+ * No city around: rainforest (tall trees close in) at the foot of a mountain, or open highland (rolling grass, a few
+ * pines) on top of one — on both sides and beyond the south end.
+ */
+function countryside(g: ColorGeometryBuilder, pack: DestinationPack, rnd: () => number) {
+  const L = pack.road.length / 2;
+  const forest = pack.backdrop === 'rainforest';
+  const greens = forest ? ['#4a7a3c', '#558a44', '#3f7036', '#5e9048'] : ['#7fa25a', '#8fae62', '#9ab86c'];
+  const spots: [number, number][] = [];
+  for (let i = 0; i < (forest ? 60 : 30); i++) spots.push([(i % 2 ? 1 : -1) * (16 + rnd() * 26), -L + rnd() * (2 * L + 10)]);
+  for (let x = -40; x < 40; x += 5 + rnd() * 4) spots.push([x, L + 5 + rnd() * 12]);
+  for (const [x, z] of spots) {
+    if (forest) {
+      const h = 8 + rnd() * 6;
+      g.cylinder('#5a4a3a', [x, h / 2, z], 0.25, 0.4, h, 6);
+      g.blob(greens[Math.floor(rnd() * greens.length)], [x, h + 1, z], 3 + rnd() * 1.6, [1.2, 0.7, 1.2]);
+    } else {
+      g.blob(greens[Math.floor(rnd() * greens.length)], [x, -2, z], 8 + rnd() * 6, [1.4, 0.45, 1.2]);
+      if (rnd() > 0.6) {
+        g.cylinder('#4a3a2c', [x * 0.9, 2.5, z], 0.15, 0.22, 5, 6);
+        g.cone('#2f5a3a', [x * 0.9, 6.2, z], 1.6, 5.5, 7);
+      }
+    }
+  }
+}
+
+/** Terrain height under a cable at z: well below the cabin (room for the forest), never below the ground. */
+function slopeAt(track: [number, number][], heights: number[], z: number): number {
+  if (z >= track[0][1]) return 0;
+  for (let i = 1; i < track.length; i++) {
+    const [, z0] = track[i - 1];
+    const [, z1] = track[i];
+    if (z <= z0 && z >= z1) {
+      const k = (z0 - z) / (z0 - z1 || 1);
+      return Math.max(0, heights[i - 1] + (heights[i] - heights[i - 1]) * k - 12);
+    }
+  }
+  return Math.max(0, heights[heights.length - 1] - 1);
+}
+
+/**
+ * A cable car running straight up the mountain north of the street: the forested slope rising under it in steps,
+ * pylons at each bend of the profile, two haul ropes, the lower station at the street end and the upper one at the
+ * top, where the plateau's grassland disappears into mist.
+ */
+function cableway(g: ColorGeometryBuilder, track: [number, number][], heights: number[], rnd: () => number) {
+  const x = track[0][0];
+  const zTop = track[track.length - 1][1];
+  // the slope, in 3 m terraces, with forest on each
+  for (let z = -44; z > -110; z -= 3) {
+    const h = slopeAt(track, heights, z - 1.5);
+    if (h <= 0.2) continue;
+    const top = z < zTop;
+    g.box(top ? '#7f9c58' : shade('#4a7a3c', (rnd() - 0.5) * 0.1), [0, h / 2, z - 1.5], [220, h, 3.05]);
+    if (top) continue;
+    for (let tx = -100; tx < 100; tx += 7 + rnd() * 6) {
+      if (Math.abs(tx - x - 1.5) < 4) continue; // the ropes' corridor is kept clear
+      g.blob(['#4a7a3c', '#558a44', '#3f7036'][Math.floor(rnd() * 3)], [tx, h + 1.6, z - 1.5], 2.6 + rnd() * 1.4, [1.2, 0.8, 1.2]);
+    }
+  }
+  // a waterfall down the escarpment, west of the line
+  const fz = -66;
+  const fh = slopeAt(track, heights, fz);
+  g.box('#e6f2f4', [x - 14, fh / 2 + 0.6, fz + 1.6], [1.6, fh + 1.2, 0.3]);
+  g.blob('#e6f2f4', [x - 14, 0.4, fz + 2.6], 1.6, [1.4, 0.4, 1]);
+  // mist on the top edge
+  for (let i = 0; i < 14; i++) {
+    const h = heights[heights.length - 1];
+    g.blob(i % 2 ? '#e8ebe8' : '#dfe3e0', [-70 + i * 11 + rnd() * 6, h - 2 + rnd() * 6, zTop - 2 - rnd() * 10], 6 + rnd() * 4, [1.6, 0.5, 1]);
+  }
+  // pylons
+  for (let i = 1; i < track.length - 1; i++) {
+    const [, z] = track[i];
+    const base = slopeAt(track, heights, z);
+    const tip = heights[i] + 3.6;
+    g.box('#9a9a96', [x + 1.5, (base + tip) / 2, z], [0.6, tip - base, 0.6]);
+    g.box('#8a8a86', [x + 1.5, tip, z], [4.6, 0.3, 0.4]);
+  }
+  // two ropes (up and down), one box per span, pitched to the climb
+  for (const off of [0, 3]) {
+    for (let i = 1; i < track.length; i++) {
+      const [, z0] = track[i - 1];
+      const [, z1] = track[i];
+      const y0 = heights[i - 1] + 3.2;
+      const y1 = heights[i] + 3.2;
+      const run = z0 - z1;
+      g.boxR('#1e1e1e', [x + off, (y0 + y1) / 2, (z0 + z1) / 2], [0.05, 0.05, Math.hypot(run, y1 - y0)], [Math.atan2(y1 - y0, run), 0, 0]);
+    }
+  }
+  // stations: canopy and bullwheel over each end
+  for (const [i, wall] of [[0, '#d8d4ca'], [track.length - 1, '#cfcac0']] as const) {
+    const [, z] = track[i];
+    const y = heights[i];
+    for (const sx of [-1.9, 4.9]) for (const sz of [-2.5, 2.5]) g.box('#b8b4aa', [x + sx, y / 2 + 3, z + sz], [0.5, y + 6, 0.5]);
+    g.box(wall, [x + 1.5, y + 6.2, z], [7.6, 0.4, 6.4]);
+    g.box('#c0392b', [x + 1.5, y + 6.55, z], [7.2, 0.3, 6]);
+    g.cylinder('#3a3a3a', [x + 1.5, y + 3.4, z + (i === 0 ? 2.2 : -2.2)], 1.6, 1.6, 0.2, 14);
+    if (i > 0) g.box('#9a948a', [x + 1.5, y / 2, z - 2], [10, y, 8]);
+  }
+}
+
+/**
+ * Top of a plateau: the ground stops at the north edge (`DestinationPack.groundEdge`) behind a low stone wall, and
+ * beyond it there is nothing but mist and, far below, the forested valley.
+ */
+function plateauEdge(g: ColorGeometryBuilder, pack: DestinationPack, rnd: () => number) {
+  const edge = pack.groundEdge ?? -48;
+  for (let x = -60; x < 60; x += 2.2) if (Math.abs(x) > 5.5) g.box(rnd() > 0.5 ? '#a8a49a' : '#9a968c', [x, 0.45, edge + 0.6], [2.1, 0.9, 0.7]);
+  g.box('#7f9c58', [0, -0.6, edge - 1], [220, 1.2, 2]);
+  // cloud lying in the valley, below the edge
+  for (let i = 0; i < 22; i++) g.blob(i % 3 ? '#e9ecea' : '#dde2df', [-90 + rnd() * 180, -14 + rnd() * 6, edge - 14 - rnd() * 40], 9 + rnd() * 6, [2, 0.3, 1.3]);
+  for (let x = -110; x < 110; x += 12 + rnd() * 8) g.blob(['#3a6232', '#46703a'][Math.floor(rnd() * 2)], [x, -48, -96 - rnd() * 10], 14 + rnd() * 6, [1.4, 0.7, 0.8]);
 }
 
 function distToSegments(track: [number, number][], x: number, z: number): number {

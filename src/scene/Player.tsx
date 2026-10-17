@@ -4,15 +4,14 @@ import * as THREE from 'three';
 import { readMove } from '../game/core/input';
 import { runtime } from '../game/core/runtime';
 import { resolveMove } from '../game/systems/collision';
-import { canRun, useGame } from '../game/store/gameStore';
+import { activeRide, canRun, rideMs, useGame } from '../game/store/gameStore';
 import { Character, type CharacterAnim } from './Character';
 import { HEIGHT } from '../game/core/avatarPresets';
 import { groundHeight, lerpAngle, useCollisionWorld, usePack } from './worldContext';
 import { findVehicle } from '../game/content/vehicles';
 import { bicycleGeometry } from './Vehicles';
 import { worldColorMaterial } from './materials';
-import { findEvent } from '../game/content';
-import { ridePose, SEAT } from '../game/systems/drive';
+import { ridePose3, SEATS } from '../game/systems/drive';
 
 const WALK = 3.4;
 const RUN = 6.4;
@@ -24,6 +23,7 @@ export function Player() {
   const group = useRef<THREE.Group>(null);
   const anim = useRef<CharacterAnim>({ speed: 0 });
   const vel = useRef({ x: 0, z: 0, y: 0 });
+  const lastRiding = useRef<string | null>(null);
   const bike = useRef<THREE.Mesh>(null);
   const ridingColor = useGame((s) => findVehicle(s.life.vehicles.find((v) => v.uid === s.life.riding)?.vehicleId ?? '')?.color ?? '#1f6f4a');
 
@@ -38,18 +38,20 @@ export function Player() {
     const p = runtime.player;
     const s = useGame.getState();
 
-    // on a game drive: sit in the back of the truck wherever it is on its track
-    const drive = s.drive ? findEvent(s.drive.eventId)?.ride : undefined;
+    // on a ride (the game drive, a cable car): sit in the vehicle wherever it is on its track
+    const drive = activeRide(s);
     if (s.drive && drive) {
-      const pose = ridePose(drive, Date.now() - s.drive.startedAt);
+      const pose = ridePose3(drive, rideMs(s.drive), !!s.drive.cable?.down);
+      const seat = SEATS[drive.vehicle];
       p.x = pose.x;
       p.z = pose.z;
+      p.y = pose.y;
       p.yaw = pose.yaw;
       p.speed = drive.speed;
       p.moving = true;
       const c = Math.cos(pose.yaw);
       const sn = Math.sin(pose.yaw);
-      g.position.set(pose.x + SEAT.x * c + SEAT.z * sn, SEAT.y, pose.z - SEAT.x * sn + SEAT.z * c);
+      g.position.set(pose.x + seat.x * c + seat.z * sn, pose.y + seat.y, pose.z - seat.x * sn + seat.z * c);
       g.rotation.y = pose.yaw;
       anim.current.speed = 0;
       anim.current.talking = false;
@@ -59,6 +61,7 @@ export function Player() {
       return;
     }
 
+    p.y = 0;
     const m = readMove();
     const cy = runtime.camera.yaw;
     const dx = Math.sin(cy) * m.y - Math.cos(cy) * m.x;
@@ -66,6 +69,12 @@ export function Player() {
     const mag = Math.min(1, Math.hypot(dx, dz));
     const sprint = m.sprint && canRun(s.life.needs);
     const ridingUid = s.life.riding;
+    // getting on or off starts from standstill (no walking off at the bike's speed)
+    if (ridingUid !== lastRiding.current) {
+      lastRiding.current = ridingUid;
+      vel.current.x = 0;
+      vel.current.z = 0;
+    }
     const ride = ridingUid ? findVehicle(s.life.vehicles.find((v) => v.uid === ridingUid)?.vehicleId ?? '') : undefined;
     const speed = mag * (ride ? (sprint ? ride.sprint : ride.speed) : sprint ? RUN : WALK);
     const tx = mag > 0.01 ? (dx / Math.hypot(dx, dz)) * speed : 0;

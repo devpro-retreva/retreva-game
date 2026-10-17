@@ -46,8 +46,9 @@ export function StaticWorld({ pack, shadows }: { pack: DestinationPack; shadows:
 
   return (
     <group>
-      <mesh rotation-x={-Math.PI / 2} position={[pack.sea ? (pack.sea.fromX - 110) / 2 : 0, -0.01, 0]} material={surfaces.ground} receiveShadow>
-        <planeGeometry args={[pack.sea ? pack.sea.fromX + 110 : 220, 220]} />
+      {/* the ground; on a plateau it stops at the north edge and the valley is far below */}
+      <mesh rotation-x={-Math.PI / 2} position={[pack.sea ? (pack.sea.fromX - 110) / 2 : 0, -0.01, pack.groundEdge !== undefined ? (pack.groundEdge + 110) / 2 : 0]} material={surfaces.ground} receiveShadow>
+        <planeGeometry args={[pack.sea ? pack.sea.fromX + 110 : 220, pack.groundEdge !== undefined ? 110 - pack.groundEdge : 220]} />
       </mesh>
       {style !== 'sand' && (
         <mesh rotation-x={-Math.PI / 2} position={[0, 0.002, 0]} material={surfaces.road} receiveShadow>
