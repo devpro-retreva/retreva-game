@@ -1322,7 +1322,7 @@ describe('Ibadan and the train', () => {
       expect(r.arriveAt).toBe('ibadan-station');
       expect(findFlight(r.returnId)?.arriveAt).toBe('lagos-station');
       expect(r.rail?.stops[0]).toBe('Ebute Metta');
-      expect(r.rail?.stops.at(-1)).toBe('Moniya');
+      expect(r.rail?.stops[r.rail.stops.length - 1]).toBe('Moniya');
     }
     expect(classes[2].rail!.joy).toBeGreaterThan(classes[0].rail!.joy);
     expect(isRail(findFlight('los-abv'))).toBe(false);
