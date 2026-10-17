@@ -28,6 +28,8 @@ Ibadan (`destinations/ibadan.ts`) names real places in and around Dugbe — Coco
 
 Abeokuta (`destinations/abeokuta.ts`) names real places in Itoku and Ake — Olumo Rock, the Itoku adire market and Centenary Hall — with short factual blurbs; Olumo is the procedural `monolith` granite, the adire cloths a procedural `clothline` prop. Iya Alaro, Baba Ogunde, Kemi, Mama Ofada, Adaeze, Taiwo and their businesses are fictional, as are the bus conductors Alhaji Sule (Ikeja/Ojota) and Rasaki (Dugbe). Adire pattern names (oniko, eleko, alabere) are the traditional technique names.
 
+Osogbo (`destinations/osogbo.ts`) names real places — the Ataoja's palace, Oja Oba market, the town's art tradition and the Osun-Osogbo Sacred Grove (UNESCO World Heritage Site, 2005) — with short factual blurbs. The grove is shown only from its gate, with procedural sculptures written as being "in the spirit of" the New Sacred Art (not copies of any real work); no job goes into it. The festival event is a fictional evening show; its text says the real festival procession is free and held once a year in August. Mama Folake, Iya Iyan, Yinka, Kwame, Bayo and their businesses are fictional.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

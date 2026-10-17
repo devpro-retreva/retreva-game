@@ -375,6 +375,17 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       for (const y of [4.5, 8, 11]) g.box('#5a5550', at(0, top + y, 1.82), [0.9, 1.4, 0.04], r);
       break;
     }
+    case 'sculpture': {
+      // a tall, organic cement sculpture in the spirit of the grove's New Sacred Art: stacked, leaning forms
+      const c = p.color ?? '#b8ab94';
+      g.blob(shade(c, -0.08), at(0, 0.6, 0), 1.1, [1.2, 0.6, 1.2]);
+      g.blob(c, at(0.2, 2.0, 0), 0.9, [0.8, 1.6, 0.8]);
+      g.blob(shade(c, 0.05), at(-0.3, 3.6, 0.1), 0.8, [1.1, 1.2, 0.7]);
+      g.blob(c, at(0.1, 5.0, -0.1), 0.65, [0.7, 1.3, 0.7]);
+      g.blob(shade(c, -0.12), at(0.6, 4.4, 0), 0.45, [1.6, 0.5, 0.5]);
+      g.blob(shade(c, -0.12), at(-0.8, 3.0, 0), 0.4, [1.5, 0.5, 0.5]);
+      break;
+    }
     case 'clothline': {
       // cloth hung out to sell (adire): two posts, a line, and panels in shades of indigo along local x
       for (const lx of [-2.2, 2.2]) g.box('#5a3b26', at(lx, 1.15, 0), [0.08, 2.3, 0.08], r);
@@ -629,6 +640,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
     if (airfield && end === -1) continue; // the airfield (or the railway) is open beyond the north fence
     if (pack.vista === 'north' && end === -1) {
       if (pack.vistaStyle === 'roofs') roofscape(g, rnd);
+      else if (pack.vistaStyle === 'forest') forest(g, rnd);
       else openCountry(g, rnd);
       continue;
     }
@@ -695,6 +707,21 @@ function roofscape(g: ColorGeometryBuilder, rnd: () => number) {
     g.boxR(rust[(i + 2) % rust.length], [x, rise + h + 0.45, z + d / 4], [w + 0.5, 0.12, d / 2 + 0.5], [-0.32, 0, 0]);
   }
   for (const [x, z, r] of [[-40, -70, 5], [36, -64, 4], [-12, -88, 6]]) g.blob('#5f7f40', [x, 3, z], r, [1.3, 0.6, 1.3]);
+}
+
+/** North of a street at the edge of a sacred grove: tall old forest closing in, dark and green, over a low wall. */
+function forest(g: ColorGeometryBuilder, rnd: () => number) {
+  g.box('#4f5a36', [0, 0.003, -78], [150, 0.01, 64]);
+  const greens = ['#2f5a2c', '#3c6b34', '#2a4d28', '#4a7a3a'];
+  for (let i = 0; i < 60; i++) {
+    const x = -64 + rnd() * 128;
+    const z = -50 - rnd() * 44;
+    const h = 7 + rnd() * 10;
+    g.cylinder('#4a3524', [x, h / 2, z], 0.35, 0.55, h, 6);
+    g.blob(greens[i % greens.length], [x, h + 1.5, z], 3 + rnd() * 2.5, [1.2, 0.9, 1.2]);
+  }
+  // the grove wall either side of the gate
+  for (const side of [-1, 1]) g.box('#b49a74', [side * 12, 0.9, -47], [16, 1.8, 0.6]);
 }
 
 /** North of a station street: the fence, the platform with its canopy, two tracks and a train waiting to leave. */

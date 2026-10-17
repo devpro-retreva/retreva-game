@@ -9,12 +9,15 @@ export function SouthWestBase() {
     <>
       <rect width="100" height="60" fill="#b9a678" />
       <path d="M0,54 C14,52 24,57 40,56 C56,55 70,58 100,57 V60 H0 Z" fill="#2d6f86" />
-      <path d="M30,0 C32,12 30,24 34,34 C37,42 34,50 36,56" stroke="#5c9db4" strokeWidth="0.9" fill="none" />
+      {/* the Ogun River runs south past Abeokuta to the lagoon; the Osun past Osogbo */}
+      <path d="M24,0 C27,10 26,20 29,30 C31,40 30,48 31,56" stroke="#5c9db4" strokeWidth="0.9" fill="none" />
+      <path d="M92,0 C90,8 86,14 80,22 C74,30 70,40 64,55" stroke="#5c9db4" strokeWidth="0.7" fill="none" />
       <g fontSize="2.6" fontWeight={800} fill="#6b5137" letterSpacing="0.5" opacity="0.8">
-        <text x="6" y="12">OGUN</text>
-        <text x="74" y="34">OYO</text>
+        <text x="6" y="40">OGUN</text>
+        <text x="40" y="8">OYO</text>
+        <text x="70" y="32">OSUN</text>
       </g>
-      <text x="35" y="22" fontSize="2.2" fill="#2f5f72" fontWeight={650} transform="rotate(80 35 22)">Ogun River</text>
+      <text x="25.5" y="14" fontSize="2.2" fill="#2f5f72" fontWeight={650} transform="rotate(80 25.5 14)">Ogun River</text>
       <text x="46" y="58.6" fontSize="2.4" fill="#d7ecf2" opacity="0.8" fontWeight={650}>LAGOS LAGOON</text>
     </>
   );

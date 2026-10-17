@@ -316,7 +316,7 @@ function trains(): FlightRoute[] {
       },
       rail: { cls: c.cls, perk: c.perk, joy: c.joy, stops: LINE },
       returnId: `ibd-los-${c.key}`,
-      map: { from: [10, 50], to: [88, 12] },
+      map: { from: [8, 52], to: [52, 20] },
     });
     out.push({
       ...common,
@@ -334,7 +334,7 @@ function trains(): FlightRoute[] {
       },
       rail: { cls: c.cls, perk: c.perk, joy: c.joy, stops: [...LINE].reverse() },
       returnId: `los-ibd-${c.key}`,
-      map: { from: [88, 12], to: [10, 50] },
+      map: { from: [52, 20], to: [8, 52] },
     });
   }
   return out;

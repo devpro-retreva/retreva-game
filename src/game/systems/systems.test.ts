@@ -37,6 +37,7 @@ import { ABUJA_PACKS } from '../content/destinations/abujaPack';
 import { CALABAR_PACKS } from '../content/destinations/calabarPack';
 import { IBADAN_PACKS } from '../content/destinations/ibadanPack';
 import { ABEOKUTA_PACKS } from '../content/destinations/abeokutaPack';
+import { OSOGBO_PACKS } from '../content/destinations/osogboPack';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 // content checks cover every city pack, so register the ones that normally load on demand
 registerPacks(ACCRA_PACKS);
@@ -45,6 +46,7 @@ registerPacks(ABUJA_PACKS);
 registerPacks(CALABAR_PACKS);
 registerPacks(IBADAN_PACKS);
 registerPacks(ABEOKUTA_PACKS);
+registerPacks(OSOGBO_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1393,6 +1395,7 @@ describe('Abeokuta and the intercity bus', () => {
     const parks = [...new Set(COACHES.flatMap((r) => r.between))];
     for (const id of parks) {
       const p = ALL_PACKS.find((x) => x.id === id)!;
+      expect(p, id).toBeDefined();
       expect(p.npcs.some((n) => Object.values(n.dialogue.nodes).some((node) => node.options.some((o) => o.action.kind === 'openTravel' && o.action.by === 'coach'))), id).toBe(true);
     }
     expect(CITY_PACKS.find((c) => c.id === 'abeokuta')?.builtIn).toBe(false);
@@ -1411,5 +1414,30 @@ describe('Abeokuta and the intercity bus', () => {
     const wallet = { ...createWallet(0), ledger: [{ id: 'coach-abc-1', amount: -4000, reason: 'Intercity bus', at: 1, destinationId: 'ikeja-village' }] };
     const snap = progressSnapshot({ jobs: emptyJobs(), world: emptyWorld('lagos-adeniyi'), inventory: emptyInventory(), wallet, travel: { ticket: null, history: [] } } as never);
     expect(snap.buses).toBe(1);
+  });
+});
+
+describe('Osogbo', () => {
+  const oja = ALL_PACKS.find((p) => p.id === 'osogbo-oja-oba')!;
+  it('the bus from Ibadan (₦3,500) is the way in; Osogbo is a separate city pack', () => {
+    expect(fareBetween('ibadan-dugbe', 'osogbo-oja-oba', 'coach')).toBe(3500);
+    expect(coachesFrom('osogbo-oja-oba').map((a) => a.id)).toEqual(['ibadan-dugbe']);
+    expect(coachesFrom('ibadan-dugbe').map((a) => a.id).sort()).toEqual(['abeokuta-itoku', 'ikeja-village', 'osogbo-oja-oba']);
+    expect(CITY_PACKS.find((c) => c.id === 'osogbo')?.builtIn).toBe(false);
+  });
+  it('the sacred grove is seen, never worked in: no job, tour or delivery goes to it', () => {
+    const grove = oja.landmarks.find((l) => l.id === 'osg-grove')!;
+    expect(grove).toBeDefined();
+    for (const j of oja.jobs) expect(j.tour?.stops ?? [], j.id).not.toContain('osg-grove');
+    // nothing to collect or deliver near the grove gate at the north end of the street
+    for (const n of oja.npcs) expect(n.position[1], n.id).toBeGreaterThan(-30);
+  });
+  it('the art walk visits real landmarks in order; the batik table is unlocked by the Yam Run', () => {
+    const walk = oja.jobs.find((j) => j.id === 'osogbo-art-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
+    for (const id of walk.tour!.stops) expect(oja.landmarks.some((l) => l.id === id), id).toBe(true);
+    const table = oja.repairs!.find((r) => r.id === 'batik-table')!;
+    expect(benchLabels(table).skill).toBe('Batik');
+    expect(table.requires?.jobsDone?.jobId).toBe('yam-run');
   });
 });

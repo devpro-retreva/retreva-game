@@ -11,6 +11,7 @@ import { ABUJA } from './abuja';
 import { CALABAR } from './calabar';
 import { OYO } from './oyo';
 import { ABEOKUTA } from './abeokuta';
+import { OSUN } from './osun';
 import { COACHES, COACH_NAME } from './intercity';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
@@ -18,7 +19,7 @@ export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
 export { COACHES, COACH_NAME, SOUTH_WEST_MAP } from './intercity';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA, OSUN];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {

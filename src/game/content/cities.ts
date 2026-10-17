@@ -64,6 +64,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['itoku-room'],
     load: () => import('./destinations/abeokutaPack').then((m) => m.ABEOKUTA_PACKS),
   },
+  {
+    id: 'osogbo',
+    builtIn: false,
+    eventIds: ['osun-festival-night'],
+    homeIds: ['osun-room'],
+    load: () => import('./destinations/osogboPack').then((m) => m.OSOGBO_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);
