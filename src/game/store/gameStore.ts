@@ -146,7 +146,7 @@ interface GameState {
    * Not saved: a reload mid-ride leaves an event ticket unused, and a cable car is only paid for on arrival.
    */
   drive: { eventId?: string; cable?: { from: string; to: string; fare: number; down: boolean }; climbId?: string; startedAt: number; spotted: string[] } | null;
-  resting: { at: 'bench' | 'home' | 'meal' | 'event' | 'swim'; eventId?: string; joy?: number; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
+  resting: { at: 'bench' | 'home' | 'meal' | 'event' | 'swim'; eventId?: string; joy?: number; label?: string; until: number; to: number; from?: { x: number; z: number }; meal?: { itemId: string; joy: number; nutrition: number }; homeId?: string } | null;
   /** Home panel: which home door the player is at. */
   homeId: string | null;
   /** Flight ticket + history (saved). */
@@ -1980,7 +1980,7 @@ export const useGame = create<GameState>()((set, get): GameState => {
       const s = get();
       const spot = pack().spots?.find((x) => x.id === spotId);
       if (!spot || spot.kind !== 'swim') return;
-      set({ ui: 'resting', resting: { at: 'swim', to: Math.min(100, s.life.needs.energy + 10), joy: spot.joy ?? 12, until: Date.now() + 3000 } });
+      set({ ui: 'resting', resting: { at: 'swim', to: Math.min(100, s.life.needs.energy + (spot.energy ?? 10)), joy: spot.joy ?? 12, label: spot.label, until: Date.now() + 3000 } });
       setUiMode('resting');
     },
 

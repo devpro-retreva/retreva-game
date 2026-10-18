@@ -47,6 +47,7 @@ import { YANKARI_PACKS } from '../content/destinations/yankariPack';
 import { OBUDU_PACKS } from '../content/destinations/obuduPack';
 import { IFE_PACKS } from '../content/destinations/ifePack';
 import { ERIN_PACKS } from '../content/destinations/erinPack';
+import { IKOGOSI_PACKS } from '../content/destinations/ikogosiPack';
 import { SOUTH_WEST_MAP } from '../content/regions/intercity';
 import { CITY_PACKS, cityAreas, citiesInSave } from '../content/cities';
 import { distanceToTrack, heightAlong, poseAlong, ridePose, ridePose3, rideSeconds, sightingsBetween, trackLength } from './drive';
@@ -68,6 +69,7 @@ registerPacks(YANKARI_PACKS);
 registerPacks(OBUDU_PACKS);
 registerPacks(IFE_PACKS);
 registerPacks(ERIN_PACKS);
+registerPacks(IKOGOSI_PACKS);
 import { emptyInventory as emptyInv } from './inventory';
 import { emptyLife, shiftLabels, drainNeeds, eat, canRun, skillLevel, levelProgress, scoreShift, shiftOrders, orderSeconds, resaleValue, regardTier, addRegard, LEVELS } from './life';
 import { TIERS, resolveTier } from '../core/quality';
@@ -1702,7 +1704,7 @@ describe('Erin-Ijesha and the waterfall climb', () => {
   const climb = e.climbs!.find((c) => c.id === 'olumirin')!;
   const ride = climb.ride;
   it('is a bus from Ile-Ife or Osogbo (estimates), on the south-west map; a separate city pack', () => {
-    expect(coachesFrom('erin-olumirin').map((a) => a.id).sort()).toEqual(['ife-enuwa', 'osogbo-oja-oba']);
+    expect(coachesFrom('erin-olumirin').map((a) => a.id).sort()).toEqual(['ife-enuwa', 'ikogosi-springs', 'osogbo-oja-oba']);
     expect([fareBetween('ife-enuwa', 'erin-olumirin', 'coach'), minutesBetween('ife-enuwa', 'erin-olumirin', 'coach')]).toEqual([2500, 70]);
     expect(SOUTH_WEST_MAP.erin).toBeDefined();
     expect(CITY_PACKS.find((c) => c.id === 'erin')?.builtIn).toBe(false);
@@ -1734,5 +1736,26 @@ describe('Erin-Ijesha and the waterfall climb', () => {
     expect(e.spots!.find((s) => s.kind === 'climb')?.climbId).toBe('olumirin');
     expect([climb.fee, climb.minEnergy]).toEqual([1500, 30]);
     expect(climb.energy).toBeLessThan(climb.minEnergy);
+  });
+});
+
+describe('Ikogosi', () => {
+  const k = ALL_PACKS.find((p) => p.id === 'ikogosi-springs')!;
+  it('is a bus from Erin-Ijesha (an estimate), on the south-west map; a separate city pack', () => {
+    expect(coachesFrom('ikogosi-springs').map((a) => a.id)).toEqual(['erin-olumirin']);
+    expect([fareBetween('erin-olumirin', 'ikogosi-springs', 'coach'), minutesBetween('erin-olumirin', 'ikogosi-springs', 'coach')]).toEqual([2000, 45]);
+    expect(SOUTH_WEST_MAP.ikogosi).toBeDefined();
+    expect(CITY_PACKS.find((c) => c.id === 'ikogosi')?.builtIn).toBe(false);
+  });
+  it('two swims: the warm spring gives back more energy and joy than the cold one, each beside its pool', () => {
+    const warm = k.spots!.find((s) => s.id === 'iko-warm-swim')!;
+    const cold = k.spots!.find((s) => s.id === 'iko-cold-swim')!;
+    expect([warm.kind, cold.kind]).toEqual(['swim', 'swim']);
+    expect(warm.energy!).toBeGreaterThan(cold.energy!);
+    expect(warm.joy!).toBeGreaterThan(cold.joy!);
+    const pool = (x: number) => k.props.find((p) => p.kind === 'spring' && Math.sign(p.position[0]) === Math.sign(x))!;
+    for (const s of [warm, cold]) expect(Math.abs(pool(s.position[0]).position[1] - s.position[1])).toBeLessThan(3);
+    const walk = k.jobs.find((j) => j.id === 'springs-walk')!;
+    expect(walk.requires?.discovered).toEqual(walk.tour!.stops);
   });
 });

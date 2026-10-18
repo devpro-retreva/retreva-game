@@ -134,6 +134,13 @@ export const CITY_PACKS: CityPack[] = [
     homeIds: ['erin-guesthouse'],
     load: () => import('./destinations/erinPack').then((m) => m.ERIN_PACKS),
   },
+  {
+    id: 'ikogosi',
+    builtIn: false,
+    eventIds: [],
+    homeIds: ['ikogosi-chalet'],
+    load: () => import('./destinations/ikogosiPack').then((m) => m.IKOGOSI_PACKS),
+  },
 ];
 
 export const findCity = (id: string) => CITY_PACKS.find((c) => c.id === id);

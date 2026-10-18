@@ -644,11 +644,28 @@ function prop(g: ColorGeometryBuilder, p: PropDef) {
       }
       break;
     }
+    case 'stream': {
+      // a spring's stream: twenty metres of shallow water in a stony bed, along the prop's local z
+      const water = p.color ?? '#6aa9b2';
+      g.box('#b9ab88', at(0, 0.03, 0), [2.6, 0.06, 20], r);
+      g.box(water, at(0, 0.07, 0), [1.6, 0.04, 20], r);
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 9; i++) g.blob('#8a8379', at((rnd() > 0.5 ? 1 : -1) * (1.0 + rnd() * 0.3), 0.15, -9 + i * 2.2), 0.35 + rnd() * 0.2, [1.3, 0.6, 1]);
+      break;
+    }
+    case 'steam': {
+      // warm water's breath: a few pale puffs hanging low over it
+      const rnd = seeded(p.id);
+      for (let i = 0; i < 9; i++) g.blob(i % 2 ? '#f4f6f4' : '#eceeec', at((rnd() - 0.5) * 4, 1.2 + rnd() * 1.4, (rnd() - 0.5) * 9), 0.22 + rnd() * 0.22, [1.4, 0.7, 1.4]);
+      break;
+    }
     case 'spring': {
       // a clear warm pool fed from under the rocks: sandy rim, turquoise water, a few steps down from the path
       g.box('#d8c9a2', at(0, 0.04, 0), [7.4, 0.08, 14.4], r);
-      g.box('#5fc2bc', at(0, 0.09, 0), [6.2, 0.04, 13.2], r);
-      g.box('#8fd8d0', at(0.6, 0.1, -2), [3.2, 0.03, 5], r);
+      // the water's colour can be set (a cold spring is bluer than a warm one)
+      const water = p.color ?? '#5fc2bc';
+      g.box(water, at(0, 0.09, 0), [6.2, 0.04, 13.2], r);
+      g.box(shade(water, 0.18), at(0.6, 0.1, -2), [3.2, 0.03, 5], r);
       for (let i = 0; i < 3; i++) g.box('#c9b98f', at(-3.4 + i * 0.35, 0.2 - i * 0.05, 4.5), [0.35, 0.12, 2.4], r);
       for (const [rx, rz] of [[2.9, -6.6], [-2.8, -6.2], [3.2, 2.4], [-3.3, -1.5]]) g.blob('#8a8379', at(rx, 0.3, rz), 0.7, [1.3, 0.6, 1]);
       break;
@@ -860,7 +877,7 @@ function streetFurniture(g: ColorGeometryBuilder, pack: DestinationPack) {
   for (let z = -L + 1; z < L; z += 3.2) g.box(pack.palette.roadLine, [0, 0.012, z], [0.12, 0.004, 1.6]);
   // street-end barriers (not across a cable-car station or a climb's gate at the north end)
   for (const end of [-1, 1]) {
-    if (end === -1 && (pack.cable || pack.cableStation || pack.climbs?.length)) continue;
+    if (end === -1 && (pack.openNorth || pack.cable || pack.cableStation || pack.climbs?.length)) continue;
     const z = end * (L - 1.6);
     for (let x = -hw - sw + 0.6, i = 0; x < hw + sw; x += 1.25, i++) {
       g.box(i % 2 ? '#f4f0e6' : '#d8452b', [x, 0.42, z], [1.15, 0.84, 0.5]);

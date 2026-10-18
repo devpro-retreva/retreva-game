@@ -265,7 +265,7 @@ export function RestOverlay() {
   return (
     <div className={`rest-overlay ${resting.at === 'bench' ? 'on-bench' : ''}`} role="status">
       {resting.at === 'meal' ? <IconPlate size={34} /> : <IconBed size={34} />}
-      <div>{resting.at === 'home' ? 'Sleeping…' : resting.at === 'meal' ? 'Enjoying your meal…' : resting.at === 'swim' ? 'Swimming in the warm water…' : 'Resting on the bench…'}</div>
+      <div>{resting.at === 'home' ? 'Sleeping…' : resting.at === 'meal' ? 'Enjoying your meal…' : resting.at === 'swim' ? `Swimming in ${resting.label ?? 'the water'}…` : 'Resting on the bench…'}</div>
     </div>
   );
 }

@@ -120,6 +120,7 @@ export const INTERIORS: InteriorDef[] = [
   smallRoom('ranch-chalet', 'Ranch chalet', '#e6e0d2', '#5a4636'),
   smallRoom('enuwa-room', 'Enuwa room', '#ece0c8', '#6a4a34'),
   smallRoom('erin-guesthouse', 'Falls View room', '#e6e2d4', '#5a4636'),
+  smallRoom('ikogosi-chalet', 'Spring chalet', '#e4e6da', '#4a3a2c'),
   {
     id: 'yaba-eatery',
     name: 'Adeniyi Eatery',

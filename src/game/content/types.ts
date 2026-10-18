@@ -127,7 +127,10 @@ export type PropKind =
   | 'fence'
   | 'cablestation'
   // monuments
-  | 'staff';
+  | 'staff'
+  // springs
+  | 'stream'
+  | 'steam';
 
 export interface PropDef {
   id: string;
@@ -302,8 +305,9 @@ export interface SpotDef {
   kind: 'bench' | 'home' | 'door' | 'event' | 'jetty' | 'swim' | 'climb';
   /** For a 'climb': which of the pack's climbs starts here. */
   climbId?: string;
-  /** For a 'swim': how much it lifts your joy. */
+  /** For a 'swim': how much it lifts your joy, and how much energy it gives back (default 10). */
   joy?: number;
+  energy?: number;
   /** For an 'event': which show this is the gate of. */
   eventId?: string;
   /** For a 'door': the interior it leads into. */
@@ -402,6 +406,8 @@ export interface DestinationPack {
    * to start, and can turn back at any point; the joy, the energy and the time scale with how far you got.
    */
   climbs?: { id: string; name: string; fee: number; minEnergy: number; energy: number; joy: number; ride: RideDef }[];
+  /** No barrier across the north end of the street: it runs on into what is there (a spring, a gate, a cable car). */
+  openNorth?: boolean;
   /** Where the ground stops on the north side (the edge of a plateau: beyond it, mist and the valley below). */
   groundEdge?: number;
   /** Where you step off the cable car in an area at the top of one (the upper station). */

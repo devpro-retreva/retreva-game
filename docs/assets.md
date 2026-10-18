@@ -48,6 +48,8 @@ Ile-Ife (`destinations/ife.ts`) names real places and traditions — the Ooni’
 
 Erin-Ijesha (`destinations/erin.ts`) names the Olumirin Waterfalls, their seven levels and the local tradition of Akinla, with short blurbs; the falls, pools, steps and forest are procedural. The gate fee (₦1,500) and bus fares are estimates (published figures are older blog prices of ₦500–1,000). Kayode, Iya Bose, Baba Femi, Mama Funmi, Ayo and their businesses are fictional.
 
+Ikogosi (`destinations/ikogosi.ts`) names the Ikogosi warm and cold springs and where they meet, with short blurbs — the temperatures (up to about 70 °C at the warm source, about 37 °C where they mix) are given as reported, “said to be”; the pools, streams and steam are procedural. Pa Ojo, Baba Tayo, Mama Kemi, Bunmi, Seyi, Dele and their businesses are fictional; the bus fare is an estimate.
+
 No third-party 3D models, textures, photos, music or sound files are shipped. City packs (`dist/packs.json`: Accra, Dubai) contain only the project's own data/code. Brands, logos and real businesses are not depicted; place names (Yaba, Osu, Oxford Street…) are real, businesses on them are fictional.
 
 ## External tools (development only — never runtime dependencies)

@@ -74,7 +74,7 @@ export function CoachMap({ from, to, durationMs, reduced }: { from: string; to: 
         return (
           <g key={id} transform={`translate(${x} ${y})`}>
             <circle r={end ? 2.2 : 1.4} fill={id === regionOf(to)?.id ? '#f2b705' : '#f6efe2'} stroke="#15130f" strokeWidth="0.5" />
-            <text y={y > 40 ? -3.4 : 5.6} textAnchor="middle" fontSize="3" fontWeight={800} fill="#15130f" stroke="#f6efe2" strokeWidth="0.9" style={{ paintOrder: 'stroke' }}>
+            <text y={y > 40 ? -3.4 : 5.6} x={x > 90 ? 2.6 : 0} textAnchor={x > 90 ? 'end' : 'middle'} fontSize="3" fontWeight={800} fill="#15130f" stroke="#f6efe2" strokeWidth="0.9" style={{ paintOrder: 'stroke' }}>
               {name}
             </text>
           </g>

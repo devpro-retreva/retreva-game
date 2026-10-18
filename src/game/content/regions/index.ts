@@ -21,6 +21,7 @@ import { BAUCHI } from './bauchi';
 import { OBUDU } from './obudu';
 import { IFE } from './ife';
 import { ERIN } from './erin';
+import { IKOGOSI } from './ikogosi';
 import { COACHES, COACH_NAME } from './intercity';
 import type { Region, RegionArea, Route, TravelBy } from './types';
 
@@ -28,7 +29,7 @@ export type { Region, RegionArea, Route, TravelBy } from './types';
 export { LAGOS_AREAS, HOME_AREA } from './lagosState';
 export { COACHES, COACH_NAME, NIGERIA_MAP, SOUTH_WEST_MAP } from './intercity';
 
-export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA, OSUN, BENIN, ENUGU, RIVERS, PLATEAU, KANO, BAUCHI, OBUDU, IFE, ERIN];
+export const REGIONS: Region[] = [LAGOS, ACCRA, DUBAI, ABUJA, CALABAR, OYO, ABEOKUTA, OSUN, BENIN, ENUGU, RIVERS, PLATEAU, KANO, BAUCHI, OBUDU, IFE, ERIN, IKOGOSI];
 export const ALL_AREAS: RegionArea[] = REGIONS.flatMap((r) => r.areas);
 
 export function findArea(id: string): RegionArea | undefined {
