@@ -904,6 +904,7 @@ function backdrop(g: ColorGeometryBuilder, pack: DestinationPack) {
     if (pack.cable) cableway(g, pack.cable.ride.track, pack.cable.ride.heights ?? [], rnd);
     const climb = pack.climbs?.[0]?.ride;
     if (climb) waterfallHill(g, climb, rnd);
+    if (pack.backdrop === 'rainforest' && !pack.cable && !climb) hillForest(g, rnd);
     if (pack.backdrop === 'highland') plateauEdge(g, pack, rnd);
     return;
   }
@@ -1121,6 +1122,19 @@ function cableway(g: ColorGeometryBuilder, track: [number, number][], heights: n
     g.box('#c0392b', [x + 1.5, y + 6.55, z], [7.2, 0.3, 6]);
     g.cylinder('#3a3a3a', [x + 1.5, y + 3.4, z + (i === 0 ? 2.2 : -2.2)], 1.6, 1.6, 0.2, 14);
     if (i > 0) g.box('#9a948a', [x + 1.5, y / 2, z - 2], [10, y, 8]);
+  }
+}
+
+/** Beyond the end of a street in the hills: forest climbing away up low hills, a little back from the road's end. */
+function hillForest(g: ColorGeometryBuilder, rnd: () => number) {
+  const greens = ['#4a7a3c', '#558a44', '#3f7036', '#5e9048'];
+  for (let x = -100; x < 100; x += 16 + rnd() * 10) g.blob('#5d7f44', [x, -4, -92 - rnd() * 12], 16 + rnd() * 8, [1.4, 0.75, 0.9]);
+  for (let i = 0; i < 70; i++) {
+    const x = -80 + rnd() * 160;
+    const z = -56 - rnd() * 40;
+    const h = 7 + rnd() * 8 + (-56 - z) * 0.15;
+    g.cylinder('#4a3524', [x, h / 2, z], 0.3, 0.5, h, 6);
+    g.blob(greens[i % greens.length], [x, h + 1.4, z], 3 + rnd() * 2, [1.2, 0.9, 1.2]);
   }
 }
 
